@@ -1,0 +1,83 @@
+/* Variables CSS Globales - Paleta de Colores Unificada */
+/* ===================================================
+    Paleta Principal:
+    - #005A9C: Azul Principal (botones de acción, encabezados, elementos clave)
+    - #1E88E5: Azul Secundario (resaltar información importante, iconos destacados)
+    - #333333: Gris Oscuro (texto principal, alto contraste)
+    - #F5F5F5: Gris Claro (fondos de interfaz, separación sutil)
+
+    Paleta para Estatus y Alertas:
+    - #4CAF50: Verde (Éxito - acciones completadas, tareas terminadas)
+    - #D32F2F: Rojo (Error - errores, alertas críticas, acciones de precaución)
+    - #FFC107: Amarillo (Advertencia - advertencias, estados que requieren atención)
+    =================================================== */
+
+:root {
+    /* Paleta Principal */
+    --primary-blue: #005A9C;        /* Azul Principal */
+    --secondary-blue: #1E88E5;      /* Azul Secundario */
+    --dark-gray: #333333;           /* Gris Oscuro */
+    --light-gray: #F5F5F5;          /* Gris Claro */
+    
+    /* Paleta para Estatus y Alertas */
+    --success-green: #4CAF50;       /* Verde (Éxito) */
+    --error-red: #D32F2F;           /* Rojo (Error) */
+    --warning-yellow: #FFC107;      /* Amarillo (Advertencia) */
+    
+    /* Colores de soporte */
+    --white: #ffffff;
+    --black: #000000;
+    --text-muted: #666666;
+    --text-light: #999999;
+    --border-color: #e2e8f0;
+    --border-hover: #1E88E5;
+    
+    /* Gradientes principales */
+    --gradient-primary: linear-gradient(135deg, #005A9C, #1E88E5);
+    --gradient-secondary: linear-gradient(180deg, #005A9C 0%, #1E88E5 100%);
+    --gradient-success: linear-gradient(135deg, #4CAF50, #45a049);
+    --gradient-error: linear-gradient(135deg, #D32F2F, #b91c1c);
+    --gradient-warning: linear-gradient(135deg, #FFC107, #F57C00);
+    
+    /* Sombras */
+    --shadow-soft: 0 2px 8px rgba(0, 90, 156, 0.1);
+    --shadow-medium: 0 4px 16px rgba(0, 90, 156, 0.15);
+    --shadow-strong: 0 8px 32px rgba(0, 90, 156, 0.2);
+    
+    /* Estados de hover */
+    --hover-primary: #0D47A1;
+    --hover-secondary: #1976D2;
+    --hover-success: #388E3C;
+    --hover-error: #B71C1C;
+    --hover-warning: #FF8F00;
+    
+    /* Fondos de secciones */
+    --bg-sidebar: linear-gradient(180deg, #005A9C 0%, #1E88E5 100%);
+    --bg-header: linear-gradient(180deg, #005A9C 0%, #1E88E5 100%);
+    --bg-card: #ffffff;
+    --bg-card-hover: #f8fafc;
+    --bg-main: #F5F5F5;
+    
+    /* Bordes */
+    --border-radius-sm: 4px;
+    --border-radius-md: 8px;
+    --border-radius-lg: 12px;
+    --border-radius-xl: 16px;
+    
+    /* Espaciado */
+    --space-xs: 0.25rem;
+    --space-sm: 0.5rem;
+    --space-md: 1rem;
+    --space-lg: 1.5rem;
+    --space-xl: 2rem;
+    --space-2xl: 3rem;
+    
+    /* Tipografía */
+    --font-size-xs: 0.75rem;
+    --font-size-sm: 0.875rem;
+    --font-size-base: 1rem;
+    --font-size-lg: 1.125rem;
+    --font-size-xl: 1.25rem;
+    --font-size-2xl: 1.5rem;
+    --font-size-3xl: 2rem;
+}

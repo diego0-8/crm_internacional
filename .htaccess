@@ -1,0 +1,12 @@
+# Deshabilitar todas las reglas de reescritura para debugging
+# RewriteEngine Off
+
+# O usar reglas más simples
+RewriteEngine On
+
+# Solo redirigir si el archivo realmente no existe
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^(.*)$ index.php [QSA,L]
+
+

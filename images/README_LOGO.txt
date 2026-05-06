@@ -1,0 +1,5 @@
+"Para crear un logo PNG personalizado, puedes:"  
+"1. Reemplazar logo.svg con tu logo PNG personalizado"  
+"2. El logo se adaptar  autom ticamente al sidebar de 280px de ancho"  
+"3. Tama¤o recomendado: 240x80 p¡xeles para mejor visualizaci¢n"  
+"4. Formatos soportados: PNG, JPG, SVG" 

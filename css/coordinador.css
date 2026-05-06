@@ -1,0 +1,814 @@
+/**
+ * Dashboard del coordinador — mismo lenguaje visual que el área principal
+ * del asesor (cards claras, variables del CRM).
+ * Usar junto a dashboard.css + asesor.css; enlazar después de ellos.
+ */
+
+.coordinador-dashboard .section-header .header-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 12px;
+}
+
+.coordinador-dashboard .users-section {
+    margin-bottom: 24px;
+    /* dashboard.css usa height:100% en .users-section y estira cada bloque en vertical */
+    height: auto;
+    min-height: 0;
+}
+
+.coordinador-dashboard .users-section:last-child {
+    margin-bottom: 0;
+}
+
+/* Resumen de tickets: menos aire vertical dentro del bloque */
+.coordinador-dashboard .users-section:has(.tickets-summary) {
+    padding: 14px 18px;
+}
+
+.coordinador-dashboard .users-section:has(.tickets-summary) .section-header {
+    margin-bottom: 10px;
+}
+
+.coordinador-dashboard .users-section:has(.performance-metrics) {
+    padding: 14px 18px;
+}
+
+.coordinador-dashboard .users-section:has(.performance-metrics) .section-header {
+    margin-bottom: 10px;
+}
+
+.coordinador-dashboard .asesor-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-soft);
+    border-left: 4px solid var(--secondary-blue);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.coordinador-dashboard .asesor-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-medium);
+}
+
+.coordinador-dashboard .asesor-name {
+    color: var(--dark-gray);
+}
+
+.coordinador-dashboard .asesor-email {
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .metric-item-value {
+    color: var(--secondary-blue);
+}
+
+.coordinador-dashboard .metric-item-label {
+    color: var(--text-muted);
+}
+
+/* Solo el panel de detalle bajo la tarjeta del dashboard (no .asesor-info .asesor-details de Tareas) */
+.coordinador-dashboard .asesor-card > .asesor-details {
+    background: var(--light-gray);
+    border: 1px solid var(--border-color);
+}
+
+.coordinador-dashboard .detail-label {
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .detail-value {
+    color: var(--dark-gray);
+}
+
+.coordinador-dashboard .tickets-summary {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+.coordinador-dashboard .ticket-metric {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    text-align: left;
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.4rem 0.65rem;
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    border-left: 4px solid var(--secondary-blue);
+    box-shadow: var(--shadow-soft);
+}
+
+.coordinador-dashboard .ticket-metric .metric-label {
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.coordinador-dashboard .ticket-metric .metric-value {
+    color: var(--primary-blue);
+    white-space: nowrap;
+    line-height: 1.2;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.coordinador-dashboard .ticket-metric .metric-value.tickets-abiertos {
+    color: var(--error-red);
+}
+
+.coordinador-dashboard .ticket-metric .metric-value.tickets-procesando {
+    color: var(--warning-yellow);
+}
+
+.coordinador-dashboard .ticket-metric .metric-value.tickets-terminados {
+    color: var(--success-green);
+}
+
+.coordinador-dashboard .ticket-metric .metric-value.tickets-urgentes {
+    color: #b71c1c;
+}
+
+.coordinador-dashboard .performance-metrics {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+.coordinador-dashboard .performance-card {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.4rem 0.65rem;
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    border-left: 4px solid var(--secondary-blue);
+    box-shadow: var(--shadow-soft);
+}
+
+.coordinador-dashboard .performance-card:hover {
+    box-shadow: var(--shadow-medium);
+}
+
+.coordinador-dashboard .performance-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: var(--border-radius-md, 8px);
+    font-size: 0.85rem;
+    background: rgba(30, 136, 229, 0.12);
+    color: var(--secondary-blue);
+}
+
+.coordinador-dashboard .performance-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.15rem 0.45rem;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.coordinador-dashboard .performance-title {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.coordinador-dashboard .performance-value {
+    color: var(--primary-blue);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.coordinador-dashboard .performance-subtitle {
+    grid-column: 1 / -1;
+    color: var(--text-light);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.coordinador-dashboard .users-table td {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.coordinador-dashboard .stat-change:not(.positive):not(.negative):not(.warning) {
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .stat-change:not(.positive):not(.negative):not(.warning) i {
+    color: var(--secondary-blue);
+}
+
+.coordinador-dashboard .stat-change.warning,
+.coordinador-dashboard .stat-change.warning i {
+    color: var(--warning-yellow);
+}
+
+/* ---------- Vista Gestión de Tareas (misma paleta que dashboard coordinador) ---------- */
+
+.coordinador-dashboard .stat-card:has(.stat-icon) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    gap: 1.25rem;
+}
+
+.coordinador-dashboard .stat-card:has(.stat-icon) .stat-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.coordinador-dashboard .stat-card:has(.stat-icon) .stat-content h3 {
+    margin: 0 0 0.25rem 0;
+    font-size: var(--font-size-2xl);
+    font-weight: 700;
+    color: var(--primary-blue);
+    line-height: 1.15;
+}
+
+.coordinador-dashboard .stat-card:has(.stat-icon) .stat-content p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .card {
+    background: var(--bg-card);
+    border-radius: var(--border-radius-xl);
+    padding: var(--space-lg);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-soft);
+    margin-bottom: var(--space-xl);
+}
+
+.coordinador-dashboard .card:last-of-type {
+    margin-bottom: 0;
+}
+
+.coordinador-dashboard .card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--border-color);
+}
+
+.coordinador-dashboard .card-header h3 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--dark-gray);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.coordinador-dashboard .card-header h3 i {
+    color: var(--secondary-blue);
+}
+
+.coordinador-dashboard .card-content {
+    color: var(--dark-gray);
+}
+
+.coordinador-dashboard #clientesContainer {
+    position: relative;
+}
+
+/* Asignación masiva: tema claro (evita .form-control oscuro heredado del modal en dashboard.css) */
+.coordinador-dashboard .asignacion-masiva {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    padding: var(--space-md);
+    background: var(--light-gray);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    border-left: 4px solid var(--secondary-blue);
+}
+
+.coordinador-dashboard .asignacion-masiva .form-group {
+    margin-bottom: 0;
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.coordinador-dashboard .asignacion-masiva .form-group label {
+    display: block;
+    color: var(--dark-gray);
+    margin-bottom: 0;
+    font-weight: 600;
+    font-size: var(--font-size-sm);
+}
+
+.coordinador-dashboard .asignacion-masiva .form-control {
+    width: 100%;
+    max-width: 100%;
+    padding: 0.65rem 0.85rem;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    color: var(--dark-gray);
+    font-size: var(--font-size-sm);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.coordinador-dashboard .asignacion-masiva .form-control:focus {
+    outline: none;
+    border-color: var(--secondary-blue);
+    box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.18);
+}
+
+.coordinador-dashboard .asignacion-masiva .form-control::placeholder {
+    color: var(--text-light);
+}
+
+.coordinador-dashboard .asignacion-masiva textarea.form-control {
+    resize: vertical;
+    min-height: 4.5rem;
+    max-width: 100%;
+}
+
+.coordinador-dashboard .asignacion-masiva .form-control-narrow {
+    max-width: 14rem;
+}
+
+.coordinador-dashboard .asignacion-masiva-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+    padding-top: var(--space-xs);
+}
+
+.coordinador-dashboard .asignacion-masiva-actions .btn {
+    margin: 0;
+}
+
+.coordinador-dashboard .asesores-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.coordinador-dashboard .asesor-card .asesor-info {
+    display: flex;
+    flex-direction: row;
+    align-items: flex-start;
+    gap: var(--space-md);
+    flex: 1;
+    min-width: 0;
+}
+
+.coordinador-dashboard .asesor-card .asesor-avatar {
+    flex-shrink: 0;
+    width: 2.75rem;
+    height: 2.75rem;
+    border-radius: var(--border-radius-lg);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(30, 136, 229, 0.12);
+    color: var(--secondary-blue);
+    font-size: 1.1rem;
+}
+
+.coordinador-dashboard .asesor-card .asesor-info .asesor-details {
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+}
+
+.coordinador-dashboard .asesor-card .asesor-info .asesor-details h4 {
+    margin: 0 0 0.35rem 0;
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.coordinador-dashboard .asesor-card .asesor-info .asesor-details p {
+    margin: 0 0 0.35rem 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .asesor-stats {
+    margin-top: var(--space-xs);
+}
+
+.coordinador-dashboard .asesor-stats .stat-item {
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .asesor-stats .stat-item i {
+    color: var(--secondary-blue);
+    margin-right: 0.35rem;
+}
+
+/* Lista de asesores en Tareas (no las tarjetas métricas del dashboard) */
+.coordinador-dashboard .asesor-card:has(.asesor-info) {
+    display: flex;
+    flex-direction: row;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    margin-bottom: 0;
+}
+
+.coordinador-dashboard .asesor-card:has(.asesor-info) .asesor-actions {
+    flex-shrink: 0;
+}
+
+.coordinador-dashboard .coordinador-empty-inline {
+    color: var(--text-muted);
+    text-align: center;
+    padding: var(--space-xl);
+    margin: 0;
+}
+
+.coordinador-dashboard .clientes-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.coordinador-dashboard .cliente-card {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    padding: var(--space-lg);
+    box-shadow: var(--shadow-soft);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    position: relative;
+}
+
+.coordinador-dashboard .cliente-card:hover {
+    box-shadow: var(--shadow-medium);
+    transform: translateY(-2px);
+}
+
+.coordinador-dashboard .cliente-card.assigned {
+    border-left: 4px solid var(--success-green);
+    background: linear-gradient(135deg, rgba(76, 175, 80, 0.08) 0%, var(--bg-card) 100%);
+}
+
+.coordinador-dashboard .cliente-card-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-md);
+    gap: var(--space-sm);
+}
+
+.coordinador-dashboard .cliente-card-info h4 {
+    margin: 0 0 var(--space-sm) 0;
+    color: var(--dark-gray);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+}
+
+.coordinador-dashboard .cliente-card-info p {
+    margin: 0.25rem 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.coordinador-dashboard .cliente-card-info p i {
+    width: 16px;
+    color: var(--text-light);
+    margin-right: var(--space-sm);
+}
+
+.coordinador-dashboard .cliente-status {
+    display: inline-flex;
+    align-items: center;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: var(--font-size-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.coordinador-dashboard .cliente-status.status-nuevo {
+    background-color: rgba(255, 193, 7, 0.25);
+    color: #b8860b;
+}
+
+.coordinador-dashboard .cliente-status.status-contactado {
+    background-color: rgba(30, 136, 229, 0.15);
+    color: var(--primary-blue);
+}
+
+.coordinador-dashboard .cliente-status.status-interesado {
+    background-color: rgba(76, 175, 80, 0.2);
+    color: #2e7d32;
+}
+
+.coordinador-dashboard .cliente-status.status-prospecto {
+    background-color: rgba(156, 39, 176, 0.15);
+    color: #7b1fa2;
+}
+
+.coordinador-dashboard .cliente-status.status-cliente {
+    background-color: rgba(76, 175, 80, 0.22);
+    color: #1b5e20;
+}
+
+.coordinador-dashboard .cliente-status.status-inactivo {
+    background-color: rgba(211, 47, 47, 0.15);
+    color: var(--error-red);
+}
+
+.coordinador-dashboard .cliente-card-actions {
+    margin-top: var(--space-md);
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.coordinador-dashboard .cliente-assigned-info {
+    color: var(--success-green);
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+}
+
+.coordinador-dashboard .pagination-container {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--border-color);
+}
+
+.coordinador-dashboard .pagination-info {
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+}
+
+.coordinador-dashboard .pagination-controls {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.coordinador-dashboard .page-numbers {
+    display: flex;
+    gap: 0.25rem;
+    margin: 0 var(--space-md);
+    flex-wrap: wrap;
+}
+
+.coordinador-dashboard .page-number {
+    min-width: 36px;
+    height: 36px;
+    padding: 0.5rem 0.75rem;
+    border: 1px solid var(--border-color);
+    background: var(--bg-card);
+    color: var(--dark-gray);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    font-size: var(--font-size-sm);
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.coordinador-dashboard .page-number:hover:not(.disabled):not(.active) {
+    background: var(--bg-card-hover);
+    border-color: var(--secondary-blue);
+}
+
+.coordinador-dashboard .page-number.active {
+    background: var(--gradient-primary);
+    color: var(--white);
+    border-color: var(--primary-blue);
+}
+
+.coordinador-dashboard .page-number.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.coordinador-dashboard .page-ellipsis {
+    display: flex;
+    align-items: center;
+    padding: 0 0.35rem;
+    color: var(--text-light);
+    font-size: var(--font-size-sm);
+}
+
+.coordinador-dashboard .search-bar {
+    position: relative;
+    margin-bottom: var(--space-lg);
+}
+
+.coordinador-dashboard .search-bar input {
+    width: 100%;
+    padding: 0.75rem 1rem 0.75rem 3rem;
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    font-size: var(--font-size-sm);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-sizing: border-box;
+}
+
+.coordinador-dashboard .search-bar input:focus {
+    outline: none;
+    border-color: var(--secondary-blue);
+    box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.18);
+}
+
+.coordinador-dashboard .search-bar i {
+    position: absolute;
+    left: 1rem;
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--text-light);
+}
+
+.coordinador-dashboard .loading-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--border-radius-lg);
+    z-index: 10;
+}
+
+.coordinador-dashboard .loading-spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid var(--light-gray);
+    border-top: 4px solid var(--secondary-blue);
+    border-radius: 50%;
+    animation: coordinador-tareas-spin 1s linear infinite;
+}
+
+@keyframes coordinador-tareas-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.coordinador-dashboard .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: var(--space-2xl) var(--space-md);
+    color: var(--text-muted);
+}
+
+.coordinador-dashboard .empty-state i {
+    font-size: 3rem;
+    color: var(--border-color);
+    margin-bottom: var(--space-md);
+}
+
+.coordinador-dashboard .empty-state h4 {
+    margin: 0 0 var(--space-sm) 0;
+    color: var(--dark-gray);
+}
+
+.coordinador-dashboard .empty-state p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+}
+
+@media (max-width: 768px) {
+    .coordinador-dashboard .clientes-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .coordinador-dashboard .pagination-container {
+        flex-direction: column;
+        gap: var(--space-md);
+        align-items: stretch;
+    }
+
+    .coordinador-dashboard .pagination-controls {
+        justify-content: center;
+    }
+
+    .coordinador-dashboard .page-numbers {
+        margin: 0;
+    }
+}
+
+/* Modales de asignación: tema claro CRM (están fuera de .content-area) */
+.modal.coordinador-modal {
+    background-color: rgba(0, 90, 156, 0.35);
+    backdrop-filter: blur(4px);
+}
+
+.modal.coordinador-modal .modal-content {
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    box-shadow: var(--shadow-strong);
+}
+
+.modal.coordinador-modal .modal-header {
+    border-bottom: 1px solid var(--border-color);
+}
+
+.modal.coordinador-modal .modal-header h3 {
+    margin: 0;
+    font-size: var(--font-size-xl);
+    font-weight: 700;
+    color: var(--dark-gray);
+}
+
+.modal.coordinador-modal .close {
+    color: var(--text-muted);
+}
+
+.modal.coordinador-modal .close:hover {
+    color: var(--dark-gray);
+}
+
+.modal.coordinador-modal .modal-body {
+    color: var(--dark-gray);
+}
+
+.modal.coordinador-modal .modal-footer {
+    border-top: 1px solid var(--border-color);
+}
+
+.modal.coordinador-modal .cliente-info-card {
+    background: var(--light-gray);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    border-left: 4px solid var(--secondary-blue);
+}
+
+.modal.coordinador-modal .cliente-header h4 {
+    color: var(--dark-gray);
+}
+
+.modal.coordinador-modal .cliente-details {
+    color: var(--text-muted);
+}
+
+.modal.coordinador-modal .clientes-seleccionados {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    background: var(--light-gray);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color);
+    font-size: var(--font-size-sm);
+    color: var(--dark-gray);
+}

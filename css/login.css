@@ -1,0 +1,501 @@
+/* Estilos para la página de login */
+/* Importar variables globales */
+@import url('variables.css');
+
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-image: url('../img/Frame.png');
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+    position: relative;
+}
+
+/* Overlay para mejorar legibilidad del contenido */
+body::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.3);
+    z-index: -1;
+}
+
+.login-container {
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    padding: 40px;
+    width: 100%;
+    max-width: 400px;
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.login-header img {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    max-width: 100%;
+    height: auto;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header h1 {
+    color: #ffffff;
+    font-size: 2.5rem;
+    font-weight: 700;
+    margin-bottom: 10px;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+}
+
+.login-header p {
+    color: #ffffff;
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.form-group {
+    margin-bottom: 25px;
+}
+
+.form-group label {
+    display: block;
+    color: #ffffff;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.input-group {
+    position: relative;
+}
+
+.input-group i {
+    position: absolute;
+    left: 15px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: rgba(255, 255, 255, 0.7);
+    font-size: 1.1rem;
+}
+
+.password-toggle {
+    left: auto !important;
+    right: 15px !important;
+    cursor: pointer;
+    transition: color 0.3s ease;
+}
+
+.password-toggle:hover {
+    color: rgba(255, 255, 255, 0.9);
+}
+
+.form-control {
+    width: 100%;
+    padding: 15px 15px 15px 45px;
+    border: none;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    color: white;
+    font-size: 1rem;
+    transition: all 0.3s ease;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.form-control::placeholder {
+    color: rgba(255, 255, 255, 0.6);
+}
+
+.form-control:focus {
+    outline: none;
+    background: rgba(255, 255, 255, 0.2);
+    border-color: #1E88E5;
+    box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.3);
+}
+
+.btn-login {
+    width: 100%;
+    padding: 15px;
+    background: linear-gradient(135deg, #005A9C, #1E88E5);
+    color: #ffffff;
+    border: none;
+    border-radius: 8px;
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.btn-login:hover {
+    background: #0D47A1;
+    transform: translateY(-2px);
+    box-shadow: 0 5px 15px rgba(30, 136, 229, 0.4);
+}
+
+.error-message {
+    background: rgba(211, 47, 47, 0.2);
+    color: #fca5a5;
+    padding: 12px;
+    border-radius: 8px;
+    margin-bottom: 20px;
+    border: 1px solid rgba(211, 47, 47, 0.3);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+/* Estilos específicos para diferentes tipos de error */
+.error-message.error-user {
+    background: rgba(59, 130, 246, 0.2);
+    color: #93c5fd;
+    border-color: rgba(59, 130, 246, 0.3);
+}
+
+.error-message.error-password {
+    background: rgba(245, 158, 11, 0.2);
+    color: #fcd34d;
+    border-color: rgba(245, 158, 11, 0.3);
+}
+
+.error-message.error-disabled {
+    background: rgba(107, 114, 128, 0.2);
+    color: #d1d5db;
+    border-color: rgba(107, 114, 128, 0.3);
+}
+
+/* Animación para los mensajes de error */
+.error-message {
+    animation: slideInDown 0.5s ease-out;
+}
+
+@keyframes slideInDown {
+    from {
+        opacity: 0;
+        transform: translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 30px;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.login-footer a {
+    color: #64B5F6;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.login-footer a:hover {
+    color: #90CAF9;
+    text-decoration: underline;
+}
+
+.login-footer a:hover {
+    text-decoration: underline;
+}
+
+/* Animaciones */
+.login-container {
+    opacity: 0;
+    transform: translateY(30px);
+    transition: all 0.6s ease;
+}
+
+.login-container.loaded {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+/* Responsive Design - Background Image Adaptations */
+
+/* Extra Large Desktops (1441px and up) */
+@media (min-width: 1441px) {
+    body {
+        background-attachment: fixed;
+    }
+
+    .login-container {
+        max-width: 450px;
+        padding: 50px;
+    }
+
+    .login-header h1 {
+        font-size: 3rem;
+    }
+}
+
+/* Large Desktops (1025px to 1440px) */
+@media (min-width: 1025px) and (max-width: 1440px) {
+    body {
+        background-attachment: fixed;
+    }
+
+    .login-container {
+        max-width: 420px;
+        padding: 45px;
+    }
+
+    .login-header h1 {
+        font-size: 2.7rem;
+    }
+}
+
+/* Tablets Landscape (769px to 1024px) */
+@media (min-width: 769px) and (max-width: 1024px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        padding: 15px;
+    }
+
+    .login-container {
+        max-width: 380px;
+        padding: 35px;
+    }
+
+    .login-header h1 {
+        font-size: 2.3rem;
+    }
+
+    .login-header p {
+        font-size: 1rem;
+    }
+}
+
+/* Tablets Portrait (481px to 768px) */
+@media (min-width: 481px) and (max-width: 768px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        padding: 10px;
+    }
+
+    .login-container {
+        max-width: 90%;
+        padding: 30px;
+    }
+
+    .login-header h1 {
+        font-size: 2rem;
+    }
+
+    .login-header p {
+        font-size: 0.95rem;
+    }
+
+    .form-control {
+        padding: 14px 15px 14px 45px;
+    }
+
+    .btn-login {
+        padding: 14px;
+        font-size: 1rem;
+    }
+}
+
+/* Mobile Large (361px to 480px) */
+@media (min-width: 361px) and (max-width: 480px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        padding: 8px;
+    }
+
+    .login-container {
+        max-width: 95%;
+        padding: 25px;
+    }
+
+    .login-header h1 {
+        font-size: 1.8rem;
+    }
+
+    .login-header p {
+        font-size: 0.9rem;
+    }
+
+    .form-control {
+        padding: 12px 15px 12px 40px;
+        font-size: 0.95rem;
+    }
+
+    .input-group i {
+        left: 12px;
+        font-size: 1rem;
+    }
+
+    .password-toggle {
+        right: 12px;
+    }
+
+    .btn-login {
+        padding: 12px;
+        font-size: 0.95rem;
+    }
+}
+
+/* Mobile Small (320px to 360px) */
+@media (max-width: 360px) {
+    body {
+        background-attachment: scroll;
+        background-size: cover;
+        padding: 5px;
+    }
+
+    .login-container {
+        max-width: 98%;
+        padding: 20px;
+    }
+
+    .login-header h1 {
+        font-size: 1.6rem;
+    }
+
+    .login-header p {
+        font-size: 0.85rem;
+    }
+
+    .form-group {
+        margin-bottom: 20px;
+    }
+
+    .form-control {
+        padding: 10px 12px 10px 35px;
+        font-size: 0.9rem;
+    }
+
+    .input-group i {
+        left: 10px;
+        font-size: 0.9rem;
+    }
+
+    .password-toggle {
+        right: 10px;
+    }
+
+    .btn-login {
+        padding: 10px;
+        font-size: 0.9rem;
+    }
+
+    .error-message {
+        padding: 10px;
+        font-size: 0.85rem;
+    }
+}
+
+/* High DPI Displays */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+    body {
+        background-attachment: scroll;
+    }
+}
+
+/* Orientation Changes */
+@media (orientation: landscape) and (max-height: 500px) {
+    body {
+        padding: 5px;
+    }
+
+    .login-container {
+        padding: 15px;
+    }
+
+    .login-header h1 {
+        font-size: 1.4rem;
+        margin-bottom: 5px;
+    }
+
+    .login-header p {
+        font-size: 0.8rem;
+    }
+
+    .form-control {
+        padding: 8px 10px 8px 30px;
+    }
+
+    .btn-login {
+        padding: 8px;
+    }
+}
+
+/* Touch Devices */
+@media (hover: none) and (pointer: coarse) {
+    .btn-login:hover {
+        transform: none;
+    }
+
+    .password-toggle:hover {
+        color: rgba(255, 255, 255, 0.9);
+    }
+}
+
+/* Reduced Motion Preferences */
+@media (prefers-reduced-motion: reduce) {
+    body {
+        background-attachment: scroll;
+    }
+
+    .login-container,
+    .btn-login,
+    .error-message {
+        transition: none;
+    }
+
+    .login-container {
+        opacity: 1;
+        transform: none;
+    }
+}
+
+/* Print Styles */
+@media print {
+    body {
+        background-image: none;
+        background: white;
+    }
+
+    .login-container {
+        background: white;
+        color: black;
+        border: 1px solid #ccc;
+        box-shadow: none;
+    }
+
+    .login-header h1,
+    .login-header p,
+    .form-group label {
+        color: black;
+    }
+
+    .form-control {
+        background: white;
+        color: black;
+        border: 1px solid #ccc;
+    }
+}

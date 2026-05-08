@@ -139,6 +139,84 @@ try {
         $ticket['predio'] = null;
     }
 
+    $ticket['cliente_telefonos'] = [];
+    $ticket['cliente_emails_list'] = [];
+    $ticket['referencias_personales'] = [];
+
+    try {
+        $stmt = $db->prepare("
+            SELECT numero, numero_normalizado, tipo, dnc_litigator, orden
+            FROM cliente_telefonos
+            WHERE cliente_cedula = ?
+            ORDER BY orden ASC, id ASC
+        ");
+        $stmt->execute([$ticket['cliente_cedula']]);
+        $ticket['cliente_telefonos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $db->prepare("
+            SELECT email, orden
+            FROM cliente_emails
+            WHERE cliente_cedula = ?
+            ORDER BY orden ASC, id ASC
+        ");
+        $stmt->execute([$ticket['cliente_cedula']]);
+        $ticket['cliente_emails_list'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $stmt = $db->prepare("
+            SELECT id, nombre, apellido, possible_type, age, orden
+            FROM referencias_personales
+            WHERE cliente_cedula = ?
+            ORDER BY orden ASC, id ASC
+        ");
+        $stmt->execute([$ticket['cliente_cedula']]);
+        $refs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($refs)) {
+            $ids = array_map('intval', array_column($refs, 'id'));
+            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+
+            $phonesByRef = [];
+            $stmt = $db->prepare("
+                SELECT referencia_id, numero, numero_normalizado, tipo, dnc_litigator, orden
+                FROM referencia_telefonos
+                WHERE referencia_id IN ($placeholders)
+                ORDER BY referencia_id ASC, orden ASC, id ASC
+            ");
+            $stmt->execute($ids);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $rid = (int) $row['referencia_id'];
+                unset($row['referencia_id']);
+                $phonesByRef[$rid][] = $row;
+            }
+
+            $emailsByRef = [];
+            $stmt = $db->prepare("
+                SELECT referencia_id, email, orden
+                FROM referencia_emails
+                WHERE referencia_id IN ($placeholders)
+                ORDER BY referencia_id ASC, orden ASC, id ASC
+            ");
+            $stmt->execute($ids);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $rid = (int) $row['referencia_id'];
+                unset($row['referencia_id']);
+                $emailsByRef[$rid][] = $row;
+            }
+
+            foreach ($refs as &$r) {
+                $rid = (int) $r['id'];
+                $r['telefonos'] = $phonesByRef[$rid] ?? [];
+                $r['emails'] = $emailsByRef[$rid] ?? [];
+            }
+            unset($r);
+            $ticket['referencias_personales'] = $refs;
+        }
+    } catch (PDOException $e) {
+        $ticket['cliente_telefonos'] = [];
+        $ticket['cliente_emails_list'] = [];
+        $ticket['referencias_personales'] = [];
+    }
+
     echo json_encode([
         'success' => true,
         'data' => $ticket,

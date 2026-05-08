@@ -122,19 +122,28 @@ $message = getMessage();
                                     <dt class="detalle-label">Estado vital</dt>
                                     <dd class="detalle-valor" id="detClienteVital">—</dd>
                                 </div>
-                                <div class="detalle-fila">
-                                    <dt class="detalle-label">Teléfono</dt>
-                                    <dd class="detalle-valor" id="detClienteTelefono">—</dd>
+                                <div class="detalle-fila detalle-fila-multilinea">
+                                    <dt class="detalle-label">Teléfonos</dt>
+                                    <dd class="detalle-valor detalle-valor-flush">
+                                        <ul class="detalle-lista-inline" id="detClienteTelefonosLista"></ul>
+                                    </dd>
                                 </div>
-                                <div class="detalle-fila">
-                                    <dt class="detalle-label">Email</dt>
-                                    <dd class="detalle-valor" id="detClienteEmail">—</dd>
+                                <div class="detalle-fila detalle-fila-multilinea">
+                                    <dt class="detalle-label">Emails</dt>
+                                    <dd class="detalle-valor detalle-valor-flush">
+                                        <ul class="detalle-lista-emails" id="detClienteEmailsLista"></ul>
+                                    </dd>
                                 </div>
                                 <div class="detalle-fila detalle-fila-multilinea">
                                     <dt class="detalle-label">Dirección postal</dt>
                                     <dd class="detalle-valor" id="detClienteMailing">—</dd>
                                 </div>
                             </dl>
+                            <div class="detalle-acciones-cliente">
+                                <button type="button" class="btn btn-secondary btn-compact" id="btnAbrirReferencias">
+                                    <i class="fas fa-address-book"></i> Referencias
+                                </button>
+                            </div>
                         </section>
 
                         <section class="detalle-grupo">
@@ -322,6 +331,21 @@ $message = getMessage();
         </div>
     </div>
 
+    <div id="modalReferencias" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalReferenciasTitulo" aria-hidden="true" style="display: none;">
+        <div class="modal-content modal-referencias-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalReferenciasTitulo">Referencias personales</h3>
+                <button type="button" class="close" onclick="cerrarModalReferencias()" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body" id="referenciasModalBody">
+                <p class="text-muted">Cargando…</p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalReferencias()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const TICKET_ID = <?php echo $ticketId; ?>;
 
@@ -336,7 +360,13 @@ $message = getMessage();
             var mount = document.getElementById('webrtc-softphone');
             if (!line || !banner || !mount) return;
 
-            var tel = (ticket && ticket.cliente_telefono) ? String(ticket.cliente_telefono) : '';
+            var tel = '';
+            if (ticket && ticket.cliente_telefono) {
+                tel = String(ticket.cliente_telefono);
+            } else if (ticket && ticket.cliente_telefonos && ticket.cliente_telefonos.length > 0 &&
+                ticket.cliente_telefonos[0].numero) {
+                tel = String(ticket.cliente_telefonos[0].numero);
+            }
             var nombre = (ticket && ticket.cliente_nombre) ? String(ticket.cliente_nombre) : '';
             line.textContent = tel ? (nombre + ' · Tel. ' + tel) : (nombre ? nombre + ' · Sin teléfono en ficha' : 'Cliente sin datos');
 
@@ -469,6 +499,24 @@ $message = getMessage();
 
                 await cargarHistorialNotas(TICKET_ID);
                 await cargarArchivosExistentes(TICKET_ID);
+
+                window.__ticketActual = ticket;
+                var btnRef = document.getElementById('btnAbrirReferencias');
+                if (btnRef) {
+                    btnRef.addEventListener('click', function() {
+                        abrirModalReferencias();
+                    });
+                }
+                var modalRef = document.getElementById('modalReferencias');
+                if (modalRef) {
+                    modalRef.addEventListener('click', function(ev) {
+                        if (ev.target === modalRef) cerrarModalReferencias();
+                    });
+                }
+                document.addEventListener('keydown', function(ev) {
+                    if (ev.key === 'Escape') cerrarModalReferencias();
+                });
+
                 await initSoftphoneSidebar(ticket);
             } catch (e) {
                 console.error(e);
@@ -599,7 +647,11 @@ $message = getMessage();
 
             var meta = [];
             if (ticket.cliente_nombre)   meta.push(escapeHtml(ticket.cliente_nombre));
-            if (ticket.cliente_telefono) meta.push('Tel. ' + escapeHtml(ticket.cliente_telefono));
+            var telMeta = ticket.cliente_telefono;
+            if (!telMeta && ticket.cliente_telefonos && ticket.cliente_telefonos.length > 0) {
+                telMeta = ticket.cliente_telefonos[0].numero;
+            }
+            if (telMeta) meta.push('Tel. ' + escapeHtml(String(telMeta)));
             if (ticket.categoria_nombre) meta.push(escapeHtml(ticket.categoria_nombre));
             if (ticket.fecha_creacion)   meta.push('Abierto: ' + new Date(ticket.fecha_creacion).toLocaleString());
             document.getElementById('ticketProMeta').innerHTML = meta.join(' · ');
@@ -654,6 +706,137 @@ $message = getMessage();
             el.classList.toggle('vacio', !hasValue);
         }
 
+        function tipoTelefonoLabel(tipo) {
+            var map = { landline: 'Landline', wireless: 'Wireless', voip: 'VoIP', other: 'Otro' };
+            return map[String(tipo || '').toLowerCase()] || (tipo ? String(tipo) : '—');
+        }
+
+        function renderClienteTelefonosYEmails(ticket) {
+            var ulTel = document.getElementById('detClienteTelefonosLista');
+            var ulMail = document.getElementById('detClienteEmailsLista');
+            if (ulTel) ulTel.innerHTML = '';
+            if (ulMail) ulMail.innerHTML = '';
+
+            var phones = ticket.cliente_telefonos || [];
+            if ((!phones || phones.length === 0) && ticket.cliente_telefono) {
+                phones = [{ numero: ticket.cliente_telefono, tipo: 'other', dnc_litigator: null, orden: 1 }];
+            }
+
+            if (ulTel) {
+                if (!phones || phones.length === 0) {
+                    ulTel.innerHTML = '<li class="detalle-sublinha vacio">Sin teléfonos registrados</li>';
+                } else {
+                    phones.forEach(function(p) {
+                        var orden = parseInt(p.orden, 10) || 1;
+                        var tipoLbl = tipoTelefonoLabel(p.tipo);
+                        var dnc = p.dnc_litigator === 'Y' ? 'Y' : (p.dnc_litigator === 'N' ? 'N' : '—');
+                        var li = document.createElement('li');
+                        li.className = 'detalle-phone-row';
+                        li.innerHTML =
+                            '<span class="det-phone-slot">Phone ' + orden + '</span>' +
+                            '<span class="det-phone-num">' + escapeHtml(String(p.numero || '').trim()) + '</span>' +
+                            '<span class="det-phone-meta">' +
+                            '<span class="det-phone-meta-label">Phone ' + orden + ': Type</span> · ' + escapeHtml(tipoLbl) +
+                            ' · <span class="det-phone-meta-label">Phone ' + orden + ': DNC/Litigator</span> · ' + escapeHtml(dnc) +
+                            '</span>';
+                        ulTel.appendChild(li);
+                    });
+                }
+            }
+
+            var mails = ticket.cliente_emails_list || [];
+            if (ulMail) {
+                if ((!mails || mails.length === 0) && ticket.cliente_email) {
+                    mails = [{ email: ticket.cliente_email, orden: 1 }];
+                }
+                if (!mails || mails.length === 0) {
+                    ulMail.innerHTML = '<li class="detalle-sublinha vacio">Sin emails registrados</li>';
+                } else {
+                    mails.forEach(function(m) {
+                        var orden = parseInt(m.orden, 10) || 1;
+                        var li = document.createElement('li');
+                        li.className = 'detalle-email-row';
+                        li.innerHTML =
+                            '<span class="det-email-slot">Email ' + orden + '</span>' +
+                            '<span class="det-email-val">' + escapeHtml(String(m.email || '').trim()) + '</span>';
+                        ulMail.appendChild(li);
+                    });
+                }
+            }
+        }
+
+        function buildReferenciasHtml(ticket) {
+            var refs = ticket.referencias_personales || [];
+            if (!refs.length) {
+                return '<p class="modal-ref-empty">No hay referencias registradas para este cliente.</p>';
+            }
+            var html = '';
+            refs.forEach(function(ref, idx) {
+                var orden = parseInt(ref.orden, 10) || (idx + 1);
+                var nombre = [ref.nombre, ref.apellido].filter(Boolean).join(' ').trim() || 'Sin nombre';
+                html += '<article class="modal-ref-card">';
+                html += '<h4 class="modal-ref-card-title">RELATIVE ' + orden + ' · ' + escapeHtml(nombre) + '</h4>';
+                var tieneTipo = ref.possible_type && String(ref.possible_type).trim() !== '';
+                var tieneEdad = ref.age !== null && ref.age !== undefined && String(ref.age).trim() !== '';
+                if (tieneTipo || tieneEdad) {
+                    html += '<p class="modal-ref-meta">';
+                    if (tieneTipo) html += '<strong>Tipo:</strong> ' + escapeHtml(String(ref.possible_type));
+                    if (tieneTipo && tieneEdad) html += ' · ';
+                    if (tieneEdad) html += '<strong>Edad:</strong> ' + escapeHtml(String(ref.age));
+                    html += '</p>';
+                }
+
+                var tels = ref.telefonos || [];
+                if (!tels.length) {
+                    html += '<p class="modal-ref-subtle">Sin teléfonos</p>';
+                } else {
+                    tels.forEach(function(p) {
+                        var k = parseInt(p.orden, 10) || 1;
+                        var tipoLbl = tipoTelefonoLabel(p.tipo);
+                        var dnc = p.dnc_litigator === 'Y' ? 'Y' : (p.dnc_litigator === 'N' ? 'N' : '—');
+                        html += '<div class="modal-ref-phone-group">';
+                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Phone ' + k + '</span><span class="ref-csv-v">' +
+                            escapeHtml(String(p.numero || '').trim()) + '</span></div>';
+                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Phone ' + k + ': Type</span><span class="ref-csv-v">' +
+                            escapeHtml(tipoLbl) + '</span></div>';
+                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Phone ' + k + ': DNC/Litigator</span><span class="ref-csv-v">' +
+                            escapeHtml(dnc) + '</span></div>';
+                        html += '</div>';
+                    });
+                }
+
+                var mails = ref.emails || [];
+                if (mails.length) {
+                    html += '<div class="modal-ref-emails"><strong>Correos</strong>';
+                    mails.forEach(function(em) {
+                        var ek = parseInt(em.orden, 10) || 1;
+                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Email ' + ek + '</span><span class="ref-csv-v">' +
+                            escapeHtml(String(em.email || '').trim()) + '</span></div>';
+                    });
+                    html += '</div>';
+                }
+
+                html += '</article>';
+            });
+            return html;
+        }
+
+        function abrirModalReferencias() {
+            var modal = document.getElementById('modalReferencias');
+            var body = document.getElementById('referenciasModalBody');
+            if (!modal || !body) return;
+            body.innerHTML = buildReferenciasHtml(window.__ticketActual || {});
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function cerrarModalReferencias() {
+            var modal = document.getElementById('modalReferencias');
+            if (!modal) return;
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
         function renderDetallesCaso(ticket) {
             // Cliente
             setText('detClienteNombre', ticket.cliente_nombre);
@@ -668,8 +851,7 @@ $message = getMessage();
             else if (deceased === 'N') vital = 'Vivo';
             setText('detClienteVital', vital);
 
-            setText('detClienteTelefono', ticket.cliente_telefono);
-            setText('detClienteEmail', ticket.cliente_email);
+            renderClienteTelefonosYEmails(ticket);
 
             var mail = [
                 ticket.cliente_mailing_street,

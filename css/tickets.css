@@ -437,6 +437,178 @@
     padding: 6px 0;
 }
 
+.detalle-acciones-cliente {
+    margin-top: 12px;
+    padding-top: 12px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.detalle-acciones-cliente .btn-compact {
+    width: 100%;
+    justify-content: center;
+}
+
+.detalle-valor-flush {
+    margin: 0;
+}
+
+.detalle-lista-inline,
+.detalle-lista-emails {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.detalle-phone-row,
+.detalle-email-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: baseline;
+    gap: 6px 10px;
+    padding: 8px 10px;
+    background: #f8fafc;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+    font-size: 0.82rem;
+    line-height: 1.35;
+}
+
+.det-phone-slot,
+.det-email-slot {
+    font-weight: 700;
+    color: #4338ca;
+    font-size: 0.72rem;
+    text-transform: uppercase;
+    letter-spacing: 0.4px;
+}
+
+.det-phone-num {
+    font-weight: 600;
+    color: #0f172a;
+    flex: 1 1 100%;
+}
+
+.det-phone-meta {
+    flex: 1 1 100%;
+    color: #475569;
+    font-size: 0.78rem;
+}
+
+.det-phone-meta-label {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.det-email-val {
+    color: #0f172a;
+    word-break: break-all;
+}
+
+.detalle-sublinha.vacio {
+    color: #94a3b8;
+    font-style: italic;
+    font-size: 0.82rem;
+}
+
+/* Modal referencias (gestionar ticket) */
+.modal-referencias-content {
+    max-width: 720px;
+    max-height: 85vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-referencias-content .modal-body {
+    overflow-y: auto;
+    flex: 1;
+    min-height: 120px;
+}
+
+.modal-ref-empty {
+    color: #64748b;
+    font-style: italic;
+    margin: 0;
+}
+
+.modal-ref-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 14px 16px;
+    margin-bottom: 14px;
+    background: #fafbfc;
+}
+
+.modal-ref-card:last-child {
+    margin-bottom: 0;
+}
+
+.modal-ref-card-title {
+    margin: 0 0 8px 0;
+    font-size: 1rem;
+    color: #1e293b;
+}
+
+.modal-ref-meta {
+    margin: 0 0 12px 0;
+    font-size: 0.85rem;
+    color: #475569;
+}
+
+.modal-ref-subtle {
+    margin: 0 0 10px 0;
+    font-size: 0.82rem;
+    color: #94a3b8;
+    font-style: italic;
+}
+
+.modal-ref-phone-group {
+    margin-bottom: 12px;
+    padding: 10px 12px;
+    background: #fff;
+    border-radius: 8px;
+    border: 1px solid #e2e8f0;
+}
+
+.modal-ref-emails {
+    margin-top: 10px;
+    padding-top: 10px;
+    border-top: 1px dashed #e2e8f0;
+    font-size: 0.85rem;
+}
+
+.modal-ref-emails strong {
+    display: block;
+    margin-bottom: 8px;
+    color: #334155;
+}
+
+.ref-csv-row {
+    display: grid;
+    grid-template-columns: minmax(140px, 42%) 1fr;
+    gap: 8px 12px;
+    font-size: 0.82rem;
+    padding: 6px 0;
+    border-bottom: 1px solid #f1f5f9;
+}
+
+.ref-csv-row:last-child {
+    border-bottom: 0;
+}
+
+.ref-csv-k {
+    font-weight: 600;
+    color: #64748b;
+}
+
+.ref-csv-v {
+    color: #0f172a;
+    word-break: break-word;
+}
+
 /* Bloque de valores monetarios destacados */
 .detalle-montos {
     list-style: none;

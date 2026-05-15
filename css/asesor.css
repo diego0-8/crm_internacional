@@ -462,4 +462,223 @@
     border-bottom: 1px solid var(--border-color);
 }
 
+/* ---------- Vista Estadísticas del asesor (misma paleta que dashboard) ---------- */
+
+.asesor-estadisticas-page .users-section {
+    margin-bottom: 24px;
+    height: auto;
+    min-height: 0;
+}
+
+.asesor-estadisticas-page .users-section:last-child {
+    margin-bottom: 0;
+}
+
+.asesor-estadisticas-page .users-section:has(.tickets-summary),
+.asesor-estadisticas-page .users-section:has(.performance-metrics) {
+    padding: 14px 18px;
+}
+
+.asesor-estadisticas-page .users-section:has(.tickets-summary) .section-header,
+.asesor-estadisticas-page .users-section:has(.performance-metrics) .section-header {
+    margin-bottom: 10px;
+}
+
+.asesor-estadisticas-page .tickets-summary {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+.asesor-estadisticas-page .ticket-metric {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 0.45rem;
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.4rem 0.65rem;
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    border-left: 4px solid var(--secondary-blue);
+    box-shadow: var(--shadow-soft);
+}
+
+.asesor-estadisticas-page .ticket-metric .metric-label {
+    color: var(--text-muted);
+    white-space: nowrap;
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+}
+
+.asesor-estadisticas-page .ticket-metric .metric-value {
+    color: var(--primary-blue);
+    white-space: nowrap;
+    line-height: 1.2;
+    font-size: 1.05rem;
+    font-weight: 700;
+}
+
+.asesor-estadisticas-page .performance-metrics {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 8px 12px;
+    width: 100%;
+    max-width: 100%;
+    box-sizing: border-box;
+    margin-bottom: 0;
+}
+
+.asesor-estadisticas-page .performance-card {
+    display: flex;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0.45rem;
+    flex: 0 1 auto;
+    width: fit-content;
+    max-width: 100%;
+    padding: 0.4rem 0.65rem;
+    box-sizing: border-box;
+    background: var(--bg-card);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    border-left: 4px solid var(--secondary-blue);
+    box-shadow: var(--shadow-soft);
+}
+
+.asesor-estadisticas-page .performance-card:hover {
+    box-shadow: var(--shadow-medium);
+}
+
+.asesor-estadisticas-page .performance-icon {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 1.85rem;
+    height: 1.85rem;
+    border-radius: var(--border-radius-md, 8px);
+    font-size: 0.85rem;
+    background: rgba(30, 136, 229, 0.12);
+    color: var(--secondary-blue);
+}
+
+.asesor-estadisticas-page .performance-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 0.15rem 0.45rem;
+    align-items: baseline;
+    min-width: 0;
+}
+
+.asesor-estadisticas-page .performance-title {
+    color: var(--text-muted);
+    font-size: 0.8125rem;
+    font-weight: 500;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.asesor-estadisticas-page .performance-value {
+    color: var(--primary-blue);
+    font-size: 1.05rem;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+
+.asesor-estadisticas-page .performance-subtitle {
+    grid-column: 1 / -1;
+    color: var(--text-light);
+    font-size: 0.72rem;
+    line-height: 1.2;
+    margin: 0;
+}
+
+.asesor-estadisticas-page .stat-change:not(.positive):not(.negative):not(.warning) {
+    color: var(--text-muted);
+}
+
+.asesor-estadisticas-page .stat-change:not(.positive):not(.negative):not(.warning) i {
+    color: var(--secondary-blue);
+}
+
+.asesor-estadisticas-page .stat-change.warning,
+.asesor-estadisticas-page .stat-change.warning i {
+    color: var(--warning-yellow);
+}
+
+.asesor-estadisticas-page .actividad-timeline {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.asesor-estadisticas-page .actividad-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 15px;
+    padding: 15px;
+    border-bottom: 1px solid var(--border-color);
+    transition: background-color 0.3s ease;
+}
+
+.asesor-estadisticas-page .actividad-item:hover {
+    background-color: var(--light-gray);
+}
+
+.asesor-estadisticas-page .actividad-item:last-child {
+    border-bottom: none;
+}
+
+.asesor-estadisticas-page .actividad-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    background: rgba(30, 136, 229, 0.12);
+    color: var(--secondary-blue);
+}
+
+.asesor-estadisticas-page .actividad-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.asesor-estadisticas-page .actividad-title {
+    font-weight: 600;
+    color: var(--dark-gray);
+    margin-bottom: 5px;
+}
+
+.asesor-estadisticas-page .actividad-description {
+    color: var(--text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 5px;
+}
+
+.asesor-estadisticas-page .actividad-time {
+    color: var(--text-light);
+    font-size: 0.8rem;
+}
+
 /* Responsive */

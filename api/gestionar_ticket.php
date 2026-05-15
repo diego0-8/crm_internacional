@@ -137,11 +137,37 @@ try {
     }
 
     if (!empty($nuevaNota)) {
-        $stmt = $db->prepare("
-            INSERT INTO ticket_notas (ticket_id, asesor_cedula, contenido, proxima_accion, fecha_proxima_accion, fecha_creacion)
-            VALUES (?, ?, ?, ?, ?, NOW())
-        ");
-        $stmt->execute([$ticketId, $asesorCedula, $nuevaNota, $proximaAccion, $fechaProximaAccion ?: null]);
+        $estadoParaNota = $estadoActual;
+        if ($estado !== '' && in_array($estado, TiketeraModel::ESTADOS, true)) {
+            $estadoParaNota = $estado;
+        }
+        try {
+            $stmt = $db->prepare("
+                INSERT INTO ticket_notas (
+                    ticket_id, asesor_cedula, estado_ticket, contenido,
+                    proxima_accion, fecha_proxima_accion, fecha_creacion
+                )
+                VALUES (?, ?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([
+                $ticketId,
+                $asesorCedula,
+                $estadoParaNota,
+                $nuevaNota,
+                $proximaAccion ?: null,
+                $fechaProximaAccion ?: null,
+            ]);
+        } catch (PDOException $e) {
+            // BD sin columna estado_ticket (esquema antiguo)
+            if (strpos($e->getMessage(), 'estado_ticket') === false) {
+                throw $e;
+            }
+            $stmt = $db->prepare("
+                INSERT INTO ticket_notas (ticket_id, asesor_cedula, contenido, proxima_accion, fecha_proxima_accion, fecha_creacion)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            ");
+            $stmt->execute([$ticketId, $asesorCedula, $nuevaNota, $proximaAccion ?: null, $fechaProximaAccion ?: null]);
+        }
     }
 
     // Devolver historial actualizado para que el cliente pinte la línea de tiempo sin recargar.

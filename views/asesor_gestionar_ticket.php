@@ -115,10 +115,6 @@ $message = getMessage();
                                     <dd class="detalle-valor" id="detClienteNombre">—</dd>
                                 </div>
                                 <div class="detalle-fila">
-                                    <dt class="detalle-label">Cédula / ID</dt>
-                                    <dd class="detalle-valor" id="detClienteCedula">—</dd>
-                                </div>
-                                <div class="detalle-fila">
                                     <dt class="detalle-label">Edad</dt>
                                     <dd class="detalle-valor" id="detClienteEdad">—</dd>
                                 </div>
@@ -209,7 +205,19 @@ $message = getMessage();
                                         <div class="mora-meter-bar" role="progressbar" aria-valuemin="0" aria-valuemax="300" aria-valuenow="0" aria-labelledby="detDiasMoraTexto">
                                             <span id="detDiasMoraFill" class="mora-meter-fill"></span>
                                         </div>
-                                        <small class="detalle-monto-hint" id="detDiasMoraHint"></small>
+                                    </dd>
+                                </div>
+                                <div class="detalle-fila" id="detImportanciaFila" style="display: none;">
+                                    <dt class="detalle-label">Importancia del ticket</dt>
+                                    <dd class="detalle-valor">
+                                        <div class="importancia-ticket">
+                                            <div class="importancia-ticket-cabecera">
+                                                <span class="importancia-num" id="detImportanciaNum" aria-label="Nivel de importancia">—</span>
+                                                <span class="importancia-leyenda" id="detImportanciaLeyenda"></span>
+                                            </div>
+                                            <p class="importancia-hint">1 = máxima prioridad · 10 = mínima prioridad</p>
+                                            <div class="importancia-escala" id="detImportanciaEscala" role="img" aria-label="Escala de importancia del 1 al 10"></div>
+                                        </div>
                                     </dd>
                                 </div>
                             </dl>
@@ -556,17 +564,20 @@ $message = getMessage();
                 if (result.success && result.data.length > 0) {
                     historialContainer.innerHTML = result.data.map(function(nota) {
                         var estKey = (nota.estado_ticket || '').trim();
-                        var estLabel = nota.estado_label || (estKey ? estKey : 'Sin registro');
-                        var badgeClass = estKey
-                            ? ('ticket-estado-badge estado-' + estKey)
-                            : 'ticket-estado-badge nota-estado-desconocido';
+                        var estLabel = (nota.estado_label || estKey || '').trim();
+                        var estadoHtml = '';
+                        if (estKey && estLabel) {
+                            estadoHtml = '<div class="nota-estado-line"><span class="ticket-estado-badge estado-' +
+                                estKey.replace(/[^a-z0-9_]/gi, '') + '">' +
+                                '<i class="fas fa-route" aria-hidden="true"></i> ' + escapeHtml(estLabel) +
+                                '</span></div>';
+                        }
                         return '<div class="nota-item">' +
                             '<div class="nota-header">' +
                             '<span class="nota-fecha">' + new Date(nota.fecha_creacion).toLocaleString() + '</span>' +
                             '<span class="nota-asesor">' + escapeHtml(nota.asesor_nombre || '') + '</span>' +
                             '</div>' +
-                            '<div class="nota-estado-line"><span class="' + badgeClass + '">' +
-                            '<i class="fas fa-route" aria-hidden="true"></i> ' + escapeHtml(estLabel) + '</span></div>' +
+                            estadoHtml +
                             '<div class="nota-contenido">' + escapeHtml(nota.contenido || '') + '</div>' +
                             (nota.proxima_accion ? '<div class="nota-accion"><strong>Próxima acción:</strong> ' +
                                 escapeHtml(nota.proxima_accion) + '</div>' : '') +
@@ -864,7 +875,6 @@ $message = getMessage();
         function renderDetallesCaso(ticket) {
             // Cliente
             setText('detClienteNombre', ticket.cliente_nombre);
-            setText('detClienteCedula', ticket.cliente_cedula);
 
             var edad = ticket.cliente_age;
             setText('detClienteEdad', (edad !== null && edad !== undefined && edad !== '') ? (edad + ' años') : null);
@@ -911,6 +921,7 @@ $message = getMessage();
                 if (vacio) vacio.style.display = 'block';
                 if (lista) lista.style.display = 'none';
                 if (grupoValores) grupoValores.style.display = 'none';
+                renderImportanciaTicket(null);
             } else {
                 if (vacio) vacio.style.display = 'none';
                 if (lista) lista.style.display = '';
@@ -980,19 +991,62 @@ $message = getMessage();
                         bar.setAttribute('aria-valuenow', String(act));
                         bar.setAttribute('aria-valuemax', String(lim));
                     }
-                    var hint = document.getElementById('detDiasMoraHint');
-                    if (hint) {
-                        var inc = pr.dias_incrementados_desde_registro != null ? pr.dias_incrementados_desde_registro : '—';
-                        var ref = pr.fecha_referencia_mora ? (' · Referencia: ' + pr.fecha_referencia_mora) : '';
-                        var ancla = (pr.mora_fecha_ancla_origen === 'fecha_venta')
-                            ? 'fecha de venta de la propiedad'
-                            : 'fecha de registro del predio';
-                        hint.textContent = 'Mora base (CSV) ' + (pr.dias_transcurridos_origen_csv != null && pr.dias_transcurridos_origen_csv !== '' ? pr.dias_transcurridos_origen_csv : '—') +
-                            ' + ' + inc + ' día(s) calendario desde la ' + ancla + ' (el cómputo de «hoy» usa ' + (pr.mora_zona_horaria || 'la zona horaria del servidor') + ' e incluye el día vigente)' + ref + '.';
-                    }
                 } else {
                     if (moraFila) moraFila.style.display = 'none';
                 }
+
+                renderImportanciaTicket(titRep ? titRep.prioridad : null);
+            }
+        }
+
+        function parsePrioridadImportancia(valor) {
+            if (valor === null || valor === undefined || String(valor).trim() === '') {
+                return null;
+            }
+            var m = String(valor).trim().match(/\d+/);
+            if (!m) return null;
+            var n = parseInt(m[0], 10);
+            if (isNaN(n)) return null;
+            if (n < 1) return 1;
+            if (n > 10) return 10;
+            return n;
+        }
+
+        function renderImportanciaTicket(prioridadRaw) {
+            var fila = document.getElementById('detImportanciaFila');
+            if (!fila) return;
+            var nivel = parsePrioridadImportancia(prioridadRaw);
+            if (nivel === null) {
+                fila.style.display = 'none';
+                return;
+            }
+            fila.style.display = '';
+            var numEl = document.getElementById('detImportanciaNum');
+            if (numEl) {
+                numEl.textContent = String(nivel);
+                numEl.setAttribute('aria-label', 'Importancia ' + nivel + ' de 10');
+            }
+            var leyenda = document.getElementById('detImportanciaLeyenda');
+            if (leyenda) {
+                if (nivel === 1) {
+                    leyenda.textContent = 'Prioridad máxima';
+                } else if (nivel >= 10) {
+                    leyenda.textContent = 'Prioridad mínima';
+                } else {
+                    leyenda.textContent = 'Prioridad intermedia';
+                }
+            }
+            var escala = document.getElementById('detImportanciaEscala');
+            if (escala) {
+                var html = '';
+                for (var i = 1; i <= 10; i++) {
+                    var cls = 'importancia-paso';
+                    if (i === nivel) cls += ' activo';
+                    else if (i < nivel) cls += ' mas-alta';
+                    html += '<span class="' + cls + '" title="Nivel ' + i + '">' + i + '</span>';
+                }
+                escala.innerHTML = html;
+                escala.setAttribute('aria-label', 'Importancia ' + nivel + ' en escala de 1 (máxima) a 10 (mínima)');
             }
         }
 

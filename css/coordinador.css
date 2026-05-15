@@ -941,3 +941,107 @@
     font-size: var(--font-size-sm);
     color: var(--dark-gray);
 }
+
+/* Exporte coordinador */
+.coordinador-exporte .exporte-info-banner {
+    margin-bottom: var(--space-md);
+}
+
+.coordinador-exporte .exporte-preview-card {
+    margin-bottom: var(--space-lg);
+    border-left: 4px solid var(--secondary-blue);
+}
+
+.coordinador-exporte .exporte-preview-inner {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+}
+
+.coordinador-exporte .exporte-preview-inner > i {
+    font-size: 1.75rem;
+    color: var(--secondary-blue);
+    margin-top: 2px;
+}
+
+.coordinador-exporte .exporte-preview-text {
+    margin: 0.35rem 0 0 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+}
+
+.coordinador-exporte .exporte-form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.coordinador-exporte .exporte-form-actions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+
+.coordinador-exporte .quick-export-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    gap: var(--space-md);
+}
+
+.coordinador-exporte .quick-export-item {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-lg);
+    background: var(--bg-card);
+    cursor: pointer;
+    text-align: left;
+    width: 100%;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+    font: inherit;
+    color: inherit;
+}
+
+.coordinador-exporte .quick-export-item:hover {
+    border-color: var(--secondary-blue);
+    box-shadow: var(--shadow-soft);
+    transform: translateY(-2px);
+}
+
+.coordinador-exporte .quick-export-item:focus-visible {
+    outline: 2px solid var(--secondary-blue);
+    outline-offset: 2px;
+}
+
+.coordinador-exporte .quick-export-icon i {
+    font-size: 1.75rem;
+    color: var(--secondary-blue);
+}
+
+.coordinador-exporte .quick-export-content h4 {
+    margin: 0 0 0.25rem 0;
+    font-size: var(--font-size-base);
+    color: var(--dark-gray);
+}
+
+.coordinador-exporte .quick-export-content p {
+    margin: 0;
+    font-size: var(--font-size-sm);
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
+.coordinador-exporte .message.toast-exporte {
+    margin-bottom: var(--space-md);
+}
+
+@media (max-width: 640px) {
+    .coordinador-exporte .exporte-form-row {
+        grid-template-columns: 1fr;
+    }
+}

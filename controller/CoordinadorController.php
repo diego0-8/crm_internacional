@@ -561,71 +561,331 @@ class CoordinadorController {
     }
     
     /**
-     * Exportar métricas a CSV
+     * Exportar reporte CSV según tipo (reparto, asignación, métricas, tickets).
      */
-    public function exportarMetricas($coordinadorId, $fechaInicio, $fechaFin) {
+    public function exportarReporte(
+        string $coordinadorId,
+        string $tipoReporte,
+        ?string $fechaInicio,
+        ?string $fechaFin,
+        ?string $filtroAsignacion = null
+    ): array {
         try {
-            $metricas = $this->metricaModel->getMetricasParaExportar($coordinadorId, $fechaInicio, $fechaFin);
-            
-            if (empty($metricas)) {
-                throw new Exception("No hay datos para exportar en el rango de fechas seleccionado");
+            $tipo = trim($tipoReporte);
+            if ($tipo === '') {
+                throw new Exception('Debe seleccionar un tipo de reporte');
             }
-            
-            // Crear directorio de exportaciones si no existe
-            $exportDirFs = __DIR__ . '/../uploads/exports/';
-            if (!is_dir($exportDirFs)) {
-                mkdir($exportDirFs, 0755, true);
+
+            $fechaInicio = $this->normalizarFechaExporte($fechaInicio);
+            $fechaFin = $this->normalizarFechaExporte($fechaFin);
+            if ($fechaInicio && $fechaFin && $fechaInicio > $fechaFin) {
+                throw new Exception('La fecha de inicio no puede ser posterior a la fecha de fin');
             }
-            
-            $nombreArchivo = 'metricas_' . date('Y-m-d_H-i-s') . '.csv';
-            $rutaArchivo = $exportDirFs . $nombreArchivo;
-            
-            $handle = fopen($rutaArchivo, 'w');
-            if (!$handle) {
-                throw new Exception("Error al crear archivo de exportación");
+
+            switch ($tipo) {
+                case 'titulares_reparto':
+                    return $this->exportarCsvTitularesReparto($coordinadorId, $fechaInicio, $fechaFin, $filtroAsignacion);
+                case 'resumen_asignacion':
+                    return $this->exportarCsvResumenAsignacion($coordinadorId, $fechaInicio, $fechaFin);
+                case 'metricas_asesores':
+                    return $this->exportarCsvMetricasAsesores($coordinadorId, $fechaInicio, $fechaFin);
+                case 'tickets_equipo':
+                    return $this->exportarCsvTicketsEquipo($coordinadorId, $fechaInicio, $fechaFin);
+                default:
+                    throw new Exception('Tipo de reporte no válido');
             }
-            
-            // Escribir encabezados
-            fputcsv($handle, [
-                'Asesor', 'Email', 'Fecha', 'Clientes Asignados', 'Clientes Contactados',
-                'Llamadas Realizadas', 'Emails Enviados', 'Reuniones Realizadas',
-                'Tareas Completadas', 'Clientes Convertidos', 'Ingresos Generados',
-                '% Contacto', '% Efectividad'
-            ]);
-            
-            // Escribir datos
-            foreach ($metricas as $metrica) {
-                fputcsv($handle, [
-                    $metrica['asesor_nombre'],
-                    $metrica['asesor_email'],
-                    $metrica['fecha_reporte'],
-                    $metrica['clientes_asignados'],
-                    $metrica['clientes_contactados'],
-                    $metrica['llamadas_realizadas'],
-                    $metrica['emails_enviados'],
-                    $metrica['reuniones_realizadas'],
-                    $metrica['tareas_completadas'],
-                    $metrica['clientes_convertidos'],
-                    $metrica['ingresos_generados'],
-                    $metrica['porcentaje_contacto'],
-                    $metrica['porcentaje_efectividad']
-                ]);
-            }
-            
-            fclose($handle);
-            
-            return [
-                'success' => true,
-                'message' => 'Archivo exportado exitosamente',
-                'archivo' => $nombreArchivo,
-                'ruta' => $rutaArchivo
-            ];
-            
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
+        }
+    }
+
+    /**
+     * @deprecated Use exportarReporte('metricas_asesores', ...)
+     */
+    public function exportarMetricas($coordinadorId, $fechaInicio, $fechaFin) {
+        return $this->exportarReporte($coordinadorId, 'metricas_asesores', $fechaInicio, $fechaFin);
+    }
+
+    /**
+     * Vista previa: cantidad de registros del reporte.
+     */
+    public function previewExporte(
+        string $coordinadorId,
+        string $tipoReporte,
+        ?string $fechaInicio,
+        ?string $fechaFin,
+        ?string $filtroAsignacion = null
+    ): array {
+        try {
+            $tipo = trim($tipoReporte);
+            $fechaInicio = $this->normalizarFechaExporte($fechaInicio);
+            $fechaFin = $this->normalizarFechaExporte($fechaFin);
+
+            $total = 0;
+            switch ($tipo) {
+                case 'titulares_reparto':
+                    $total = $this->titularModel->contarParaExporteCoordinador(
+                        $coordinadorId,
+                        $fechaInicio,
+                        $fechaFin,
+                        $filtroAsignacion
+                    );
+                    break;
+                case 'resumen_asignacion':
+                    $rows = $this->titularModel->resumenAsignacionParaExporte($coordinadorId, $fechaInicio, $fechaFin);
+                    $total = count($rows);
+                    break;
+                case 'metricas_asesores':
+                    if ($fechaInicio && $fechaFin) {
+                        $rows = $this->metricaModel->getMetricasParaExportar($coordinadorId, $fechaInicio, $fechaFin);
+                        $total = count($rows);
+                    }
+                    break;
+                case 'tickets_equipo':
+                    $total = $this->contarTicketsEquipoParaExporte($coordinadorId, $fechaInicio, $fechaFin);
+                    break;
+                default:
+                    throw new Exception('Tipo de reporte no válido');
+            }
+
+            return [
+                'success' => true,
+                'total' => $total,
+                'tipo_reporte' => $tipo,
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
+            ];
+        }
+    }
+
+    private function normalizarFechaExporte(?string $fecha): ?string {
+        if ($fecha === null || trim($fecha) === '') {
+            return null;
+        }
+        $fecha = trim($fecha);
+        if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $fecha)) {
+            throw new Exception('Formato de fecha inválido (use AAAA-MM-DD)');
+        }
+        return $fecha;
+    }
+
+    private function asegurarDirectorioExportaciones(): string {
+        $exportDirFs = __DIR__ . '/../uploads/exports/';
+        if (!is_dir($exportDirFs)) {
+            mkdir($exportDirFs, 0755, true);
+        }
+        return $exportDirFs;
+    }
+
+    /**
+     * @param list<string> $encabezados
+     * @param list<array<string, mixed>> $filas
+     * @param list<string> $columnasOrden claves por fila en el mismo orden que encabezados
+     */
+    private function escribirArchivoCsv(string $prefijoNombre, array $encabezados, array $filas, array $columnasOrden): array {
+        if (empty($filas)) {
+            throw new Exception('No hay datos para exportar con los filtros seleccionados');
+        }
+
+        $exportDirFs = $this->asegurarDirectorioExportaciones();
+        $nombreArchivo = $prefijoNombre . '_' . date('Y-m-d_His') . '.csv';
+        $rutaArchivo = $exportDirFs . $nombreArchivo;
+
+        $handle = fopen($rutaArchivo, 'w');
+        if (!$handle) {
+            throw new Exception('Error al crear archivo de exportación');
+        }
+
+        fprintf($handle, "\xEF\xBB\xBF");
+        fputcsv($handle, $encabezados);
+        foreach ($filas as $fila) {
+            $linea = [];
+            foreach ($columnasOrden as $col) {
+                $linea[] = $fila[$col] ?? '';
+            }
+            fputcsv($handle, $linea);
+        }
+        fclose($handle);
+
+        return [
+            'success' => true,
+            'message' => 'Archivo exportado exitosamente',
+            'archivo' => $nombreArchivo,
+            'ruta' => $rutaArchivo,
+            'registros' => count($filas),
+        ];
+    }
+
+    private function exportarCsvTitularesReparto(
+        string $coordinadorId,
+        ?string $fechaInicio,
+        ?string $fechaFin,
+        ?string $filtroAsignacion
+    ): array {
+        $filas = $this->titularModel->filasParaExporteCoordinador(
+            $coordinadorId,
+            $fechaInicio,
+            $fechaFin,
+            $filtroAsignacion
+        );
+
+        $encabezados = [
+            'ID titular', 'Primer nombre', 'Apellido', 'Reg_Int', 'BaseD', 'F_Correo', 'Agente', 'Prioridad',
+            'Asesor cédula', 'Asesor nombre', 'Fecha registro', 'Fecha actualización',
+            'Case Number', 'Parcel Number', 'Tipo foreclosure', 'Condado', 'Fuente', 'Fecha venta', 'Días transcurridos',
+            'Excedente', 'Puja apertura', 'Puja cierre', 'Monetización',
+            'Mailing calle', 'Mailing ciudad', 'Mailing estado', 'Mailing CP',
+            'Propiedad calle', 'Propiedad ciudad', 'Propiedad estado', 'Propiedad CP',
+            'Edad', 'Fallecido', 'Teléfonos', 'Correos',
+        ];
+        $columnas = [
+            'id_cliente', 'primer_nombre', 'apellido', 'reg_int', 'base_d', 'f_correo', 'agente', 'prioridad',
+            'asesor_cedula', 'asesor_nombre', 'fecha_registro', 'fecha_actualizacion',
+            'numero_caso', 'numero_parcela', 'tipo_foreclosure', 'condado', 'fuente', 'fecha_venta', 'dias_transcurridos',
+            'excedente', 'puja_apertura', 'puja_cierre', 'monetizacion',
+            'mailing_calle', 'mailing_ciudad', 'mailing_estado', 'mailing_codigo_postal',
+            'propiedad_calle', 'propiedad_ciudad', 'propiedad_estado', 'propiedad_codigo_postal',
+            'edad', 'fallecido', 'telefonos', 'correos',
+        ];
+
+        return $this->escribirArchivoCsv('titulares_reparto', $encabezados, $filas, $columnas);
+    }
+
+    private function exportarCsvResumenAsignacion(
+        string $coordinadorId,
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): array {
+        $filas = $this->titularModel->resumenAsignacionParaExporte($coordinadorId, $fechaInicio, $fechaFin);
+        return $this->escribirArchivoCsv(
+            'resumen_asignacion',
+            ['Asesor cédula', 'Asesor', 'Total titulares'],
+            $filas,
+            ['asesor_cedula', 'asesor_nombre', 'total_titulares']
+        );
+    }
+
+    private function exportarCsvMetricasAsesores(
+        string $coordinadorId,
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): array {
+        if (!$fechaInicio || !$fechaFin) {
+            throw new Exception('Las métricas por asesor requieren fecha de inicio y fin');
+        }
+        $filas = $this->metricaModel->getMetricasParaExportar($coordinadorId, $fechaInicio, $fechaFin);
+        return $this->escribirArchivoCsv(
+            'metricas_asesores',
+            [
+                'Asesor', 'Email', 'Fecha', 'Clientes asignados', 'Clientes contactados',
+                'Llamadas', 'Emails', 'Reuniones', 'Tareas completadas', 'Convertidos', 'Ingresos',
+                '% contacto', '% efectividad',
+            ],
+            $filas,
+            [
+                'asesor_nombre', 'asesor_email', 'fecha_reporte', 'clientes_asignados', 'clientes_contactados',
+                'llamadas_realizadas', 'emails_enviados', 'reuniones_realizadas', 'tareas_completadas',
+                'clientes_convertidos', 'ingresos_generados', 'porcentaje_contacto', 'porcentaje_efectividad',
+            ]
+        );
+    }
+
+    private function exportarCsvTicketsEquipo(
+        string $coordinadorId,
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): array {
+        $filas = $this->filasTicketsEquipoParaExporte($coordinadorId, $fechaInicio, $fechaFin);
+        return $this->escribirArchivoCsv(
+            'tickets_equipo',
+            [
+                'ID ticket', 'Número ticket', 'Estado', 'Título', 'Cliente cédula',
+                'Asesor cédula', 'Asesor', 'Fecha creación', 'Fecha actualización', 'Fecha cierre', 'Origen',
+            ],
+            $filas,
+            [
+                'id', 'numero_ticket', 'estado', 'titulo', 'cliente_cedula',
+                'asesor_cedula', 'asesor_nombre', 'fecha_creacion', 'fecha_actualizacion', 'fecha_cierre', 'origen',
+            ]
+        );
+    }
+
+    private function contarTicketsEquipoParaExporte(
+        string $coordinadorId,
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): int {
+        $db = getDB();
+        $sql = "
+            SELECT COUNT(*)
+            FROM tiketera tk
+            INNER JOIN usuarios u ON tk.asesor_cedula = u.cedula
+            WHERE u.coordinador_cedula = ?
+        ";
+        $params = [$coordinadorId];
+        if ($fechaInicio) {
+            $sql .= ' AND DATE(tk.fecha_creacion) >= ?';
+            $params[] = $fechaInicio;
+        }
+        if ($fechaFin) {
+            $sql .= ' AND DATE(tk.fecha_creacion) <= ?';
+            $params[] = $fechaFin;
+        }
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return (int) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            return 0;
+        }
+    }
+
+    private function filasTicketsEquipoParaExporte(
+        string $coordinadorId,
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): array {
+        $db = getDB();
+        $sql = "
+            SELECT
+                tk.id,
+                tk.numero_ticket,
+                tk.estado,
+                tk.titulo,
+                tk.cliente_cedula,
+                tk.asesor_cedula,
+                TRIM(CONCAT(COALESCE(u.nombre, ''), ' ', COALESCE(u.apellido, ''))) AS asesor_nombre,
+                DATE_FORMAT(tk.fecha_creacion, '%Y-%m-%d %H:%i') AS fecha_creacion,
+                DATE_FORMAT(tk.fecha_actualizacion, '%Y-%m-%d %H:%i') AS fecha_actualizacion,
+                DATE_FORMAT(tk.fecha_cierre, '%Y-%m-%d %H:%i') AS fecha_cierre,
+                tk.origen
+            FROM tiketera tk
+            INNER JOIN usuarios u ON tk.asesor_cedula = u.cedula
+            WHERE u.coordinador_cedula = ?
+        ";
+        $params = [$coordinadorId];
+        if ($fechaInicio) {
+            $sql .= ' AND DATE(tk.fecha_creacion) >= ?';
+            $params[] = $fechaInicio;
+        }
+        if ($fechaFin) {
+            $sql .= ' AND DATE(tk.fecha_creacion) <= ?';
+            $params[] = $fechaFin;
+        }
+        $sql .= ' ORDER BY tk.fecha_creacion DESC, tk.id DESC';
+
+        try {
+            $stmt = $db->prepare($sql);
+            $stmt->execute($params);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (Exception $e) {
+            throw new Exception('No se pudo consultar la tiketera (verifique que la tabla exista)');
         }
     }
     

@@ -1,13 +1,11 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
 if (!isLoggedIn()) {
     header('Location: login.php');
     exit;
 }
 
-// Obtener datos del usuario actual
 $user = getCurrentUser();
 $message = getMessage();
 ?>
@@ -16,7 +14,7 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Exporte de Métricas - <?php echo APP_NAME; ?></title>
+    <title>Exporte de reportes - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="../css/variables.css" rel="stylesheet">
     <link href="../css/role-specific.css" rel="stylesheet">
@@ -26,7 +24,6 @@ $message = getMessage();
 </head>
 <body>
     <div class="dashboard-container">
-        <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-asesor">
@@ -62,119 +59,138 @@ $message = getMessage();
                         <?php echo strtoupper(substr($user['nombre'], 0, 1) . substr($user['apellido'], 0, 1)); ?>
                     </div>
                     <div class="profile-info">
-                        <h4 class="text-asesor"><?php echo $user['nombre'] . ' ' . $user['apellido']; ?></h4>
+                        <h4 class="text-asesor"><?php echo htmlspecialchars($user['nombre'] . ' ' . $user['apellido']); ?></h4>
                         <p class="text-asesor">Coordinador</p>
                     </div>
                 </div>
-                
-                <button class="logout-btn" onclick="cerrarSesion()">
+                <button type="button" class="logout-btn" onclick="cerrarSesion()">
                     <i class="fas fa-sign-out-alt"></i>
                     Cerrar Sesión
                 </button>
             </div>
         </div>
 
-        <!-- Main Content -->
         <div class="main-content">
-            <!-- Top Header -->
             <div class="top-header header-asesor">
                 <div class="header-left">
-                    <button class="menu-toggle" onclick="toggleSidebar()">
+                    <button type="button" class="menu-toggle" onclick="toggleSidebar()" aria-label="Menú">
                         <i class="fas fa-bars"></i>
                     </button>
                     <div class="welcome-section">
-                        <h1 class="title-asesor">Exporte de Métricas</h1>
-                        <p class="subtitle-asesor">Exporta métricas y reportes de rendimiento en formato CSV.</p>
+                        <h1 class="title-asesor">Exporte de reportes</h1>
+                        <p class="subtitle-asesor">Descargue CSV de titulares (reparto), asignación a asesores y tickets de su equipo.</p>
                     </div>
                 </div>
             </div>
 
-            <!-- Content Area -->
-            <div class="content-area">
+            <div class="content-area coordinador-dashboard coordinador-exporte">
                 <?php if ($message): ?>
-                    <div class="message <?php echo $message['type']; ?>">
+                    <div class="message <?php echo htmlspecialchars($message['type']); ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message']); ?>
                     </div>
                 <?php endif; ?>
 
-                <!-- Export Form -->
+                <div class="message info exporte-info-banner">
+                    <i class="fas fa-info-circle"></i>
+                    <span>Los reportes de <strong>titulares</strong> y <strong>asignación</strong> filtran por <strong>fecha de registro</strong> del titular en el sistema. Los <strong>tickets</strong> filtran por <strong>fecha de creación</strong> en la tiketera. El archivo CSV incluye codificación UTF-8 para Excel.</span>
+                </div>
+
+                <div class="card exporte-preview-card" id="exportePreviewCard" aria-live="polite">
+                    <div class="exporte-preview-inner">
+                        <i class="fas fa-table" aria-hidden="true"></i>
+                        <div>
+                            <strong id="exportePreviewLabel">Vista previa</strong>
+                            <p id="exportePreviewText" class="exporte-preview-text">Seleccione tipo de reporte y fechas para ver cuántos registros se exportarán.</p>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-download"></i> Generar Reporte</h3>
+                        <h3><i class="fas fa-file-csv"></i> Generar reporte</h3>
                     </div>
                     <div class="card-content">
-                        <form id="exportForm">
-                            <div class="form-row">
+                        <form id="exportForm" novalidate>
+                            <div class="form-row exporte-form-row">
                                 <div class="form-group">
-                                    <label for="fechaInicio">Fecha de Inicio</label>
+                                    <label for="fechaInicio">Fecha de inicio</label>
                                     <input type="date" id="fechaInicio" name="fecha_inicio" class="form-control" required>
                                 </div>
                                 <div class="form-group">
-                                    <label for="fechaFin">Fecha de Fin</label>
+                                    <label for="fechaFin">Fecha de fin</label>
                                     <input type="date" id="fechaFin" name="fecha_fin" class="form-control" required>
                                 </div>
                             </div>
-                            
+
                             <div class="form-group">
-                                <label for="tipoReporte">Tipo de Reporte</label>
+                                <label for="tipoReporte">Tipo de reporte</label>
                                 <select id="tipoReporte" name="tipo_reporte" class="form-control" required>
-                                    <option value="">Seleccionar tipo de reporte</option>
-                                    <option value="metricas_generales">Métricas Generales</option>
-                                    <option value="metricas_asesores">Métricas por Asesor</option>
-                                    <option value="metricas_clientes">Métricas de Clientes</option>
-                                    <option value="metricas_tickets">Métricas de Tickets</option>
+                                    <option value="titulares_reparto">Titulares reparto (detalle completo)</option>
+                                    <option value="resumen_asignacion">Resumen asignación por asesor</option>
+                                    <option value="tickets_equipo">Tickets CRM del equipo</option>
+                                    <option value="metricas_asesores">Métricas diarias de asesores</option>
+                                </select>
+                                <small class="form-text text-muted" id="tipoReporteHelp">
+                                    Incluye titular, propiedad, Reg_Int, BaseD, F_Correo, contactos y asesor asignado.
+                                </small>
+                            </div>
+
+                            <div class="form-group" id="filtroAsignacionGroup">
+                                <label for="filtroAsignacion">Filtrar titulares</label>
+                                <select id="filtroAsignacion" name="filtro_asignacion" class="form-control">
+                                    <option value="">Todos</option>
+                                    <option value="asignados">Solo con asesor asignado</option>
+                                    <option value="sin_asesor">Solo sin asesor</option>
                                 </select>
                             </div>
-                            
-                            <div class="form-actions">
-                                <button type="submit" class="btn btn-success">
-                                    <i class="fas fa-download"></i> Generar y Descargar
+
+                            <div class="form-actions exporte-form-actions">
+                                <button type="submit" class="btn btn-success" id="btnExportar">
+                                    <i class="fas fa-download"></i> Descargar CSV
                                 </button>
                                 <button type="button" class="btn btn-secondary" onclick="resetForm()">
-                                    <i class="fas fa-undo"></i> Limpiar
+                                    <i class="fas fa-undo"></i> Restablecer
                                 </button>
                             </div>
                         </form>
                     </div>
                 </div>
 
-                <!-- Quick Export Options -->
                 <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-bolt"></i> Exportes Rápidos</h3>
+                        <h3><i class="fas fa-bolt"></i> Exportes rápidos</h3>
                     </div>
                     <div class="card-content">
                         <div class="quick-export-grid">
-                            <div class="quick-export-item" onclick="exporteRapido('hoy')">
-                                <div class="quick-export-icon">
-                                    <i class="fas fa-calendar-day"></i>
-                                </div>
+                            <button type="button" class="quick-export-item" onclick="exporteRapido('titulares_reparto', 'mes')">
+                                <div class="quick-export-icon"><i class="fas fa-users"></i></div>
                                 <div class="quick-export-content">
-                                    <h4>Hoy</h4>
-                                    <p>Métricas del día actual</p>
+                                    <h4>Titulares del mes</h4>
+                                    <p>Detalle reparto registrado este mes</p>
                                 </div>
-                            </div>
-                            
-                            <div class="quick-export-item" onclick="exporteRapido('semana')">
-                                <div class="quick-export-icon">
-                                    <i class="fas fa-calendar-week"></i>
-                                </div>
+                            </button>
+                            <button type="button" class="quick-export-item" onclick="exporteRapido('resumen_asignacion', 'mes')">
+                                <div class="quick-export-icon"><i class="fas fa-user-friends"></i></div>
                                 <div class="quick-export-content">
-                                    <h4>Esta Semana</h4>
-                                    <p>Métricas de los últimos 7 días</p>
+                                    <h4>Asignación del mes</h4>
+                                    <p>Titulares por asesor (mes actual)</p>
                                 </div>
-                            </div>
-                            
-                            <div class="quick-export-item" onclick="exporteRapido('mes')">
-                                <div class="quick-export-icon">
-                                    <i class="fas fa-calendar-alt"></i>
-                                </div>
+                            </button>
+                            <button type="button" class="quick-export-item" onclick="exporteRapido('tickets_equipo', 'mes')">
+                                <div class="quick-export-icon"><i class="fas fa-ticket-alt"></i></div>
                                 <div class="quick-export-content">
-                                    <h4>Este Mes</h4>
-                                    <p>Métricas del mes actual</p>
+                                    <h4>Tickets del mes</h4>
+                                    <p>Tiketera del equipo (mes actual)</p>
                                 </div>
-                            </div>
+                            </button>
+                            <button type="button" class="quick-export-item" onclick="exporteRapido('titulares_reparto', 'sin_asesor')">
+                                <div class="quick-export-icon"><i class="fas fa-user-clock"></i></div>
+                                <div class="quick-export-content">
+                                    <h4>Sin asesor</h4>
+                                    <p>Titulares pendientes de asignar (todo el histórico)</p>
+                                </div>
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -183,273 +199,254 @@ $message = getMessage();
     </div>
 
     <script>
-        // Inicializar
+        const TIPO_REPORTE_AYUDA = {
+            titulares_reparto: 'Incluye titular, propiedad, Reg_Int, BaseD, F_Correo, teléfonos, correos y asesor asignado.',
+            resumen_asignacion: 'Cantidad de titulares por asesor (incluye fila «Sin asignar»).',
+            tickets_equipo: 'Tickets de la tiketera de los asesores de su coordinación.',
+            metricas_asesores: 'Requiere datos en metricas_asesores; filtra por fecha del reporte.'
+        };
+
+        let previewTimeout = null;
+
         document.addEventListener('DOMContentLoaded', function() {
             initializeForm();
-        });
-
-        // Inicializar formulario
-        function initializeForm() {
-            // Establecer fechas por defecto
-            const today = new Date();
-            const firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
-            
-            document.getElementById('fechaInicio').value = firstDay.toISOString().split('T')[0];
-            document.getElementById('fechaFin').value = today.toISOString().split('T')[0];
-            
-            // Manejar envío del formulario
             document.getElementById('exportForm').addEventListener('submit', function(e) {
                 e.preventDefault();
                 generateExport();
             });
+            ['fechaInicio', 'fechaFin', 'tipoReporte', 'filtroAsignacion'].forEach(function(id) {
+                var el = document.getElementById(id);
+                if (el) {
+                    el.addEventListener('change', schedulePreview);
+                }
+            });
+            toggleFiltroAsignacion();
+            schedulePreview();
+        });
+
+        function initializeForm() {
+            var today = new Date();
+            var firstDay = new Date(today.getFullYear(), today.getMonth(), 1);
+            document.getElementById('fechaInicio').value = formatDateYmd(firstDay);
+            document.getElementById('fechaFin').value = formatDateYmd(today);
+            updateTipoHelp();
         }
 
-        // Generar exporte
-        async function generateExport() {
-            const formData = new FormData(document.getElementById('exportForm'));
-            
+        function formatDateYmd(d) {
+            var y = d.getFullYear();
+            var m = String(d.getMonth() + 1).padStart(2, '0');
+            var day = String(d.getDate()).padStart(2, '0');
+            return y + '-' + m + '-' + day;
+        }
+
+        function updateTipoHelp() {
+            var tipo = document.getElementById('tipoReporte').value;
+            var help = document.getElementById('tipoReporteHelp');
+            if (help) {
+                help.textContent = TIPO_REPORTE_AYUDA[tipo] || '';
+            }
+            toggleFiltroAsignacion();
+        }
+
+        function toggleFiltroAsignacion() {
+            var tipo = document.getElementById('tipoReporte').value;
+            var grp = document.getElementById('filtroAsignacionGroup');
+            if (grp) {
+                grp.style.display = (tipo === 'titulares_reparto') ? '' : 'none';
+            }
+        }
+
+        document.getElementById('tipoReporte').addEventListener('change', function() {
+            updateTipoHelp();
+            schedulePreview();
+        });
+
+        function schedulePreview() {
+            clearTimeout(previewTimeout);
+            previewTimeout = setTimeout(loadPreview, 350);
+        }
+
+        async function loadPreview() {
+            var tipo = document.getElementById('tipoReporte').value;
+            var params = new URLSearchParams({
+                tipo_reporte: tipo,
+                fecha_inicio: document.getElementById('fechaInicio').value,
+                fecha_fin: document.getElementById('fechaFin').value,
+                filtro_asignacion: document.getElementById('filtroAsignacion').value
+            });
+            var label = document.getElementById('exportePreviewLabel');
+            var text = document.getElementById('exportePreviewText');
+            if (text) {
+                text.textContent = 'Calculando vista previa…';
+            }
             try {
-                showMessage('Generando reporte...', 'info');
-                
-                const response = await fetch('../api/export_metricas.php?' + new URLSearchParams({
-                    fecha_inicio: formData.get('fecha_inicio'),
-                    fecha_fin: formData.get('fecha_fin'),
-                    tipo_reporte: formData.get('tipo_reporte')
-                }), {
+                var response = await fetch('../api/coordinador_exporte_preview.php?' + params.toString(), {
                     credentials: 'include'
                 });
-                
-                if (response.ok) {
-                    // Descargar archivo
-                    const blob = await response.blob();
-                    const url = window.URL.createObjectURL(blob);
-                    const a = document.createElement('a');
+                var result = await response.json();
+                if (result.success) {
+                    var n = result.total != null ? result.total : 0;
+                    if (label) label.textContent = 'Listo para exportar';
+                    if (text) {
+                        text.textContent = n === 0
+                            ? 'No hay registros con los filtros actuales. Ajuste fechas o tipo de reporte.'
+                            : ('Se exportarán aproximadamente ' + n + ' registro(s).');
+                    }
+                } else {
+                    if (label) label.textContent = 'Vista previa';
+                    if (text) text.textContent = result.message || 'No se pudo calcular la vista previa.';
+                }
+            } catch (err) {
+                if (label) label.textContent = 'Vista previa';
+                if (text) text.textContent = 'Error al consultar la vista previa.';
+            }
+        }
+
+        function buildExportParams() {
+            return new URLSearchParams({
+                fecha_inicio: document.getElementById('fechaInicio').value,
+                fecha_fin: document.getElementById('fechaFin').value,
+                tipo_reporte: document.getElementById('tipoReporte').value,
+                filtro_asignacion: document.getElementById('filtroAsignacion').value
+            });
+        }
+
+        async function generateExport() {
+            var btn = document.getElementById('btnExportar');
+            var tipo = document.getElementById('tipoReporte').value;
+            var fi = document.getElementById('fechaInicio').value;
+            var ff = document.getElementById('fechaFin').value;
+            if (!fi || !ff) {
+                showMessage('Indique fecha de inicio y fin.', 'error');
+                return;
+            }
+            if (fi > ff) {
+                showMessage('La fecha de inicio no puede ser posterior a la de fin.', 'error');
+                return;
+            }
+
+            if (btn) {
+                btn.disabled = true;
+            }
+            showMessage('Generando reporte…', 'info');
+
+            try {
+                var response = await fetch('../api/export_metricas.php?' + buildExportParams().toString(), {
+                    credentials: 'include'
+                });
+
+                var contentType = (response.headers.get('Content-Type') || '').toLowerCase();
+
+                if (response.ok && contentType.indexOf('text/csv') !== -1) {
+                    var blob = await response.blob();
+                    var url = window.URL.createObjectURL(blob);
+                    var a = document.createElement('a');
                     a.href = url;
-                    a.download = `reporte_${formData.get('tipo_reporte')}_${formData.get('fecha_inicio')}_${formData.get('fecha_fin')}.csv`;
+                    a.download = 'reporte_' + tipo + '_' + fi + '_' + ff + '.csv';
                     document.body.appendChild(a);
                     a.click();
                     window.URL.revokeObjectURL(url);
                     document.body.removeChild(a);
-                    
-                    showMessage('Reporte generado y descargado exitosamente', 'success');
+                    showMessage('Reporte descargado correctamente.', 'success');
+                    schedulePreview();
                 } else {
-                    const result = await response.json();
-                    showMessage('Error generando reporte: ' + result.message, 'error');
+                    var result = { message: 'Error al generar el reporte' };
+                    try {
+                        result = await response.json();
+                    } catch (e) { /* respuesta no JSON */ }
+                    showMessage(result.message || 'No hay datos para exportar o el servidor rechazó la solicitud.', 'error');
                 }
             } catch (error) {
-                console.error('Error:', error);
-                showMessage('Error generando reporte', 'error');
+                console.error(error);
+                showMessage('Error de conexión al generar el reporte.', 'error');
+            } finally {
+                if (btn) btn.disabled = false;
             }
         }
 
-        // Exporte rápido
-        function exporteRapido(tipo) {
-            const today = new Date();
-            let fechaInicio, fechaFin;
-            
-            switch (tipo) {
-                case 'hoy':
-                    fechaInicio = fechaFin = today.toISOString().split('T')[0];
-                    break;
-                case 'semana':
-                    fechaInicio = new Date(today.getTime() - 7 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
-                    fechaFin = today.toISOString().split('T')[0];
-                    break;
-                case 'mes':
-                    fechaInicio = new Date(today.getFullYear(), today.getMonth(), 1).toISOString().split('T')[0];
-                    fechaFin = today.toISOString().split('T')[0];
-                    break;
+        function exporteRapido(tipo, modo) {
+            var today = new Date();
+            document.getElementById('tipoReporte').value = tipo;
+            updateTipoHelp();
+
+            if (modo === 'sin_asesor') {
+                var inicioAmplio = new Date(2000, 0, 1);
+                document.getElementById('fechaInicio').value = formatDateYmd(inicioAmplio);
+                document.getElementById('fechaFin').value = formatDateYmd(today);
+                document.getElementById('filtroAsignacion').value = 'sin_asesor';
+            } else if (modo === 'mes') {
+                document.getElementById('fechaInicio').value = formatDateYmd(new Date(today.getFullYear(), today.getMonth(), 1));
+                document.getElementById('fechaFin').value = formatDateYmd(today);
+                document.getElementById('filtroAsignacion').value = '';
             }
-            
-            // Establecer fechas en el formulario
-            document.getElementById('fechaInicio').value = fechaInicio;
-            document.getElementById('fechaFin').value = fechaFin;
-            document.getElementById('tipoReporte').value = 'metricas_generales';
-            
-            // Generar exporte
-            generateExport();
+
+            schedulePreview();
+            setTimeout(generateExport, 400);
         }
 
-        // Resetear formulario
         function resetForm() {
             document.getElementById('exportForm').reset();
             initializeForm();
+            document.getElementById('filtroAsignacion').value = '';
+            schedulePreview();
         }
 
         function showMessage(message, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            
-            let icon = 'info-circle';
+            var contentArea = document.querySelector('.coordinador-exporte');
+            if (!contentArea) return;
+            var existing = contentArea.querySelector('.message.toast-exporte');
+            if (existing) existing.remove();
+
+            var messageDiv = document.createElement('div');
+            messageDiv.className = 'message ' + type + ' toast-exporte';
+            var icon = 'info-circle';
             if (type === 'success') icon = 'check-circle';
             else if (type === 'error') icon = 'exclamation-triangle';
-            else if (type === 'warning') icon = 'exclamation-triangle';
-            
-            messageDiv.innerHTML = `
-                <i class="fas fa-${icon}"></i>
-                <span>${message}</span>
-            `;
-            
-            const contentArea = document.querySelector('.content-area');
+            messageDiv.innerHTML = '<i class="fas fa-' + icon + '"></i><span>' + escapeHtml(message) + '</span>';
             contentArea.insertBefore(messageDiv, contentArea.firstChild);
-            
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
+            setTimeout(function() { messageDiv.remove(); }, 6000);
         }
 
-        // Cerrar sesión
+        function escapeHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
         async function cerrarSesion() {
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
-            
             try {
-                const response = await fetch('../api/logout.php', {
+                var response = await fetch('../api/logout.php', {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     credentials: 'include'
                 });
-                
-                const result = await response.json();
-                
+                var result = await response.json();
                 if (result.success) {
                     window.location.href = '../views/login.php';
                 } else {
-                    showMessage(result.message, 'error');
+                    showMessage(result.message || 'Error al cerrar sesión', 'error');
                 }
             } catch (error) {
-                console.error('Error cerrando sesión:', error);
                 showMessage('Error cerrando sesión', 'error');
             }
         }
 
-        // Toggle sidebar para dispositivos móviles
         function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('open');
-        }
-    </script>
-
-    <style>
-        .form-row {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 1rem;
+            document.querySelector('.sidebar').classList.toggle('open');
         }
 
-        .quick-export-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 1rem;
-        }
-
-        .quick-export-item {
-            display: flex;
-            align-items: center;
-            padding: 1rem;
-            border: 1px solid #e5e7eb;
-            border-radius: 8px;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            background-color: #ffffff;
-        }
-
-        .quick-export-item:hover {
-            border-color: #3b82f6;
-            background-color: #f8fafc;
-            transform: translateY(-2px);
-        }
-
-        .quick-export-icon {
-            margin-right: 1rem;
-        }
-
-        .quick-export-icon i {
-            font-size: 2rem;
-            color: #3b82f6;
-        }
-
-        .quick-export-content h4 {
-            margin: 0;
-            color: #374151;
-        }
-
-        .quick-export-content p {
-            margin: 0.25rem 0 0 0;
-            color: #6b7280;
-            font-size: 0.875rem;
-        }
-    </style>
-
-    <script>
-        // Función para cerrar sesión
-        async function cerrarSesion() {
-            if (!confirm('¿Está seguro de cerrar sesión?')) return;
-
-            try {
-                const response = await fetch('../api/logout.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    }
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    window.location.href = '../views/login.php';
-                } else {
-                    showMessage(result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error cerrando sesión:', error);
-                showMessage('Error cerrando sesión', 'error');
-            }
-        }
-
-        // Función para toggle del sidebar
-        function toggleSidebar() {
-            const sidebar = document.querySelector('.sidebar');
-            sidebar.classList.toggle('open');
-        }
-
-        // Cerrar sidebar al hacer clic fuera en móviles
         document.addEventListener('click', function(event) {
-            const sidebar = document.querySelector('.sidebar');
-            const menuToggle = document.querySelector('.menu-toggle');
-
-            if (window.innerWidth <= 768 &&
-                sidebar.classList.contains('open') &&
-                !sidebar.contains(event.target) &&
-                !menuToggle.contains(event.target)) {
+            var sidebar = document.querySelector('.sidebar');
+            var menuToggle = document.querySelector('.menu-toggle');
+            if (window.innerWidth <= 768 && sidebar.classList.contains('open') &&
+                !sidebar.contains(event.target) && menuToggle && !menuToggle.contains(event.target)) {
                 sidebar.classList.remove('open');
             }
         });
-
-        // Cerrar sidebar en desktop
-        window.addEventListener('resize', function() {
-            const sidebar = document.querySelector('.sidebar');
-            if (window.innerWidth > 768) {
-                sidebar.classList.remove('open');
-            }
-        });
-
-        // Función para mostrar mensajes
-        function showMessage(message, type) {
-            const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${type}`;
-            messageDiv.innerHTML = `
-                <i class="fas fa-${type === 'success' ? 'check-circle' : type === 'error' ? 'exclamation-circle' : 'info-circle'}"></i>
-                <span>${message}</span>
-            `;
-            
-            document.body.appendChild(messageDiv);
-            
-            setTimeout(() => {
-                messageDiv.remove();
-            }, 5000);
-        }
     </script>
 </body>
 </html>

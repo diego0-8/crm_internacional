@@ -246,6 +246,180 @@ class TitularModel {
     /**
      * Titulares sin asesor del coordinador, orden antiguos primero.
      */
+    /**
+     * Filas completas titular + propiedad + contactos para exportación CSV del coordinador.
+     *
+     * @param string|null $filtroAsignacion '' | 'asignados' | 'sin_asesor'
+     */
+    public function filasParaExporteCoordinador(
+        string $coordinadorCedula,
+        ?string $fechaInicio,
+        ?string $fechaFin,
+        ?string $filtroAsignacion = null
+    ): array {
+        $conAsesor = $this->titularesTieneColumnaAsesorCedula();
+        $asesorJoin = $conAsesor
+            ? 'LEFT JOIN usuarios a ON t.asesor_cedula = a.cedula'
+            : '';
+        $asesorSelect = $conAsesor
+            ? "t.asesor_cedula, TRIM(CONCAT(COALESCE(a.nombre, ''), ' ', COALESCE(a.apellido, ''))) AS asesor_nombre,"
+            : "NULL AS asesor_cedula, NULL AS asesor_nombre,";
+
+        $sql = "
+            SELECT
+                t.id_cliente,
+                t.primer_nombre,
+                t.apellido,
+                t.mailing_calle,
+                t.mailing_ciudad,
+                t.mailing_estado,
+                t.mailing_codigo_postal,
+                t.edad,
+                t.fallecido,
+                t.reg_int,
+                t.base_d,
+                t.f_correo,
+                t.agente,
+                t.prioridad,
+                {$asesorSelect}
+                DATE_FORMAT(t.creado_en, '%Y-%m-%d %H:%i') AS fecha_registro,
+                DATE_FORMAT(t.actualizado_en, '%Y-%m-%d %H:%i') AS fecha_actualizacion,
+                p.numero_caso,
+                p.numero_parcela,
+                p.tipo_foreclosure,
+                p.propiedad_calle,
+                p.propiedad_ciudad,
+                p.propiedad_estado,
+                p.propiedad_codigo_postal,
+                p.condado,
+                p.fuente,
+                p.fecha_venta,
+                p.dias_transcurridos,
+                p.excedente,
+                p.puja_apertura,
+                p.puja_cierre,
+                p.monetizacion,
+                (SELECT GROUP_CONCAT(tel.numero ORDER BY tel.orden SEPARATOR ' | ')
+                 FROM telefonos tel WHERE tel.id_cliente = t.id_cliente) AS telefonos,
+                (SELECT GROUP_CONCAT(co.email ORDER BY co.orden SEPARATOR ' | ')
+                 FROM correos co WHERE co.id_cliente = t.id_cliente) AS correos
+            FROM titulares t
+            LEFT JOIN propiedades p ON p.id_cliente = t.id_cliente
+            {$asesorJoin}
+            WHERE t.coordinador_cedula = ?
+        ";
+        $params = [$coordinadorCedula];
+
+        if ($fechaInicio !== null && $fechaInicio !== '') {
+            $sql .= ' AND DATE(t.creado_en) >= ?';
+            $params[] = $fechaInicio;
+        }
+        if ($fechaFin !== null && $fechaFin !== '') {
+            $sql .= ' AND DATE(t.creado_en) <= ?';
+            $params[] = $fechaFin;
+        }
+
+        $filtro = $filtroAsignacion !== null ? trim($filtroAsignacion) : '';
+        if ($conAsesor && $filtro === 'asignados') {
+            $sql .= ' AND t.asesor_cedula IS NOT NULL AND TRIM(t.asesor_cedula) <> \'\'';
+        } elseif ($conAsesor && $filtro === 'sin_asesor') {
+            $sql .= ' AND (t.asesor_cedula IS NULL OR TRIM(t.asesor_cedula) = \'\')';
+        }
+
+        $sql .= ' ORDER BY t.id_cliente ASC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Resumen de titulares por asesor (incluye fila sin asignar) para exportación.
+     */
+    public function resumenAsignacionParaExporte(
+        string $coordinadorCedula,
+        ?string $fechaInicio,
+        ?string $fechaFin
+    ): array {
+        $conAsesor = $this->titularesTieneColumnaAsesorCedula();
+        if (!$conAsesor) {
+            $stmt = $this->db->prepare('
+                SELECT COUNT(*) AS total_titulares
+                FROM titulares
+                WHERE coordinador_cedula = ?
+                  AND (? IS NULL OR ? = \'\' OR DATE(creado_en) >= ?)
+                  AND (? IS NULL OR ? = \'\' OR DATE(creado_en) <= ?)
+            ');
+            $stmt->execute([
+                $coordinadorCedula,
+                $fechaInicio, $fechaInicio, $fechaInicio,
+                $fechaFin, $fechaFin, $fechaFin,
+            ]);
+            $row = $stmt->fetch(PDO::FETCH_ASSOC);
+            return [[
+                'asesor_cedula' => '',
+                'asesor_nombre' => 'Sin columna asesor (migración pendiente)',
+                'total_titulares' => (int) ($row['total_titulares'] ?? 0),
+            ]];
+        }
+
+        $sql = "
+            SELECT
+                COALESCE(NULLIF(TRIM(t.asesor_cedula), ''), '') AS asesor_cedula,
+                CASE
+                    WHEN t.asesor_cedula IS NULL OR TRIM(t.asesor_cedula) = '' THEN 'Sin asignar'
+                    ELSE TRIM(CONCAT(COALESCE(a.nombre, ''), ' ', COALESCE(a.apellido, '')))
+                END AS asesor_nombre,
+                COUNT(*) AS total_titulares
+            FROM titulares t
+            LEFT JOIN usuarios a ON t.asesor_cedula = a.cedula
+            WHERE t.coordinador_cedula = ?
+        ";
+        $params = [$coordinadorCedula];
+        if ($fechaInicio !== null && $fechaInicio !== '') {
+            $sql .= ' AND DATE(t.creado_en) >= ?';
+            $params[] = $fechaInicio;
+        }
+        if ($fechaFin !== null && $fechaFin !== '') {
+            $sql .= ' AND DATE(t.creado_en) <= ?';
+            $params[] = $fechaFin;
+        }
+        $sql .= ' GROUP BY asesor_cedula, asesor_nombre ORDER BY total_titulares DESC, asesor_nombre ASC';
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Conteo de filas que tendría un export de titulares (vista previa).
+     */
+    public function contarParaExporteCoordinador(
+        string $coordinadorCedula,
+        ?string $fechaInicio,
+        ?string $fechaFin,
+        ?string $filtroAsignacion = null
+    ): int {
+        $conAsesor = $this->titularesTieneColumnaAsesorCedula();
+        $sql = 'SELECT COUNT(*) FROM titulares t WHERE t.coordinador_cedula = ?';
+        $params = [$coordinadorCedula];
+        if ($fechaInicio !== null && $fechaInicio !== '') {
+            $sql .= ' AND DATE(t.creado_en) >= ?';
+            $params[] = $fechaInicio;
+        }
+        if ($fechaFin !== null && $fechaFin !== '') {
+            $sql .= ' AND DATE(t.creado_en) <= ?';
+            $params[] = $fechaFin;
+        }
+        $filtro = $filtroAsignacion !== null ? trim($filtroAsignacion) : '';
+        if ($conAsesor && $filtro === 'asignados') {
+            $sql .= ' AND t.asesor_cedula IS NOT NULL AND TRIM(t.asesor_cedula) <> \'\'';
+        } elseif ($conAsesor && $filtro === 'sin_asesor') {
+            $sql .= ' AND (t.asesor_cedula IS NULL OR TRIM(t.asesor_cedula) = \'\')';
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
+        return (int) $stmt->fetchColumn();
+    }
+
     public function listarDisponiblesPorCoordinador(string $coordinadorCedula, int $limite): array {
         if ($this->titularesTieneColumnaAsesorCedula()) {
             $stmt = $this->db->prepare('

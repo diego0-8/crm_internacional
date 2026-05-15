@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config.php';
+require_once '../model/TiketeraModel.php';
 
 // Verificar autenticación y permisos
 if (!isLoggedIn() || !hasRole('asesor')) {
@@ -30,27 +31,46 @@ try {
         exit;
     }
 
-    // Obtener notas del ticket
-    $stmt = $db->prepare("
+    $tieneColEstado = false;
+    try {
+        $chk = $db->query("
+            SELECT COUNT(*) FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'ticket_notas'
+              AND COLUMN_NAME = 'estado_ticket'
+        ");
+        $tieneColEstado = ((int) $chk->fetchColumn()) > 0;
+    } catch (Exception $e) {
+        $tieneColEstado = false;
+    }
+
+    $sql = "
         SELECT
             tn.id,
             tn.contenido,
             tn.proxima_accion,
             tn.fecha_proxima_accion,
             tn.fecha_creacion,
-            u.nombre as asesor_nombre,
-            u.apellido as asesor_apellido
+            u.nombre AS asesor_nombre,
+            u.apellido AS asesor_apellido"
+        . ($tieneColEstado ? ", tn.estado_ticket" : ", NULL AS estado_ticket")
+        . "
         FROM ticket_notas tn
         JOIN usuarios u ON tn.asesor_cedula = u.cedula
         WHERE tn.ticket_id = ?
         ORDER BY tn.fecha_creacion DESC
-    ");
+    ";
+    $stmt = $db->prepare($sql);
     $stmt->execute([$ticketId]);
     $notas = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Formatear datos
     foreach ($notas as &$nota) {
-        $nota['asesor_nombre'] = $nota['asesor_nombre'] . ' ' . $nota['asesor_apellido'];
+        $nota['asesor_nombre'] = trim($nota['asesor_nombre'] . ' ' . $nota['asesor_apellido']);
+        $estKey = trim((string) ($nota['estado_ticket'] ?? ''));
+        $nota['estado_ticket'] = $estKey;
+        $nota['estado_label'] = $estKey !== ''
+            ? (TiketeraModel::ESTADO_LABELS[$estKey] ?? $estKey)
+            : '';
     }
     unset($nota);
 

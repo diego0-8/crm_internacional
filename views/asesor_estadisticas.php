@@ -18,6 +18,8 @@ $message = getMessage();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Estadísticas - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="../css/variables.css" rel="stylesheet">
+    <link href="../css/role-specific.css" rel="stylesheet">
     <link href="../css/dashboard.css" rel="stylesheet">
     <link href="../css/asesor.css" rel="stylesheet">
 </head>
@@ -26,9 +28,8 @@ $message = getMessage();
         <!-- Sidebar -->
         <div class="sidebar">
             <div class="sidebar-header">
-                <div class="logo" style="color: #EBF58E;">
-                    <i class="fas fa-chart-line"></i>
-                    CRM
+                <div class="logo logo-asesor">
+                    <img src="../img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
@@ -52,16 +53,16 @@ $message = getMessage();
 
             <div class="sidebar-footer">
                 <div class="profile-card">
-                    <div class="profile-avatar" style="background: linear-gradient(135deg, #81864E, #AEB669);">
+                    <div class="profile-avatar avatar-asesor">
                         <?php echo strtoupper(substr($user['nombre'], 0, 1) . substr($user['apellido'], 0, 1)); ?>
                     </div>
                     <div class="profile-info">
-                        <h4 style="color: #EBF58E;"><?php echo $user['nombre'] . ' ' . $user['apellido']; ?></h4>
-                        <p style="color: #E2EC89;">Asesor</p>
+                        <h4 class="text-asesor"><?php echo $user['nombre'] . ' ' . $user['apellido']; ?></h4>
+                        <p class="text-asesor">Asesor</p>
                     </div>
                 </div>
 
-                <button class="logout-btn" onclick="cerrarSesion()" style="background: linear-gradient(135deg, #ef4444, #dc2626);">
+                <button class="logout-btn" onclick="cerrarSesion()">
                     <i class="fas fa-sign-out-alt"></i>
                     Cerrar Sesión
                 </button>
@@ -71,25 +72,25 @@ $message = getMessage();
         <!-- Main Content -->
         <div class="main-content">
             <!-- Top Header -->
-            <div class="top-header" style="background: linear-gradient(180deg, #60643A 0%, #81864E 100%);">
+            <div class="top-header header-asesor">
                 <div class="header-left">
-                    <button class="menu-toggle" onclick="toggleSidebar()" style="color: #EBF58E;">
+                    <button class="menu-toggle" onclick="toggleSidebar()">
                         <i class="fas fa-bars"></i>
                     </button>
                     <div class="welcome-section">
-                        <h1 style="background: linear-gradient(135deg, #81864E, #AEB669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Mis Estadísticas</h1>
-                        <p style="color: #E2EC89;">Casos de reparto (titulares), clientes CRM, tickets y llamadas.</p>
+                        <h1 class="title-asesor">Mis Estadísticas</h1>
+                        <p class="subtitle-asesor">Casos de reparto (titulares), clientes CRM, tickets y llamadas.</p>
                     </div>
                 </div>
                 <div class="header-actions">
-                    <button class="btn btn-primary" onclick="refreshEstadisticas()" style="background: linear-gradient(135deg, #60643A, #81864E); color: #EBF58E;">
+                    <button type="button" class="btn btn-primary" onclick="refreshEstadisticas()">
                         <i class="fas fa-sync-alt"></i> Actualizar
                     </button>
                 </div>
             </div>
 
             <!-- Content Area -->
-            <div class="content-area">
+            <div class="content-area asesor-estadisticas-page">
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
@@ -102,7 +103,7 @@ $message = getMessage();
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-title">Casos reparto</div>
-                            <div class="stat-icon" style="background: rgba(96, 100, 58, 0.2); color: #60643A;">
+                            <div class="stat-icon">
                                 <i class="fas fa-users"></i>
                             </div>
                         </div>
@@ -116,7 +117,7 @@ $message = getMessage();
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-title">Con email o teléfono</div>
-                            <div class="stat-icon" style="background: rgba(129, 134, 78, 0.2); color: #81864E;">
+                            <div class="stat-icon">
                                 <i class="fas fa-user-check"></i>
                             </div>
                         </div>
@@ -130,7 +131,7 @@ $message = getMessage();
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-title">Tickets Resueltos</div>
-                            <div class="stat-icon" style="background: rgba(174, 182, 105, 0.2); color: #AEB669;">
+                            <div class="stat-icon">
                                 <i class="fas fa-check-circle"></i>
                             </div>
                         </div>
@@ -144,7 +145,7 @@ $message = getMessage();
                     <div class="stat-card">
                         <div class="stat-header">
                             <div class="stat-title">Tiempo Promedio</div>
-                            <div class="stat-icon" style="background: rgba(194, 202, 117, 0.2); color: #C2CA75;">
+                            <div class="stat-icon">
                                 <i class="fas fa-clock"></i>
                             </div>
                         </div>
@@ -163,7 +164,7 @@ $message = getMessage();
                     </div>
                     <div class="performance-metrics">
                         <div class="performance-card">
-                            <div class="performance-icon" style="background: linear-gradient(135deg, #60643A, #81864E); color: #EBF58E;">
+                            <div class="performance-icon">
                                 <i class="fas fa-chart-line"></i>
                             </div>
                             <div class="performance-content">
@@ -174,7 +175,7 @@ $message = getMessage();
                         </div>
 
                         <div class="performance-card">
-                            <div class="performance-icon" style="background: linear-gradient(135deg, #81864E, #AEB669); color: #EBF58E;">
+                            <div class="performance-icon">
                                 <i class="fas fa-phone"></i>
                             </div>
                             <div class="performance-content">
@@ -185,7 +186,7 @@ $message = getMessage();
                         </div>
 
                         <div class="performance-card">
-                            <div class="performance-icon" style="background: linear-gradient(135deg, #AEB669, #C2CA75); color: #60643A;">
+                            <div class="performance-icon">
                                 <i class="fas fa-envelope"></i>
                             </div>
                             <div class="performance-content">
@@ -196,7 +197,7 @@ $message = getMessage();
                         </div>
 
                         <div class="performance-card">
-                            <div class="performance-icon" style="background: linear-gradient(135deg, #C2CA75, #EBF58E); color: #60643A;">
+                            <div class="performance-icon">
                                 <i class="fas fa-calendar-check"></i>
                             </div>
                             <div class="performance-content">
@@ -383,8 +384,8 @@ $message = getMessage();
             const container = document.getElementById('actividadReciente');
             container.innerHTML = `
                 <div class="actividad-item">
-                    <div class="actividad-icon" style="background: linear-gradient(135deg, #81864E, #AEB669);">
-                        <i class="fas fa-chart-line" style="color: #EBF58E;"></i>
+                    <div class="actividad-icon">
+                        <i class="fas fa-chart-line"></i>
                     </div>
                     <div class="actividad-content">
                         <div class="actividad-title">Estadísticas Actualizadas</div>
@@ -393,8 +394,8 @@ $message = getMessage();
                     </div>
                 </div>
                 <div class="actividad-item">
-                    <div class="actividad-icon" style="background: linear-gradient(135deg, #AEB669, #C2CA75);">
-                        <i class="fas fa-users" style="color: #60643A;"></i>
+                    <div class="actividad-icon">
+                        <i class="fas fa-users"></i>
                     </div>
                     <div class="actividad-content">
                         <div class="actividad-title">Casos de reparto</div>
@@ -403,8 +404,8 @@ $message = getMessage();
                     </div>
                 </div>
                 <div class="actividad-item">
-                    <div class="actividad-icon" style="background: linear-gradient(135deg, #C2CA75, #EBF58E);">
-                        <i class="fas fa-ticket-alt" style="color: #60643A;"></i>
+                    <div class="actividad-icon">
+                        <i class="fas fa-ticket-alt"></i>
                     </div>
                     <div class="actividad-content">
                         <div class="actividad-title">Tickets Resueltos</div>
@@ -430,8 +431,8 @@ $message = getMessage();
                 const actividadItem = document.createElement('div');
                 actividadItem.className = 'actividad-item';
                 actividadItem.innerHTML = `
-                    <div class="actividad-icon" style="background: linear-gradient(135deg, #81864E, #AEB669);">
-                        <i class="fas fa-${actividad.icono || 'circle'}" style="color: #EBF58E;"></i>
+                    <div class="actividad-icon">
+                        <i class="fas fa-${actividad.icono || 'circle'}"></i>
                     </div>
                     <div class="actividad-content">
                         <div class="actividad-title">${actividad.titulo}</div>
@@ -517,60 +518,5 @@ $message = getMessage();
             }
         });
     </script>
-
-    <style>
-        .actividad-timeline {
-            max-height: 400px;
-            overflow-y: auto;
-        }
-
-        .actividad-item {
-            display: flex;
-            align-items: flex-start;
-            gap: 15px;
-            padding: 15px;
-            border-bottom: 1px solid #e2e8f0;
-            transition: background-color 0.3s ease;
-        }
-
-        .actividad-item:hover {
-            background-color: rgba(129, 134, 78, 0.05);
-        }
-
-        .actividad-item:last-child {
-            border-bottom: none;
-        }
-
-        .actividad-icon {
-            width: 40px;
-            height: 40px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            flex-shrink: 0;
-        }
-
-        .actividad-content {
-            flex: 1;
-        }
-
-        .actividad-title {
-            font-weight: 600;
-            color: #2d3748;
-            margin-bottom: 5px;
-        }
-
-        .actividad-description {
-            color: #4a5568;
-            font-size: 0.9rem;
-            margin-bottom: 5px;
-        }
-
-        .actividad-time {
-            color: #718096;
-            font-size: 0.8rem;
-        }
-    </style>
 </body>
 </html>

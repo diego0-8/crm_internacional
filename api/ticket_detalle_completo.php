@@ -258,7 +258,7 @@ try {
     if ($titularIdResuelto > 0) {
         try {
             $stmt = $db->prepare('
-                SELECT id_cliente, primer_nombre, apellido,
+                SELECT id_cliente, primer_nombre, apellido, prioridad,
                        mailing_calle, mailing_ciudad, mailing_estado, mailing_codigo_postal
                 FROM titulares
                 WHERE id_cliente = ? AND asesor_cedula = ?
@@ -271,6 +271,7 @@ try {
                     'id_cliente' => (int) $titRow['id_cliente'],
                     'primer_nombre' => $titRow['primer_nombre'],
                     'apellido' => $titRow['apellido'],
+                    'prioridad' => $titRow['prioridad'],
                     'mailing_calle' => $titRow['mailing_calle'],
                     'mailing_ciudad' => $titRow['mailing_ciudad'],
                     'mailing_estado' => $titRow['mailing_estado'],

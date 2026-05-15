@@ -4,6 +4,28 @@ require_once __DIR__ . '/../config.php';
 class TiketeraModel {
     private $db;
 
+    /** @var array<string, bool> */
+    private static $tablaExisteCache = [];
+
+    /** True si la tabla existe en la BD actual (dump sin módulo tiketera). */
+    private function tablaExiste(string $nombreTabla): bool {
+        if (array_key_exists($nombreTabla, self::$tablaExisteCache)) {
+            return self::$tablaExisteCache[$nombreTabla];
+        }
+        try {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$nombreTabla]);
+            self::$tablaExisteCache[$nombreTabla] = (bool) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            self::$tablaExisteCache[$nombreTabla] = false;
+        }
+        return self::$tablaExisteCache[$nombreTabla];
+    }
+
     /**
      * Lista canónica de los 6 estados del workflow profesional.
      */
@@ -109,6 +131,11 @@ class TiketeraModel {
      * Se registra fila inicial en ticket_estado_historial (estado_anterior=NULL).
      */
     public function createTicket($data) {
+        if (!$this->tablaExiste('tiketera')) {
+            throw new Exception(
+                'La tabla tiketera no existe en esta base de datos. Importe el esquema CRM (p. ej. database/crm_internacional estructura.sql) o cree la tabla tiketera.'
+            );
+        }
         $this->db->beginTransaction();
         try {
             $estadoInicial = 'comunicacion';
@@ -163,6 +190,9 @@ class TiketeraModel {
      */
     public function getTicketsByAsesor($asesorCedula, $estado = null, $clienteCedula = null) {
         try {
+            if (!$this->tablaExiste('tiketera')) {
+                return [];
+            }
             $sql = "
                 SELECT t.*,
                        tc.codigo AS categoria_codigo,
@@ -193,7 +223,14 @@ class TiketeraModel {
             $stmt->execute($params);
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            throw new Exception("Error al obtener tickets: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (stripos($msg, '42S02') !== false
+                || stripos($msg, "doesn't exist") !== false
+                || stripos($msg, 'no existe') !== false) {
+                self::$tablaExisteCache['tiketera'] = false;
+                return [];
+            }
+            throw new Exception("Error al obtener tickets: " . $msg);
         }
     }
 
@@ -202,6 +239,9 @@ class TiketeraModel {
      */
     public function getTicketById($ticketId, $asesorCedula) {
         try {
+            if (!$this->tablaExiste('tiketera')) {
+                return false;
+            }
             $stmt = $this->db->prepare("
                 SELECT t.*,
                        tc.codigo AS categoria_codigo,
@@ -217,7 +257,14 @@ class TiketeraModel {
             $stmt->execute([$ticketId, $asesorCedula]);
             return $stmt->fetch();
         } catch (Exception $e) {
-            throw new Exception("Error al obtener ticket: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (stripos($msg, '42S02') !== false
+                || stripos($msg, "doesn't exist") !== false
+                || stripos($msg, 'no existe') !== false) {
+                self::$tablaExisteCache['tiketera'] = false;
+                return false;
+            }
+            throw new Exception("Error al obtener ticket: " . $msg);
         }
     }
 
@@ -231,6 +278,13 @@ class TiketeraModel {
 
         if (!in_array($nuevoEstado, self::ESTADOS, true)) {
             throw new Exception("Estado no válido: {$nuevoEstado}", 422);
+        }
+
+        if (!$this->tablaExiste('tiketera')) {
+            throw new Exception(
+                'La tabla tiketera no existe en esta base de datos. Importe el esquema CRM antes de gestionar tickets.',
+                503
+            );
         }
 
         $this->db->beginTransaction();
@@ -308,6 +362,9 @@ class TiketeraModel {
      */
     public function getHistorialEstado($ticketId) {
         $ticketId = (int) $ticketId;
+        if (!$this->tablaExiste('ticket_estado_historial')) {
+            return ['historial' => [], 'total_segundos' => 0];
+        }
         $stmt = $this->db->prepare("
             SELECT h.id,
                    h.ticket_id,
@@ -341,6 +398,11 @@ class TiketeraModel {
             $rows[$i]['duracion_segundos'] = $durSeg;
             $rows[$i]['duracion_legible']  = self::humanizeSeconds($durSeg);
             $rows[$i]['estado_label']      = self::ESTADO_LABELS[$rows[$i]['estado_nuevo']] ?? $rows[$i]['estado_nuevo'];
+            $ea = $rows[$i]['estado_anterior'] ?? null;
+            $rows[$i]['estado_anterior_label'] = ($ea !== null && $ea !== '')
+                ? (self::ESTADO_LABELS[$ea] ?? $ea)
+                : null;
+            $rows[$i]['estado_guardado_label'] = $rows[$i]['estado_label'];
             $rows[$i]['asesor_nombre_completo'] = trim(
                 ($rows[$i]['asesor_nombre'] ?? '') . ' ' . ($rows[$i]['asesor_apellido'] ?? '')
             );
@@ -379,6 +441,18 @@ class TiketeraModel {
      */
     public function getEstadisticasTickets($asesorCedula) {
         try {
+            if (!$this->tablaExiste('tiketera')) {
+                return [
+                    'total_tickets' => 0,
+                    'tickets_comunicacion' => 0,
+                    'tickets_validacion' => 0,
+                    'tickets_proceso_judicial' => 0,
+                    'tickets_remate' => 0,
+                    'tickets_recuperacion' => 0,
+                    'tickets_cierre' => 0,
+                    'tickets_abiertos' => 0,
+                ];
+            }
             $stmt = $this->db->prepare("
                 SELECT
                     COUNT(*) as total_tickets,
@@ -395,7 +469,23 @@ class TiketeraModel {
             $stmt->execute([$asesorCedula]);
             return $stmt->fetch();
         } catch (Exception $e) {
-            throw new Exception("Error al obtener estadísticas: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (stripos($msg, '42S02') !== false
+                || stripos($msg, "doesn't exist") !== false
+                || stripos($msg, 'no existe') !== false) {
+                self::$tablaExisteCache['tiketera'] = false;
+                return [
+                    'total_tickets' => 0,
+                    'tickets_comunicacion' => 0,
+                    'tickets_validacion' => 0,
+                    'tickets_proceso_judicial' => 0,
+                    'tickets_remate' => 0,
+                    'tickets_recuperacion' => 0,
+                    'tickets_cierre' => 0,
+                    'tickets_abiertos' => 0,
+                ];
+            }
+            throw new Exception("Error al obtener estadísticas: " . $msg);
         }
     }
 
@@ -404,6 +494,9 @@ class TiketeraModel {
      */
     public function buscarTickets($asesorCedula, $termino) {
         try {
+            if (!$this->tablaExiste('tiketera')) {
+                return [];
+            }
             $stmt = $this->db->prepare("
                 SELECT t.*,
                        tc.codigo AS categoria_codigo,
@@ -428,7 +521,14 @@ class TiketeraModel {
             ]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            throw new Exception("Error al buscar tickets: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (stripos($msg, '42S02') !== false
+                || stripos($msg, "doesn't exist") !== false
+                || stripos($msg, 'no existe') !== false) {
+                self::$tablaExisteCache['tiketera'] = false;
+                return [];
+            }
+            throw new Exception("Error al buscar tickets: " . $msg);
         }
     }
 
@@ -437,6 +537,9 @@ class TiketeraModel {
      */
     public function getTicketsByCliente($clienteCedula) {
         try {
+            if (!$this->tablaExiste('tiketera')) {
+                return [];
+            }
             $stmt = $this->db->prepare("
                 SELECT t.*,
                        tc.codigo AS categoria_codigo,
@@ -452,7 +555,14 @@ class TiketeraModel {
             $stmt->execute([$clienteCedula]);
             return $stmt->fetchAll();
         } catch (Exception $e) {
-            throw new Exception("Error al obtener tickets del cliente: " . $e->getMessage());
+            $msg = $e->getMessage();
+            if (stripos($msg, '42S02') !== false
+                || stripos($msg, "doesn't exist") !== false
+                || stripos($msg, 'no existe') !== false) {
+                self::$tablaExisteCache['tiketera'] = false;
+                return [];
+            }
+            throw new Exception("Error al obtener tickets del cliente: " . $msg);
         }
     }
 
@@ -475,6 +585,9 @@ class TiketeraModel {
      */
     public function actualizarTicket($ticketId, $datos) {
         try {
+            if (!$this->tablaExiste('tiketera')) {
+                throw new Exception('La tabla tiketera no existe en esta base de datos.');
+            }
             $campos = [];
             $valores = [];
 

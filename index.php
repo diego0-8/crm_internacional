@@ -13,23 +13,29 @@
 // Incluir configuración (config.php inicia/configura la sesión)
 require_once 'config.php';
 
+// Rutas absolutas de redirección (evitan bucles cuando .htaccess envía a index.php
+// una URL bajo views/ que ya no existe: un Location relativo "views/..." se duplicaba).
+function appRedirectPath($relativePath) {
+    return rtrim(APP_URL, '/') . '/' . ltrim($relativePath, '/');
+}
+
 // Función para redirigir al dashboard según el rol
 function redirectToDashboard($rol) {
     switch ($rol) {
         case 'admin':
-            header('Location: views/admin_dashboard.php');
+            header('Location: ' . appRedirectPath('views/admin_dashboard.php'));
             break;
         case 'coordinador':
-            header('Location: views/coordinador_dashboard.php');
+            header('Location: ' . appRedirectPath('views/coordinador_dashboard.php'));
             break;
         case 'asesor':
-            header('Location: views/asesor_dashboard.php');
+            header('Location: ' . appRedirectPath('views/asesor_dashboard.php'));
             break;
         case 'cliente':
-            header('Location: views/cliente_dashboard.php');
+            header('Location: ' . appRedirectPath('views/cliente_dashboard.php'));
             break;
         default:
-            header('Location: views/login.php');
+            header('Location: ' . appRedirectPath('views/login.php'));
             break;
     }
     exit();
@@ -45,6 +51,6 @@ if (isLoggedIn()) {
 }
 
 // Si no está logueado, redirigir al login
-header('Location: views/login.php');
+header('Location: ' . appRedirectPath('views/login.php'));
 exit();
 ?>

@@ -40,15 +40,24 @@ class ArchivoCsvModel {
     
     /**
      * Actualizar estado del archivo
+     *
+     * @param int|null $totalRegistros Si se indica, actualiza total_registros (importación reparto / legacy).
      */
-    public function updateEstado($id, $estado, $registrosProcesados = null) {
+    public function updateEstado($id, $estado, $registrosProcesados = null, $totalRegistros = null) {
         try {
+            if ($estado === 'completado_con_errores') {
+                $estado = 'completado';
+            }
             $fields = ['estado = ?'];
             $values = [$estado];
             
             if ($registrosProcesados !== null) {
                 $fields[] = 'registros_procesados = ?';
                 $values[] = $registrosProcesados;
+            }
+            if ($totalRegistros !== null) {
+                $fields[] = 'total_registros = ?';
+                $values[] = $totalRegistros;
             }
             
             $values[] = $id;
@@ -120,7 +129,11 @@ class ArchivoCsvModel {
                 unlink($archivo['ruta_archivo']);
             }
             
-            // Eliminar clientes asociados
+            // Titulares importados desde este CSV (reparto) y datos en cascada
+            $stmt = $this->db->prepare("DELETE FROM titulares WHERE archivo_csv_id = ?");
+            $stmt->execute([$id]);
+
+            // Clientes CRM asociados al mismo archivo
             $stmt = $this->db->prepare("DELETE FROM clientes WHERE archivo_csv_id = ?");
             $stmt->execute([$id]);
             

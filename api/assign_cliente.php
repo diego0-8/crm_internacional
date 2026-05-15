@@ -21,20 +21,32 @@ if (!$input) {
 }
 
 // Validar datos requeridos
-if (empty($input['cliente_id']) || empty($input['asesor_cedula'])) {
+if (empty($input['asesor_cedula'])) {
     http_response_code(400);
-    echo json_encode(['success' => false, 'message' => 'Cliente ID y Asesor son requeridos']);
+    echo json_encode(['success' => false, 'message' => 'Asesor es requerido']);
     exit;
 }
 
 $coordinadorController = new CoordinadorController();
+$user = getCurrentUser();
 
 try {
-    $result = $coordinadorController->asignarClienteAAsesor(
-        $input['cliente_id'],
-        $input['asesor_cedula'],
-        $input['notas'] ?? ''
-    );
+    if (!empty($input['titular_id'])) {
+        $result = $coordinadorController->asignarTitularAAsesor(
+            (int) $input['titular_id'],
+            $input['asesor_cedula'],
+            $user['cedula']
+        );
+    } elseif (!empty($input['cliente_id'])) {
+        $result = $coordinadorController->asignarClienteAAsesor(
+            $input['cliente_id'],
+            $input['asesor_cedula']
+        );
+    } else {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'titular_id o cliente_id es requerido']);
+        exit;
+    }
     echo json_encode($result);
 } catch (Exception $e) {
     http_response_code(500);

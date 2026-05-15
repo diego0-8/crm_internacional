@@ -3,10 +3,18 @@ header('Content-Type: application/json');
 require_once '../config.php';
 require_once '../controller/AsesorController.php';
 
-// Verificar autenticación y permisos
-if (!isLoggedIn() || !hasRole('asesor')) {
+// Verificar autenticación: los asesores no pueden crear tickets (UI y política).
+if (!isLoggedIn()) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'No autorizado']);
+    exit;
+}
+if (hasRole('asesor')) {
+    http_response_code(403);
+    echo json_encode([
+        'success' => false,
+        'message' => 'Los asesores no pueden crear tickets. La creación la asigna el coordinador o administración.',
+    ]);
     exit;
 }
 

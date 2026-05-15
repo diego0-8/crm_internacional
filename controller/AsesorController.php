@@ -5,6 +5,7 @@ require_once __DIR__ . '/../model/TipificacionModel.php';
 require_once __DIR__ . '/../model/HistorialLlamadaModel.php';
 require_once __DIR__ . '/../model/TareaModel.php';
 require_once __DIR__ . '/../model/TiketeraModel.php';
+require_once __DIR__ . '/../model/TitularModel.php';
 
 class AsesorController {
     private $clienteModel;
@@ -12,6 +13,7 @@ class AsesorController {
     private $historialLlamadaModel;
     private $tareaModel;
     private $tiketeraModel;
+    private $titularModel;
     
     public function __construct() {
         $this->clienteModel = new ClienteModel();
@@ -19,6 +21,7 @@ class AsesorController {
         $this->historialLlamadaModel = new HistorialLlamadaModel();
         $this->tareaModel = new TareaModel();
         $this->tiketeraModel = new TiketeraModel();
+        $this->titularModel = new TitularModel();
     }
     
     /**
@@ -36,6 +39,24 @@ class AsesorController {
             return [
                 'success' => false,
                 'message' => $e->getMessage()
+            ];
+        }
+    }
+
+    /**
+     * Titulares (reparto) asignados al asesor vía titulares.asesor_cedula.
+     */
+    public function getTitularesAsesor($asesorCedula, $busqueda = null) {
+        try {
+            $titulares = $this->titularModel->listarPorAsesor($asesorCedula, $busqueda);
+            return [
+                'success' => true,
+                'data' => $titulares,
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage(),
             ];
         }
     }

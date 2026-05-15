@@ -21,6 +21,95 @@ if ($ticketId <= 0) {
 
 $db = getDB();
 
+/**
+ * dias_transcurridos en CSV = mora al momento del registro. Se suman días calendario desde la
+ * fecha de venta (propiedades.fecha_venta) si existe; si no, desde creado_en / actualizado_en.
+ * «Hoy» en APP_TIMEZONE; +1 día inclusivo frente a medianoches. Tope 300. JD evita DST.
+ */
+function ticket_propiedad_ymd_desde_db(string $refStr): ?string {
+    $refStr = trim($refStr);
+    if ($refStr === '') {
+        return null;
+    }
+    if (preg_match('/^(\d{4}-\d{2}-\d{2})/', $refStr, $m)) {
+        return $m[1];
+    }
+    $ts = strtotime($refStr);
+    if ($ts === false) {
+        return null;
+    }
+    return date('Y-m-d', $ts);
+}
+
+function ticket_gregorian_jd(string $ymd): ?int {
+    $p = array_map('intval', explode('-', $ymd));
+    if (count($p) !== 3) {
+        return null;
+    }
+    [$y, $m, $d] = $p;
+    if ($y < 1 || $m < 1 || $m > 12 || $d < 1 || $d > 31) {
+        return null;
+    }
+    return gregoriantojd($m, $d, $y);
+}
+
+function ticket_calcular_dias_mora_reparto(array $propRow): array {
+    $limite = 300;
+    $raw = $propRow['dias_transcurridos'] ?? null;
+    $base = ($raw !== null && $raw !== '')
+        ? max(0, (int) $raw)
+        : 0;
+    $fechaVenta = isset($propRow['fecha_venta']) ? trim((string) $propRow['fecha_venta']) : '';
+    $anclaOrigen = 'creado_en';
+    $refYmd = null;
+    if ($fechaVenta !== '') {
+        $refYmd = ticket_propiedad_ymd_desde_db($fechaVenta);
+        if ($refYmd !== null) {
+            $anclaOrigen = 'fecha_venta';
+        }
+    }
+    if ($refYmd === null) {
+        $refStr = (string) ($propRow['creado_en'] ?? $propRow['actualizado_en'] ?? date('Y-m-d H:i:s'));
+        $refYmd = ticket_propiedad_ymd_desde_db($refStr);
+        if ($refYmd === null) {
+            $refYmd = date('Y-m-d');
+        }
+    }
+
+    $tzName = (string) (defined('APP_TIMEZONE') ? constant('APP_TIMEZONE') : 'America/Bogota');
+    try {
+        $tz = new DateTimeZone($tzName);
+    } catch (Exception $e) {
+        $tz = new DateTimeZone('UTC');
+    }
+    $todayYmd = (new DateTimeImmutable('now', $tz))->format('Y-m-d');
+
+    $jRef = ticket_gregorian_jd($refYmd);
+    $jToday = ticket_gregorian_jd($todayYmd);
+    if ($jRef === null || $jToday === null) {
+        $extra = 0;
+    } else {
+        // +1: la mora debe reflejar la vigencia hasta el día calendario actual, no hasta medianoche de hoy.
+        $extra = $jToday - $jRef + 1;
+        if ($extra < 0) {
+            $extra = 0;
+        }
+    }
+
+    $total = min($limite, $base + $extra);
+
+    return [
+        'dias_transcurridos_origen_csv' => $raw,
+        'dias_mora_activos' => $total,
+        'dias_mora_limite' => $limite,
+        'dias_incrementados_desde_registro' => $extra,
+        'fecha_referencia_mora' => $refYmd,
+        'mora_fecha_ancla_origen' => $anclaOrigen,
+        'mora_zona_horaria' => $tzName,
+        'en_limite' => $total >= $limite,
+    ];
+}
+
 try {
     $stmt = $db->prepare("
         SELECT
@@ -122,7 +211,7 @@ try {
                    case_number, parcel_number, type_of_foreclosure,
                    property_street, property_city, property_state, property_zip,
                    county, source AS predio_source,
-                   valor_a_devolver, valor_vendido, valor_inicial_subasta, date_sold,
+                   valor_a_devolver, valor_vendido, valor_inicial_subasta, date_sold, monetizacion,
                    created_at
             FROM predios
             WHERE ticket_id = ?
@@ -137,6 +226,90 @@ try {
     } catch (PDOException $e) {
         // Tabla no existe (migración pendiente) u otro error de BD: no rompemos la respuesta.
         $ticket['predio'] = null;
+    }
+
+    // Titular / propiedad reparto (tablas titulares + propiedades) vinculado al ticket
+    $ticket['titular_reparto'] = null;
+    $ticket['propiedad_reparto'] = null;
+
+    $titularIdResuelto = null;
+    $cedulaCliente = (string) ($ticket['cliente_cedula'] ?? '');
+    if (preg_match('/^TIT-(\d+)$/i', $cedulaCliente, $mTit)) {
+        $titularIdResuelto = (int) $mTit[1];
+    } elseif (!empty($ticket['numero_ticket'])) {
+        try {
+            $stmt = $db->prepare('
+                SELECT t.id_cliente
+                FROM titulares t
+                INNER JOIN propiedades p ON p.id_cliente = t.id_cliente
+                WHERE p.numero_caso = ? AND t.asesor_cedula = ?
+                LIMIT 1
+            ');
+            $stmt->execute([(string) $ticket['numero_ticket'], $asesorCedula]);
+            $rowT = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($rowT) {
+                $titularIdResuelto = (int) $rowT['id_cliente'];
+            }
+        } catch (PDOException $e) {
+            // esquema sin titulares/propiedades
+        }
+    }
+
+    if ($titularIdResuelto > 0) {
+        try {
+            $stmt = $db->prepare('
+                SELECT id_cliente, primer_nombre, apellido,
+                       mailing_calle, mailing_ciudad, mailing_estado, mailing_codigo_postal
+                FROM titulares
+                WHERE id_cliente = ? AND asesor_cedula = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$titularIdResuelto, $asesorCedula]);
+            $titRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($titRow) {
+                $ticket['titular_reparto'] = [
+                    'id_cliente' => (int) $titRow['id_cliente'],
+                    'primer_nombre' => $titRow['primer_nombre'],
+                    'apellido' => $titRow['apellido'],
+                    'mailing_calle' => $titRow['mailing_calle'],
+                    'mailing_ciudad' => $titRow['mailing_ciudad'],
+                    'mailing_estado' => $titRow['mailing_estado'],
+                    'mailing_codigo_postal' => $titRow['mailing_codigo_postal'],
+                ];
+            }
+
+            $stmt = $db->prepare('
+                SELECT id_propiedad, id_cliente, dias_transcurridos, creado_en, actualizado_en,
+                       fecha_venta,
+                       numero_caso, numero_parcela, tipo_foreclosure,
+                       propiedad_calle, propiedad_ciudad, propiedad_estado, propiedad_codigo_postal,
+                       condado, fuente
+                FROM propiedades
+                WHERE id_cliente = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$titularIdResuelto]);
+            $propRow = $stmt->fetch(PDO::FETCH_ASSOC);
+            if ($propRow) {
+                $mora = ticket_calcular_dias_mora_reparto($propRow);
+                $ticket['propiedad_reparto'] = array_merge(
+                    [
+                        'numero_caso' => $propRow['numero_caso'],
+                        'numero_parcela' => $propRow['numero_parcela'],
+                        'tipo_foreclosure' => $propRow['tipo_foreclosure'],
+                        'propiedad_calle' => $propRow['propiedad_calle'],
+                        'propiedad_ciudad' => $propRow['propiedad_ciudad'],
+                        'propiedad_estado' => $propRow['propiedad_estado'],
+                        'propiedad_codigo_postal' => $propRow['propiedad_codigo_postal'],
+                        'condado' => $propRow['condado'],
+                        'fuente' => $propRow['fuente'],
+                    ],
+                    $mora
+                );
+            }
+        } catch (PDOException $e) {
+            // sin tablas reparto
+        }
     }
 
     $ticket['cliente_telefonos'] = [];

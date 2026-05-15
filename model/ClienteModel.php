@@ -3,9 +3,31 @@ require_once __DIR__ . '/../config.php';
 
 class ClienteModel {
     private $db;
-    
+
+    /** @var array<string, bool> */
+    private static $tableExistsCache = [];
+
     public function __construct() {
         $this->db = getDB();
+    }
+
+    /** True si la tabla existe en la BD actual (dump parcial sin CRM completo). */
+    private function tablaExiste(string $nombreTabla): bool {
+        if (array_key_exists($nombreTabla, self::$tableExistsCache)) {
+            return self::$tableExistsCache[$nombreTabla];
+        }
+        try {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM information_schema.TABLES
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$nombreTabla]);
+            self::$tableExistsCache[$nombreTabla] = (bool) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            self::$tableExistsCache[$nombreTabla] = false;
+        }
+        return self::$tableExistsCache[$nombreTabla];
     }
     
     /**
@@ -283,7 +305,11 @@ class ClienteModel {
      */
     public function getClientesByAsesor($asesorCedula) {
         try {
-            $stmt = $this->db->prepare("
+            $hasHistorial = $this->tablaExiste('historial_llamadas');
+            $hasTiketera = $this->tablaExiste('tiketera');
+
+            if ($hasHistorial && $hasTiketera) {
+                $sql = "
                 SELECT c.*,
                        CASE 
                            WHEN EXISTS (
@@ -298,7 +324,45 @@ class ClienteModel {
                 FROM clientes c
                 WHERE c.asesor_cedula = ? 
                 ORDER BY c.created_at DESC
-            ");
+            ";
+            } elseif ($hasHistorial) {
+                $sql = "
+                SELECT c.*,
+                       CASE 
+                           WHEN EXISTS (
+                               SELECT 1 FROM historial_llamadas hl 
+                               WHERE hl.cliente_cedula = c.cedula
+                           ) THEN 'gestionado'
+                           ELSE 'nuevo'
+                       END as estado_gestion
+                FROM clientes c
+                WHERE c.asesor_cedula = ? 
+                ORDER BY c.created_at DESC
+            ";
+            } elseif ($hasTiketera) {
+                $sql = "
+                SELECT c.*,
+                       CASE 
+                           WHEN EXISTS (
+                               SELECT 1 FROM tiketera t 
+                               WHERE t.cliente_cedula = c.cedula
+                           ) THEN 'gestionado'
+                           ELSE 'nuevo'
+                       END as estado_gestion
+                FROM clientes c
+                WHERE c.asesor_cedula = ? 
+                ORDER BY c.created_at DESC
+            ";
+            } else {
+                $sql = "
+                SELECT c.*, 'nuevo' AS estado_gestion
+                FROM clientes c
+                WHERE c.asesor_cedula = ? 
+                ORDER BY c.created_at DESC
+            ";
+            }
+
+            $stmt = $this->db->prepare($sql);
             $stmt->execute([$asesorCedula]);
             return $stmt->fetchAll();
         } catch (Exception $e) {

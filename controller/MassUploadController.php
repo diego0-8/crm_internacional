@@ -2,6 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../model/ArchivoCsvModel.php';
 require_once __DIR__ . '/../model/ClienteModel.php';
+require_once __DIR__ . '/../model/RepartoImportModel.php';
 
 class MassUploadController {
     private $archivoCsvModel;
@@ -63,6 +64,12 @@ class MassUploadController {
             }
             
             $headers = fgetcsv($handle);
+            if ($headers === false) {
+                fclose($handle);
+                throw new Exception('El archivo CSV está vacío o no se pudo leer la cabecera');
+            }
+
+            $esReparto = RepartoImportModel::esCabeceraReparto($headers);
             $totalRegistros = 0;
             $registrosProcesados = 0;
             $errores = [];
@@ -78,71 +85,75 @@ class MassUploadController {
             ];
             
             $archivoId = $this->archivoCsvModel->createArchivo($archivoData);
-            
-            // Procesar cada línea del CSV
-            while (($data = fgetcsv($handle)) !== false) {
-                $totalRegistros++;
+            $repartoImporter = $esReparto ? new RepartoImportModel() : null;
+            $filaArchivo = 1;
 
-                // Log the raw data for debugging
-                // debug logs removidos para evitar filtrar información sensible
-
-                try {
-                    // Mapear datos del CSV según formato esperado
-                    $clienteData = [
-                        'cedula' => $this->generarCedulaUnica(), // Generar cédula única
-                        'nombre_completo' => trim($data[0] ?? ''), // Nombre completo desde primera columna
-                        'email' => trim($data[1] ?? '') ?: null,
-                        'telefono' => trim($data[2] ?? '') ?: null,
-                        'direccion' => trim($data[3] ?? '') ?: null,
-                        'ciudad' => trim($data[4] ?? '') ?: null,
-                        'pais' => trim($data[5] ?? '') ?: null,
-                        'coordinador_cedula' => $coordinadorId,
-                        'archivo_csv_id' => $archivoId,
-                        'estado' => 'nuevo'
-                    ];
-
-                    // debug logs removidos para evitar filtrar información sensible
-                    
-                    // Validar datos obligatorios
-                    if (empty($clienteData['nombre_completo'])) {
-                        throw new Exception("Nombre completo es obligatorio. Fila contiene: nombre_completo='{$clienteData['nombre_completo']}'");
+            if ($esReparto) {
+                while (($data = fgetcsv($handle)) !== false) {
+                    $filaArchivo++;
+                    $rowAssoc = $repartoImporter->filaAsociativa($headers, $data);
+                    if ($repartoImporter->filaVacia($rowAssoc)) {
+                        continue;
                     }
-
-                    // Validar formato de email si se proporciona
-                    if (!empty($clienteData['email']) && !filter_var($clienteData['email'], FILTER_VALIDATE_EMAIL)) {
-                        throw new Exception("El email '{$clienteData['email']}' no tiene un formato válido");
+                    $totalRegistros++;
+                    try {
+                        $repartoImporter->importarFila($rowAssoc, $archivoId, $coordinadorId);
+                        $registrosProcesados++;
+                    } catch (Exception $e) {
+                        $errores[] = "Fila CSV $filaArchivo: " . $e->getMessage();
                     }
+                }
+            } else {
+                while (($data = fgetcsv($handle)) !== false) {
+                    $totalRegistros++;
+                    $filaArchivo++;
 
-                    // Validar que no haya datos mal mapeados (ej: teléfono en lugar de email)
-                    if (!empty($clienteData['email']) && is_numeric($clienteData['email'])) {
-                        throw new Exception("El email '{$clienteData['email']}' parece ser un número de teléfono. Verifique el orden de las columnas en el CSV");
-                    }
-                    
-                    // Verificar si el cliente ya existe (por email o nombre completo)
-                    if ($clienteData['email']) {
-                        // Verificar por email usando consulta directa
-                        $db = getDB();
-                        $stmt = $db->prepare("SELECT id FROM clientes WHERE email = ?");
-                        $stmt->execute([$clienteData['email']]);
-                        $clienteExistente = $stmt->fetch();
-                        
-                        if ($clienteExistente) {
-                            throw new Exception("Cliente con email {$clienteData['email']} ya existe");
+                    try {
+                        $clienteData = [
+                            'cedula' => $this->generarCedulaUnica(),
+                            'nombre_completo' => trim($data[0] ?? ''),
+                            'email' => trim($data[1] ?? '') ?: null,
+                            'telefono' => trim($data[2] ?? '') ?: null,
+                            'direccion' => trim($data[3] ?? '') ?: null,
+                            'ciudad' => trim($data[4] ?? '') ?: null,
+                            'pais' => trim($data[5] ?? '') ?: null,
+                            'coordinador_cedula' => $coordinadorId,
+                            'archivo_csv_id' => $archivoId,
+                            'estado' => 'nuevo'
+                        ];
+
+                        if (empty($clienteData['nombre_completo'])) {
+                            throw new Exception("Nombre completo es obligatorio. Fila contiene: nombre_completo='{$clienteData['nombre_completo']}'");
                         }
+
+                        if (!empty($clienteData['email']) && !filter_var($clienteData['email'], FILTER_VALIDATE_EMAIL)) {
+                            throw new Exception("El email '{$clienteData['email']}' no tiene un formato válido");
+                        }
+
+                        if (!empty($clienteData['email']) && is_numeric($clienteData['email'])) {
+                            throw new Exception("El email '{$clienteData['email']}' parece ser un número de teléfono. Verifique el orden de las columnas en el CSV");
+                        }
+
+                        if ($clienteData['email']) {
+                            $db = getDB();
+                            $stmt = $db->prepare("SELECT id FROM clientes WHERE email = ?");
+                            $stmt->execute([$clienteData['email']]);
+                            if ($stmt->fetch()) {
+                                throw new Exception("Cliente con email {$clienteData['email']} ya existe");
+                            }
+                        }
+
+                        $this->clienteModel->createCliente($clienteData);
+                        $registrosProcesados++;
+                    } catch (Exception $e) {
+                        $errores[] = "Fila $totalRegistros: " . $e->getMessage();
                     }
-                    
-                    $this->clienteModel->createCliente($clienteData);
-                    $registrosProcesados++;
-                } catch (Exception $e) {
-                    $errores[] = "Fila $totalRegistros: " . $e->getMessage();
-                    continue;
                 }
             }
             
             fclose($handle);
             
-            // Actualizar estado del archivo
-            $estadoFinal = empty($errores) ? 'completado' : (count($errores) === $totalRegistros ? 'error' : 'completado_con_errores');
+            $estadoFinal = empty($errores) ? 'completado' : ($registrosProcesados === 0 ? 'error' : 'completado');
             $this->archivoCsvModel->updateEstado($archivoId, $estadoFinal, $registrosProcesados, $totalRegistros);
             
             // Preparar mensaje de resultado
@@ -157,6 +168,7 @@ class MassUploadController {
                 'success' => true,
                 'message' => $mensaje,
                 'archivo_id' => $archivoId,
+                'formato' => $esReparto ? 'reparto_foreclosure' : 'crm_simple',
                 'total_registros' => $totalRegistros,
                 'registros_procesados' => $registrosProcesados,
                 'errores' => count($errores),
@@ -335,7 +347,7 @@ class MassUploadController {
             
         } catch (Exception $e) {
             // Marcar archivo como error
-            $this->archivoCsvModel->updateEstado($archivoId, 'error', 0, 0, $e->getMessage());
+            $this->archivoCsvModel->updateEstado($archivoId, 'error', 0);
             
             return [
                 'success' => false,

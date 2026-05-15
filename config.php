@@ -1,7 +1,7 @@
 <?php
 // Configuración de la base de datos
 define('DB_HOST', 'localhost');
-define('DB_NAME', 'crm_internacional');
+define('DB_NAME', 'internacional2');
 define('DB_USER', 'root');
 define('DB_PASS', '');
 define('DB_CHARSET', 'utf8mb4');
@@ -10,12 +10,15 @@ define('DB_CHARSET', 'utf8mb4');
 define('APP_NAME', 'CRM Internacional');
 define('APP_URL', 'http://localhost/crm_internacional');
 define('APP_VERSION', '1.0.0');
+/** Zona horaria para cómputos de negocio (p. ej. días de mora hasta «hoy»). Ajuste en servidor si aplica otro huso. */
+define('APP_TIMEZONE', 'America/Bogota');
 
 // Configuración de seguridad
 // Preferir variable de entorno para evitar secretos hardcodeados.
 // En desarrollo, permite fallback; en producción se recomienda configurar JWT_SECRET.
 if (!defined('JWT_SECRET')) {
-    $jwtSecret = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET') ?: '';
+    $rawSecret = $_ENV['JWT_SECRET'] ?? getenv('JWT_SECRET');
+    $jwtSecret = is_string($rawSecret) ? trim($rawSecret) : '';
     if ($jwtSecret === '') {
         // Fallback solo para dev/local. Si lo usas en producción, configúralo por ENV.
         $jwtSecret = 'dev_only_change_me';
@@ -24,6 +27,8 @@ if (!defined('JWT_SECRET')) {
 }
 define('SESSION_LIFETIME', 3600); // 1 hora en segundos
 define('SESSION_REGENERATION_TIME', 300); // 5 minutos para regenerar ID
+/** Nombre de cookie de sesión PHP exclusivo de este proyecto (evita colisión con otros sitios en el mismo dominio/host). */
+define('APP_SESSION_NAME', 'internacional2_SID');
 define('REMEMBER_ME_LIFETIME', 2592000); // 30 días en segundos
 
 // Configuración de archivos
@@ -242,6 +247,7 @@ if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE && !headers_sent
         ini_set('session.cookie_secure', 1);      // Solo HTTPS
     }
 
+    session_name(APP_SESSION_NAME);
     session_start();
 
     // Regenerar ID de sesión periódicamente para prevenir fixation
@@ -255,7 +261,8 @@ if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE && !headers_sent
     // Verificar si hay logout forzado desde otra pestaña
     if (isset($_SESSION['force_logout']) && $_SESSION['force_logout']) {
         session_destroy();
-        header('Location: views/login.php');
+        // Ruta absoluta desde APP_URL: un Location relativo falla si el script está en /api/ u otra carpeta.
+        header('Location: ' . rtrim(APP_URL, '/') . '/views/login.php');
         exit;
     }
 }

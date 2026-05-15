@@ -477,9 +477,10 @@
 
 .coordinador-dashboard .clientes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(min(100%, 340px), 1fr));
     gap: var(--space-md);
     margin-bottom: var(--space-lg);
+    align-items: start;
 }
 
 .coordinador-dashboard .cliente-card {
@@ -490,6 +491,17 @@
     box-shadow: var(--shadow-soft);
     transition: transform 0.2s ease, box-shadow 0.2s ease;
     position: relative;
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+    height: auto;
+    min-height: 0;
+    overflow-wrap: anywhere;
+    word-wrap: break-word;
+    container-type: inline-size;
+    container-name: titular-card;
 }
 
 .coordinador-dashboard .cliente-card:hover {
@@ -507,7 +519,23 @@
     justify-content: space-between;
     align-items: flex-start;
     margin-bottom: var(--space-md);
-    gap: var(--space-sm);
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.coordinador-dashboard .cliente-card-info {
+    flex: 1;
+    min-width: 0;
+    width: 100%;
+}
+
+.coordinador-dashboard .cliente-card-titulo {
+    margin: 0 0 var(--space-sm) 0;
+    color: var(--dark-gray);
+    font-size: var(--font-size-lg);
+    font-weight: 600;
+    line-height: 1.35;
+    word-break: break-word;
 }
 
 .coordinador-dashboard .cliente-card-info h4 {
@@ -515,6 +543,28 @@
     color: var(--dark-gray);
     font-size: var(--font-size-lg);
     font-weight: 600;
+}
+
+.coordinador-dashboard .cliente-card-linea {
+    margin: 0.35rem 0;
+    color: var(--text-muted);
+    font-size: var(--font-size-sm);
+    line-height: 1.45;
+    display: flex;
+    align-items: flex-start;
+    gap: 0.5rem;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+}
+
+.coordinador-dashboard .cliente-card-linea > span {
+    flex: 1;
+    min-width: 0;
+}
+
+.coordinador-dashboard .cliente-card-linea--caso {
+    font-size: var(--font-size-xs);
+    color: var(--text-light);
 }
 
 .coordinador-dashboard .cliente-card-info p {
@@ -529,6 +579,54 @@
     margin-right: var(--space-sm);
 }
 
+.coordinador-dashboard .cliente-card-linea i {
+    width: 16px;
+    min-width: 16px;
+    color: var(--text-light);
+    margin-top: 0.15em;
+    flex-shrink: 0;
+}
+
+.coordinador-dashboard .titular-reparto-meta-cols {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.6rem 0.75rem;
+    margin-top: 0.85rem;
+    padding-top: 0.85rem;
+    border-top: 1px dashed var(--border-color);
+    font-size: var(--font-size-xs);
+}
+
+@container titular-card (min-width: 300px) {
+    .coordinador-dashboard .titular-reparto-meta-cols {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
+.coordinador-dashboard .titular-reparto-meta-cols .trc-item {
+    min-width: 0;
+    padding: 0.35rem 0.4rem;
+    background: rgba(0, 0, 0, 0.02);
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color);
+}
+
+.coordinador-dashboard .titular-reparto-meta-cols .trc-lbl {
+    display: block;
+    font-weight: 700;
+    color: var(--text-light);
+    margin-bottom: 4px;
+    letter-spacing: 0.02em;
+}
+
+.coordinador-dashboard .titular-reparto-meta-cols .trc-val {
+    display: block;
+    color: var(--dark-gray);
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.4;
+}
+
 .coordinador-dashboard .cliente-status {
     display: inline-flex;
     align-items: center;
@@ -537,6 +635,13 @@
     font-size: var(--font-size-xs);
     font-weight: 600;
     text-transform: uppercase;
+    flex-shrink: 0;
+    align-self: flex-start;
+    max-width: 100%;
+    word-break: break-word;
+    white-space: normal;
+    text-align: center;
+    line-height: 1.25;
 }
 
 .coordinador-dashboard .cliente-status.status-nuevo {
@@ -575,12 +680,25 @@
     gap: var(--space-sm);
     align-items: center;
     flex-wrap: wrap;
+    width: 100%;
+}
+
+.coordinador-dashboard .cliente-card-actions-row {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    width: 100%;
 }
 
 .coordinador-dashboard .cliente-assigned-info {
     color: var(--success-green);
     font-size: var(--font-size-sm);
     font-weight: 500;
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    width: 100%;
 }
 
 .coordinador-dashboard .pagination-container {
@@ -793,14 +911,25 @@
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
     border-left: 4px solid var(--secondary-blue);
+    padding: var(--space-md);
+    overflow-wrap: anywhere;
 }
 
 .modal.coordinador-modal .cliente-header h4 {
     color: var(--dark-gray);
+    word-break: break-word;
+    line-height: 1.35;
 }
 
 .modal.coordinador-modal .cliente-details {
     color: var(--text-muted);
+}
+
+.modal.coordinador-modal .cliente-details p {
+    margin: 0.4rem 0;
+    line-height: 1.45;
+    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
 .modal.coordinador-modal .clientes-seleccionados {

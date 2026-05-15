@@ -2,8 +2,9 @@
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../controller/LoginController.php';
 
-// Iniciar sesión si no está iniciada
+// Sesión: nombre único en config.php (APP_SESSION_NAME). Respaldo si config no pudo iniciarla (p. ej. headers ya enviados).
 if (session_status() === PHP_SESSION_NONE) {
+    session_name(APP_SESSION_NAME);
     session_start();
 }
 

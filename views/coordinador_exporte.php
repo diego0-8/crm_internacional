@@ -49,10 +49,6 @@ $message = getMessage();
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_tickets_import.php" class="nav-item">
-                        <i class="fas fa-file-upload"></i>
-                        Importar tickets CSV
-                    </a>
                     <a href="coordinador_exporte.php" class="nav-item active">
                         <i class="fas fa-download"></i>
                         Exporte

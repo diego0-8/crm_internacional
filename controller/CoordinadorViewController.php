@@ -83,8 +83,8 @@ class CoordinadorViewController {
         $user = getCurrentUser();
         $message = getMessage();
         
-        // Incluir la vista
-        include __DIR__ . '/../views/coordinador_archivos.php';
+        // La lista de archivos CSV está integrada en gestión (no hay vista separada).
+        include __DIR__ . '/../views/coordinador_gestion.php';
     }
 }
 ?>

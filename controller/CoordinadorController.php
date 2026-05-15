@@ -1,6 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../model/ClienteModel.php';
+require_once __DIR__ . '/../model/TitularModel.php';
 require_once __DIR__ . '/../model/ArchivoCsvModel.php';
 require_once __DIR__ . '/../model/TareaModel.php';
 require_once __DIR__ . '/../model/MetricaModel.php';
@@ -8,6 +9,7 @@ require_once __DIR__ . '/../model/UserModel.php';
 
 class CoordinadorController {
     private $clienteModel;
+    private $titularModel;
     private $archivoCsvModel;
     private $tareaModel;
     private $metricaModel;
@@ -15,6 +17,7 @@ class CoordinadorController {
     
     public function __construct() {
         $this->clienteModel = new ClienteModel();
+        $this->titularModel = new TitularModel();
         $this->archivoCsvModel = new ArchivoCsvModel();
         $this->tareaModel = new TareaModel();
         $this->metricaModel = new MetricaModel();
@@ -28,8 +31,8 @@ class CoordinadorController {
         try {
             $data = [];
             
-            // Estadísticas de clientes
-            $data['clientes'] = $this->clienteModel->getEstadisticasClientes($coordinadorId);
+            // Estadísticas de titulares (reparto) para el panel de tareas
+            $data['clientes'] = $this->titularModel->getEstadisticasPorCoordinador($coordinadorId);
             
             // Estadísticas de archivos CSV
             $data['archivos'] = $this->archivoCsvModel->getEstadisticasArchivos($coordinadorId);
@@ -436,19 +439,15 @@ class CoordinadorController {
     }
     
     /**
-     * Obtener clientes
+     * Listado para coordinador_tareas: titulares (reparto) del coordinador.
      */
     public function getClientes($coordinadorId, $busqueda = null) {
         try {
-            if ($busqueda) {
-                $clientes = $this->clienteModel->buscarClientes($coordinadorId, $busqueda);
-            } else {
-                $clientes = $this->clienteModel->getClientesByCoordinador($coordinadorId);
-            }
+            $titulares = $this->titularModel->listarPorCoordinador($coordinadorId, $busqueda);
             
             return [
                 'success' => true,
-                'data' => $clientes
+                'data' => $titulares
             ];
         } catch (Exception $e) {
             return [
@@ -459,7 +458,33 @@ class CoordinadorController {
     }
     
     /**
-     * Asignar cliente a asesor
+     * Asignar titular (reparto) a asesor del mismo coordinador.
+     */
+    public function asignarTitularAAsesor($titularId, $asesorCedula, $coordinadorCedula) {
+        try {
+            $asesor = $this->userModel->getUserByCedula($asesorCedula);
+            if (!$asesor || ($asesor['rol_nombre'] ?? '') !== 'asesor') {
+                throw new Exception('Asesor no válido');
+            }
+            if (($asesor['coordinador_cedula'] ?? '') !== $coordinadorCedula) {
+                throw new Exception('El asesor no pertenece a su equipo');
+            }
+            $this->titularModel->asignarAsesor((int) $titularId, $asesorCedula, $coordinadorCedula);
+            
+            return [
+                'success' => true,
+                'message' => 'Titular asignado al asesor correctamente'
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
+     * Asignar cliente CRM a asesor (cédula PK en clientes).
      */
     public function asignarClienteAAsesor($clienteId, $asesorId) {
         try {
@@ -713,45 +738,48 @@ class CoordinadorController {
     }
     
     /**
-     * Asignar clientes automáticamente a un asesor
+     * Asignar titulares sin asesor repartiendo en round-robin entre los asesores del coordinador.
+     *
+     * @param string $coordinadorCedula Cédula del coordinador (sesión)
+     * @param int $cantidad Cuántos titulares asignar
      */
-    public function asignarClientesAutomatico($asesorCedula, $cantidad, $notas = '') {
+    public function asignarTitularesAutomatico($coordinadorCedula, $cantidad, $notas = '') {
+        $db = getDB();
         try {
-            $db = getDB();
+            $asesoresRes = $this->getAsesores($coordinadorCedula);
+            if (!$asesoresRes['success']) {
+                throw new Exception($asesoresRes['message'] ?? 'No se pudieron obtener asesores');
+            }
+            $asesores = $asesoresRes['data'] ?? [];
+            if (count($asesores) === 0) {
+                throw new Exception('No hay asesores en su equipo');
+            }
+            
+            $titularesDisponibles = $this->titularModel->listarDisponiblesPorCoordinador($coordinadorCedula, (int) $cantidad);
+            
+            if (count($titularesDisponibles) < $cantidad) {
+                throw new Exception('No hay suficientes titulares sin asesor. Disponibles: ' . count($titularesDisponibles) . ', solicitados: ' . (int) $cantidad);
+            }
+            
             $db->beginTransaction();
-            
-            // Verificar que el asesor existe
-            $asesor = $this->userModel->getUserByCedula($asesorCedula);
-            if (!$asesor || $asesor['rol_nombre'] !== 'asesor') {
-                throw new Exception("Asesor no válido");
-            }
-            
-            // Obtener clientes disponibles (sin asesor asignado)
-            $clientesDisponibles = $this->clienteModel->getClientesDisponibles($cantidad);
-            
-            if (count($clientesDisponibles) < $cantidad) {
-                throw new Exception("No hay suficientes clientes disponibles. Disponibles: " . count($clientesDisponibles) . ", Solicitados: $cantidad");
-            }
-            
             $asignados = 0;
             $errores = [];
             
-            // Asignar los clientes
-            for ($i = 0; $i < $cantidad; $i++) {
+            foreach ($titularesDisponibles as $i => $row) {
                 try {
-                    $cliente = $clientesDisponibles[$i];
-                    $this->clienteModel->asignarClienteAAsesor($cliente['id'], $asesorCedula);
+                    $asesor = $asesores[$i % count($asesores)];
+                    $this->titularModel->asignarAsesor((int) $row['id_cliente'], $asesor['cedula'], $coordinadorCedula);
                     $asignados++;
                 } catch (Exception $e) {
-                    $errores[] = "Cliente ID {$cliente['id']}: " . $e->getMessage();
+                    $errores[] = 'Titular ' . ($row['id_cliente'] ?? '?') . ': ' . $e->getMessage();
                 }
             }
             
             $db->commit();
             
-            $mensaje = "Se asignaron $asignados clientes al asesor {$asesor['nombre']} {$asesor['apellido']} exitosamente";
+            $mensaje = "Se asignaron $asignados titular(es) entre " . count($asesores) . ' asesor(es).';
             if (!empty($errores)) {
-                $mensaje .= ". Errores: " . implode(', ', $errores);
+                $mensaje .= ' Errores: ' . implode('; ', $errores);
             }
             
             return [
@@ -759,11 +787,12 @@ class CoordinadorController {
                 'message' => $mensaje,
                 'asignados' => $asignados,
                 'errores' => count($errores),
-                'asesor' => $asesor
             ];
             
         } catch (Exception $e) {
-            $db->rollBack();
+            if ($db->inTransaction()) {
+                $db->rollBack();
+            }
             return [
                 'success' => false,
                 'message' => $e->getMessage()

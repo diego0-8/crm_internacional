@@ -47,12 +47,16 @@ $message = getMessage();
                 <div class="nav-section">
                     <div class="nav-section-title">Asesor</div>
                     <a href="asesor_dashboard.php" class="nav-item">
-                        <i class="fas fa-users"></i>
-                        Mis Clientes
+                        <i class="fas fa-folder-open"></i>
+                        Mis casos (reparto)
                     </a>
                     <a href="asesor_tickets.php" class="nav-item active">
                         <i class="fas fa-ticket-alt"></i>
-                        Mis Tickets
+                        Mis tickets CRM
+                    </a>
+                    <a href="asesor_estadisticas.php" class="nav-item">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
                     </a>
                 </div>
             </nav>
@@ -104,7 +108,7 @@ $message = getMessage();
                 <div class="ticket-gestion-layout">
                     <aside class="ticket-detalles-aside" aria-label="Detalles del caso">
                         <section class="detalle-grupo">
-                            <h4><i class="fas fa-user"></i> Cliente</h4>
+                            <h4><i class="fas fa-user"></i> Titular (tiketera)</h4>
                             <dl class="detalle-lista">
                                 <div class="detalle-fila">
                                     <dt class="detalle-label">Nombre</dt>
@@ -135,10 +139,31 @@ $message = getMessage();
                                     </dd>
                                 </div>
                                 <div class="detalle-fila detalle-fila-multilinea">
-                                    <dt class="detalle-label">Dirección postal</dt>
+                                    <dt class="detalle-label">Dirección postal (CRM)</dt>
                                     <dd class="detalle-valor" id="detClienteMailing">—</dd>
                                 </div>
                             </dl>
+                            <div id="titularRepartoMailingBlock" class="titular-reparto-mailing" style="display: none;" aria-label="Mailing tabla titulares">
+                                <h5 class="detalle-subtitulo-reparto"><i class="fas fa-envelope"></i> Mailing (tabla titulares)</h5>
+                                <dl class="detalle-lista">
+                                    <div class="detalle-fila">
+                                        <dt class="detalle-label">mailing_calle</dt>
+                                        <dd class="detalle-valor" id="detTitMailingCalle">—</dd>
+                                    </div>
+                                    <div class="detalle-fila">
+                                        <dt class="detalle-label">mailing_ciudad</dt>
+                                        <dd class="detalle-valor" id="detTitMailingCiudad">—</dd>
+                                    </div>
+                                    <div class="detalle-fila">
+                                        <dt class="detalle-label">mailing_estado</dt>
+                                        <dd class="detalle-valor" id="detTitMailingEstado">—</dd>
+                                    </div>
+                                    <div class="detalle-fila">
+                                        <dt class="detalle-label">mailing_codigo_postal</dt>
+                                        <dd class="detalle-valor" id="detTitMailingCp">—</dd>
+                                    </div>
+                                </dl>
+                            </div>
                             <div class="detalle-acciones-cliente">
                                 <button type="button" class="btn btn-secondary btn-compact" id="btnAbrirReferencias">
                                     <i class="fas fa-address-book"></i> Referencias
@@ -176,6 +201,17 @@ $message = getMessage();
                                     <dt class="detalle-label">Source</dt>
                                     <dd class="detalle-valor" id="detPredioSource">—</dd>
                                 </div>
+                                <div class="detalle-fila" id="detDiasMoraFila" style="display: none;">
+                                    <dt class="detalle-label">Días en mora</dt>
+                                    <dd class="detalle-valor">
+                                        <strong id="detDiasMoraTexto">—</strong>
+                                        <span class="detalle-mora-meta" id="detDiasMoraMeta"></span>
+                                        <div class="mora-meter-bar" role="progressbar" aria-valuemin="0" aria-valuemax="300" aria-valuenow="0" aria-labelledby="detDiasMoraTexto">
+                                            <span id="detDiasMoraFill" class="mora-meter-fill"></span>
+                                        </div>
+                                        <small class="detalle-monto-hint" id="detDiasMoraHint"></small>
+                                    </dd>
+                                </div>
                             </dl>
                         </section>
 
@@ -183,22 +219,22 @@ $message = getMessage();
                             <h4><i class="fas fa-dollar-sign"></i> Valores y subasta</h4>
                             <ul class="detalle-montos">
                                 <li class="detalle-monto subasta">
-                                    <span class="detalle-monto-label">Valor inicial subasta</span>
+                                    <span class="detalle-monto-label">Valor de puja apertura</span>
                                     <span class="detalle-monto-valor" id="detValorInicial">—</span>
-                                    <small class="detalle-monto-hint">Valor en que empezó la subasta del predio</small>
+                                    <small class="detalle-monto-hint">Valor inicial de la subasta</small>
                                 </li>
                                 <li class="detalle-monto vendido">
-                                    <span class="detalle-monto-label">Valor vendido</span>
+                                    <span class="detalle-monto-label">Valor puja de cierre</span>
                                     <span class="detalle-monto-valor" id="detValorVendido">—</span>
-                                    <small class="detalle-monto-hint">Valor en que se subastó el predio</small>
+                                    <small class="detalle-monto-hint">Valor vendido del predio</small>
                                 </li>
                                 <li class="detalle-monto devolver">
-                                    <span class="detalle-monto-label">Valor a devolver</span>
+                                    <span class="detalle-monto-label">Excedente</span>
                                     <span class="detalle-monto-valor" id="detValorDevolver">—</span>
-                                    <small class="detalle-monto-hint">Excedente a devolver al cliente</small>
+                                    <small class="detalle-monto-hint">Valor a devolver al titular</small>
                                 </li>
                                 <li class="detalle-monto fecha">
-                                    <span class="detalle-monto-label">Date sold</span>
+                                    <span class="detalle-monto-label">Fecha de venta</span>
                                     <span class="detalle-monto-valor" id="detDateSold">—</span>
                                     <small class="detalle-monto-hint">Fecha en que se vendió/subastó</small>
                                 </li>
@@ -243,15 +279,16 @@ $message = getMessage();
                                 </div>
                             </div>
 
-                            <div class="form-group">
-                                <label for="gestionObservaciones">Observación de este cambio (opcional)</label>
-                                <textarea id="gestionObservaciones" name="observaciones" class="form-control" rows="3"
-                                          placeholder="Describa la razón del cambio de estado o cualquier observación relevante"></textarea>
-                            </div>
+
                         </div>
 
                         <div class="form-section">
                             <h4><i class="fas fa-stream"></i> Línea de tiempo del caso</h4>
+                            <div class="ticket-timeline-estado-actual" id="ticketTimelineEstadoActual" aria-live="polite">
+                                <div class="ticket-timeline-estado-actual-label">Estado actual del ticket</div>
+                                <span class="ticket-estado-badge" id="ticketTimelineEstadoBadge" role="status">—</span>
+                                <p class="ticket-timeline-estado-actual-hint">Coincide con el estado en <strong>tiketera</strong> y con el selector «Cambiar estado» cuando no hay cambios pendientes.</p>
+                            </div>
                             <ol class="ticket-timeline" id="ticketTimeline" aria-live="polite">
                                 <li class="timeline-empty">Cargando línea de tiempo…</li>
                             </ol>
@@ -325,6 +362,12 @@ $message = getMessage();
                             <div id="webrtc-softphone"></div>
                         </div>
                         <p class="softphone-client-line" id="softphoneClienteLine"></p>
+                        
+                        <div class="monetizacion-panel" style="margin-top: 20px; background: #fff; border-radius: 8px; padding: 16px; border: 1px solid var(--border-light); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
+                            <h4 style="color: var(--primary-color); font-size: 14px; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-money-bill-wave"></i> Monetización Esperada</h4>
+                            <div style="font-size: 24px; font-weight: 700; color: #10b981;" id="detMonetizacion">—</div>
+                            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Incentivo por cerrar el ticket</p>
+                        </div>
                     </aside>
                 </div>
             </div>
@@ -398,32 +441,6 @@ $message = getMessage();
                         Invitation: mod.Invitation,
                         SessionState: mod.SessionState
                     };
-
-                    // #region agent log
-                    try {
-                        fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                            body: JSON.stringify({
-                                sessionId: '695289',
-                                runId: 'pre-fix',
-                                hypothesisId: 'H1',
-                                location: 'views/asesor_gestionar_ticket.php:initSoftphoneSidebar',
-                                message: 'SIP.js module exports snapshot',
-                                data: {
-                                    has_UserAgent: typeof mod.UserAgent === 'function',
-                                    has_Registerer: typeof mod.Registerer === 'function',
-                                    has_RegistererState: typeof mod.RegistererState !== 'undefined',
-                                    export_keys_sample: Object.keys(mod).slice(0, 30),
-                                    windowSIP_keys: Object.keys(window.SIP || {}),
-                                    windowSIP_typeof_Registerer: typeof (window.SIP && window.SIP.Registerer),
-                                    windowSIP_typeof_RegistererState: typeof (window.SIP && window.SIP.RegistererState)
-                                },
-                                timestamp: Date.now()
-                            })
-                        }).catch(() => {});
-                    } catch (_) {}
-                    // #endregion
                 }
 
                 if (!window.WebRTCSoftphone) {
@@ -495,7 +512,7 @@ $message = getMessage();
                 }
                 document.getElementById('ticketSubtitle').textContent = subParts.join(' · ');
 
-                document.getElementById('gestionObservaciones').value = '';
+
 
                 await cargarHistorialNotas(TICKET_ID);
                 await cargarArchivosExistentes(TICKET_ID);
@@ -538,11 +555,18 @@ $message = getMessage();
 
                 if (result.success && result.data.length > 0) {
                     historialContainer.innerHTML = result.data.map(function(nota) {
+                        var estKey = (nota.estado_ticket || '').trim();
+                        var estLabel = nota.estado_label || (estKey ? estKey : 'Sin registro');
+                        var badgeClass = estKey
+                            ? ('ticket-estado-badge estado-' + estKey)
+                            : 'ticket-estado-badge nota-estado-desconocido';
                         return '<div class="nota-item">' +
                             '<div class="nota-header">' +
                             '<span class="nota-fecha">' + new Date(nota.fecha_creacion).toLocaleString() + '</span>' +
                             '<span class="nota-asesor">' + escapeHtml(nota.asesor_nombre || '') + '</span>' +
                             '</div>' +
+                            '<div class="nota-estado-line"><span class="' + badgeClass + '">' +
+                            '<i class="fas fa-route" aria-hidden="true"></i> ' + escapeHtml(estLabel) + '</span></div>' +
                             '<div class="nota-contenido">' + escapeHtml(nota.contenido || '') + '</div>' +
                             (nota.proxima_accion ? '<div class="nota-accion"><strong>Próxima acción:</strong> ' +
                                 escapeHtml(nota.proxima_accion) + '</div>' : '') +
@@ -659,7 +683,7 @@ $message = getMessage();
             var estado = ticket.estado || '';
             var badge = document.getElementById('ticketEstadoBadge');
             badge.className = 'ticket-estado-badge estado-' + estado;
-            badge.textContent = ticket.estado_label || ESTADO_LABELS[estado] || estado;
+            badge.innerHTML = '<i class="fas fa-route"></i> ' + escapeHtml(ticket.estado_label || ESTADO_LABELS[estado] || estado);
 
             var desde = document.getElementById('ticketEstadoDesde');
             if (ticket.estado_actual_desde) {
@@ -861,13 +885,29 @@ $message = getMessage();
             ].filter(function(x) { return x && String(x).trim() !== ''; }).join(', ');
             setText('detClienteMailing', mail);
 
-            // Predio
+            var titRep = ticket.titular_reparto || null;
+            var blkTit = document.getElementById('titularRepartoMailingBlock');
+            if (blkTit) {
+                if (titRep) {
+                    blkTit.style.display = '';
+                    setText('detTitMailingCalle', titRep.mailing_calle);
+                    setText('detTitMailingCiudad', titRep.mailing_ciudad);
+                    setText('detTitMailingEstado', titRep.mailing_estado);
+                    setText('detTitMailingCp', titRep.mailing_codigo_postal);
+                } else {
+                    blkTit.style.display = 'none';
+                }
+            }
+
+            // Predio (tabla predios) y/o reparto (propiedades + mora)
             var predio = ticket.predio || null;
+            var pr = ticket.propiedad_reparto || null;
+            var tieneCasoPredio = !!(predio) || !!(pr);
             var vacio = document.getElementById('detPredioVacio');
             var lista = document.getElementById('detPredioLista');
             var grupoValores = document.getElementById('detValoresGrupo');
 
-            if (!predio) {
+            if (!tieneCasoPredio) {
                 if (vacio) vacio.style.display = 'block';
                 if (lista) lista.style.display = 'none';
                 if (grupoValores) grupoValores.style.display = 'none';
@@ -876,25 +916,83 @@ $message = getMessage();
                 if (lista) lista.style.display = '';
                 if (grupoValores) grupoValores.style.display = '';
 
-                setText('detPredioCase', predio.case_number);
-                setText('detPredioParcel', predio.parcel_number);
-                setText('detPredioTipo', predio.type_of_foreclosure);
+                if (predio) {
+                    setText('detPredioCase', predio.case_number);
+                    setText('detPredioParcel', predio.parcel_number);
+                    setText('detPredioTipo', predio.type_of_foreclosure);
 
-                var dirPredio = [
-                    predio.property_street,
-                    predio.property_city,
-                    predio.property_state,
-                    predio.property_zip
-                ].filter(function(x) { return x && String(x).trim() !== ''; }).join(', ');
-                setText('detPredioDireccion', dirPredio);
+                    var dirPredio = [
+                        predio.property_street,
+                        predio.property_city,
+                        predio.property_state,
+                        predio.property_zip
+                    ].filter(function(x) { return x && String(x).trim() !== ''; }).join(', ');
+                    setText('detPredioDireccion', dirPredio);
 
-                setText('detPredioCounty', predio.county);
-                setText('detPredioSource', predio.predio_source);
+                    setText('detPredioCounty', predio.county);
+                    setText('detPredioSource', predio.predio_source);
 
-                setText('detValorInicial',  formatUsd(predio.valor_inicial_subasta));
-                setText('detValorVendido',  formatUsd(predio.valor_vendido));
-                setText('detValorDevolver', formatUsd(predio.valor_a_devolver));
-                setText('detDateSold',      formatDateOnly(predio.date_sold));
+                    setText('detValorInicial',  formatUsd(predio.valor_inicial_subasta));
+                    setText('detValorVendido',  formatUsd(predio.valor_vendido));
+                    setText('detValorDevolver', formatUsd(predio.valor_a_devolver));
+                    setText('detDateSold',      formatDateOnly(predio.date_sold));
+
+                    var formatCop = function(val) {
+                        if (val === null || val === undefined || val === '') return '—';
+                        var num = parseFloat(val);
+                        if (isNaN(num)) return val;
+                        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
+                    };
+
+                    setText('detMonetizacion',  predio.monetizacion ? formatCop(predio.monetizacion) : '—');
+                } else if (pr) {
+                    setText('detPredioCase', pr.numero_caso);
+                    setText('detPredioParcel', pr.numero_parcela);
+                    setText('detPredioTipo', pr.tipo_foreclosure);
+                    var dirPr = [
+                        pr.propiedad_calle,
+                        pr.propiedad_ciudad,
+                        pr.propiedad_estado,
+                        pr.propiedad_codigo_postal
+                    ].filter(function(x) { return x && String(x).trim() !== ''; }).join(', ');
+                    setText('detPredioDireccion', dirPr);
+                    setText('detPredioCounty', pr.condado);
+                    setText('detPredioSource', pr.fuente);
+                    if (grupoValores) grupoValores.style.display = 'none';
+                }
+
+                var moraFila = document.getElementById('detDiasMoraFila');
+                if (pr && pr.dias_mora_activos != null && pr.dias_mora_activos !== '') {
+                    if (moraFila) moraFila.style.display = '';
+                    var lim = pr.dias_mora_limite || 300;
+                    var act = Math.min(lim, Math.max(0, parseInt(String(pr.dias_mora_activos), 10) || 0));
+                    setText('detDiasMoraTexto', act + ' / ' + lim + ' días');
+                    var meta = document.getElementById('detDiasMoraMeta');
+                    if (meta) {
+                        meta.textContent = pr.en_limite ? ' (límite alcanzado)' : '';
+                    }
+                    var fill = document.getElementById('detDiasMoraFill');
+                    if (fill) {
+                        fill.style.width = Math.min(100, (act / lim) * 100) + '%';
+                    }
+                    var bar = moraFila ? moraFila.querySelector('.mora-meter-bar') : null;
+                    if (bar) {
+                        bar.setAttribute('aria-valuenow', String(act));
+                        bar.setAttribute('aria-valuemax', String(lim));
+                    }
+                    var hint = document.getElementById('detDiasMoraHint');
+                    if (hint) {
+                        var inc = pr.dias_incrementados_desde_registro != null ? pr.dias_incrementados_desde_registro : '—';
+                        var ref = pr.fecha_referencia_mora ? (' · Referencia: ' + pr.fecha_referencia_mora) : '';
+                        var ancla = (pr.mora_fecha_ancla_origen === 'fecha_venta')
+                            ? 'fecha de venta de la propiedad'
+                            : 'fecha de registro del predio';
+                        hint.textContent = 'Mora base (CSV) ' + (pr.dias_transcurridos_origen_csv != null && pr.dias_transcurridos_origen_csv !== '' ? pr.dias_transcurridos_origen_csv : '—') +
+                            ' + ' + inc + ' día(s) calendario desde la ' + ancla + ' (el cómputo de «hoy» usa ' + (pr.mora_zona_horaria || 'la zona horaria del servidor') + ' e incluye el día vigente)' + ref + '.';
+                    }
+                } else {
+                    if (moraFila) moraFila.style.display = 'none';
+                }
             }
         }
 
@@ -927,29 +1025,56 @@ $message = getMessage();
             }
         }
 
+        function updateTimelineEstadoActual(estadoActual) {
+            var badge = document.getElementById('ticketTimelineEstadoBadge');
+            if (!badge) return;
+            var key = (estadoActual || '').trim();
+            var lab = ESTADO_LABELS[key] || (key || '—');
+            badge.className = 'ticket-estado-badge' + (key ? (' estado-' + key) : '');
+            badge.innerHTML = '<i class="fas fa-flag-checkered" aria-hidden="true"></i> ' + escapeHtml(lab);
+        }
+
         function renderTimeline(historial, estadoActual) {
+            updateTimelineEstadoActual(estadoActual);
+
             var tl = document.getElementById('ticketTimeline');
+            if (!tl) return;
+
             if (!historial || historial.length === 0) {
-                tl.innerHTML = '<li class="timeline-empty">Sin cambios de estado registrados.</li>';
+                tl.innerHTML = '<li class="timeline-empty">Sin registros de cambio de estado en el historial. El <strong>estado actual</strong> del ticket se muestra arriba; cada nueva gestión que cambie el estado aparecerá aquí.</li>';
                 return;
             }
 
             var html = historial.map(function(h, idx) {
-                var esActual = (idx === historial.length - 1);
-                var label = h.estado_label || ESTADO_LABELS[h.estado_nuevo] || h.estado_nuevo;
+                var esUltimo = (idx === historial.length - 1);
+                var esActual = esUltimo;
+                var labelNuevo = h.estado_guardado_label || h.estado_label || ESTADO_LABELS[h.estado_nuevo] || h.estado_nuevo;
+                var labelAnt = h.estado_anterior_label || (h.estado_anterior ? (ESTADO_LABELS[h.estado_anterior] || h.estado_anterior) : null);
                 var fecha = h.fecha_cambio ? new Date(h.fecha_cambio).toLocaleString() : '';
                 var asesor = h.asesor_nombre_completo ? escapeHtml(h.asesor_nombre_completo) : 'Sistema';
                 var dur = h.duracion_legible || '';
-                var prevText = h.estado_anterior
-                    ? ('De ' + (ESTADO_LABELS[h.estado_anterior] || h.estado_anterior) + ' a ' + label)
-                    : ('Apertura del caso · ' + label);
-                var obs = h.observacion ? '<div class="timeline-obs">' + escapeHtml(h.observacion) + '</div>' : '';
+                var prevText = labelAnt
+                    ? ('Transición registrada: de «' + escapeHtml(labelAnt) + '» a «' + escapeHtml(labelNuevo) + '»')
+                    : ('Alta del ticket · estado inicial: «' + escapeHtml(labelNuevo) + '»');
+                var obs = h.observacion
+                    ? ('<div class="timeline-obs"><span class="timeline-obs-label">Observación en esta gestión</span>' +
+                        '<div class="timeline-obs-body">' + escapeHtml(h.observacion) + '</div></div>')
+                    : '';
+
+                var estadoKey = String(h.estado_nuevo || '').trim();
+                var estadoClassKey = estadoKey.replace(/[^a-z0-9_]/gi, '') || 'sin_estado';
+                var badgeGuardado = '<span class="ticket-estado-badge estado-' + estadoClassKey + '">' +
+                    '<i class="fas fa-bookmark" aria-hidden="true"></i> ' + escapeHtml(labelNuevo) + '</span>';
 
                 return '' +
-                    '<li class="timeline-step estado-' + h.estado_nuevo + (esActual ? ' active' : '') + '">' +
+                    '<li class="timeline-step estado-' + estadoClassKey + (esActual ? ' active' : '') + '">' +
                         '<div class="timeline-marker"></div>' +
                         '<div class="timeline-body">' +
-                            '<div class="timeline-title">' + escapeHtml(prevText) + '</div>' +
+                            '<div class="timeline-estado-gestion">' +
+                                '<span class="timeline-estado-gestion-label">Estado en que quedó guardado el ticket en esta gestión</span>' +
+                                badgeGuardado +
+                            '</div>' +
+                            '<div class="timeline-title">' + prevText + '</div>' +
                             '<div class="timeline-meta">' +
                                 '<span><i class="far fa-clock"></i> ' + escapeHtml(fecha) + '</span>' +
                                 '<span><i class="far fa-user"></i> ' + asesor + '</span>' +
@@ -973,10 +1098,7 @@ $message = getMessage();
             const formData = new FormData();
             formData.append('ticket_id', ticketId);
             formData.append('estado', estado);
-            const observaciones = document.getElementById('gestionObservaciones').value;
-            if (observaciones.trim()) {
-                formData.append('observaciones', observaciones);
-            }
+
 
             const nuevaNota = document.getElementById('nuevaNota').value;
             if (nuevaNota.trim()) {
@@ -1008,8 +1130,18 @@ $message = getMessage();
 
                 if (result.success) {
                     showMessage('Cambios guardados', 'success');
-                    // Recargar el detalle para refrescar header, badge, transiciones y timeline.
-                    setTimeout(function() { window.location.reload(); }, 600);
+                    var tid = String(typeof TICKET_ID !== 'undefined' ? TICKET_ID : (document.getElementById('gestionTicketId') && document.getElementById('gestionTicketId').value) || '');
+                    var key = 'crm_ticket_primer_guardado_' + tid;
+                    if (tid && !localStorage.getItem(key)) {
+                        localStorage.setItem(key, '1');
+                        setTimeout(function() {
+                            window.location.href = 'asesor_tickets.php';
+                        }, 600);
+                    } else {
+                        setTimeout(function() {
+                            window.location.reload();
+                        }, 600);
+                    }
                 } else {
                     showMessage(result.message || 'No se pudo guardar', 'error');
                 }

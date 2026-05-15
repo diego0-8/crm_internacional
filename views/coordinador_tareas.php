@@ -49,10 +49,6 @@ $message = getMessage();
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_tickets_import.php" class="nav-item">
-                        <i class="fas fa-file-upload"></i>
-                        Importar tickets CSV
-                    </a>
                     <a href="coordinador_exporte.php" class="nav-item">
                         <i class="fas fa-download"></i>
                         Exporte
@@ -88,7 +84,7 @@ $message = getMessage();
                     </button>
                     <div class="welcome-section">
                         <h1 class="title-asesor">Gestión de Tareas</h1>
-                        <p class="subtitle-asesor">Asignación de clientes a asesores de manera eficiente.</p>
+                        <p class="subtitle-asesor">Asignación de titulares (reparto) a asesores.</p>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -115,7 +111,7 @@ $message = getMessage();
                         </div>
                         <div class="stat-content">
                             <h3 id="totalClientes">0</h3>
-                            <p>Total Clientes</p>
+                            <p>Total titulares</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -124,7 +120,7 @@ $message = getMessage();
                         </div>
                         <div class="stat-content">
                             <h3 id="clientesAsignados">0</h3>
-                            <p>Clientes Asignados</p>
+                            <p>Asignados a asesor</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -133,7 +129,7 @@ $message = getMessage();
                         </div>
                         <div class="stat-content">
                             <h3 id="clientesDisponibles">0</h3>
-                            <p>Clientes Disponibles</p>
+                            <p>Sin asesor</p>
                         </div>
                     </div>
                     <div class="stat-card">
@@ -150,15 +146,20 @@ $message = getMessage();
                 <!-- Asignación Individual -->
                 <div class="card">
                     <div class="card-header">
-                        <h3><i class="fas fa-user-plus"></i> Asignación Individual</h3>
+                        <h3><i class="fas fa-user-plus"></i> Titulares (reparto)</h3>
                         <button class="btn btn-primary" onclick="refreshClientes()">
                             <i class="fas fa-sync"></i> Actualizar
                         </button>
                     </div>
                     <div class="card-content">
                         <div class="search-bar">
-                            <input type="text" id="searchClientes" placeholder="Buscar por cédula, nombre o teléfono..." onkeyup="debounceSearch()">
+                            <input type="text" id="searchClientes" placeholder="Buscar por nombre, caso, condado, teléfono, email, Reg_Int, BaseD o F_Correo…" onkeyup="debounceSearch()">
                             <i class="fas fa-search"></i>
+                        </div>
+                        <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+                            <button type="button" class="btn btn-primary btn-sm" onclick="abrirAsignacionMasivaSeleccion()">
+                                <i class="fas fa-user-friends"></i> Asignar selección…
+                            </button>
                         </div>
                         <div id="clientesContainer">
                             <div id="clientesList" class="clientes-grid">
@@ -166,7 +167,7 @@ $message = getMessage();
                             </div>
                             <div id="paginationContainer" class="pagination-container" style="display: none;">
                                 <div class="pagination-info">
-                                    <span id="paginationInfo">Mostrando 1-5 de 0 clientes</span>
+                                    <span id="paginationInfo">Mostrando 1-5 de 0 titulares</span>
                                 </div>
                                 <div class="pagination-controls">
                                     <button id="prevPage" class="btn btn-sm btn-secondary" onclick="changePage(currentPage - 1)" disabled>
@@ -190,7 +191,7 @@ $message = getMessage();
                     <div class="card-content">
                         <div class="asignacion-masiva">
                             <div class="form-group">
-                                <label for="totalClientesAsignar">Total de clientes a asignar</label>
+                                <label for="totalClientesAsignar">Cantidad de titulares sin asesor a repartir</label>
                                 <input type="number" id="totalClientesAsignar" class="form-control form-control-narrow" min="1" placeholder="Ej. 10">
                             </div>
                             <div class="form-group">
@@ -199,7 +200,7 @@ $message = getMessage();
                             </div>
                             <div class="asignacion-masiva-actions">
                                 <button type="button" class="btn btn-success" onclick="asignarClientesGlobalmente()">
-                                    <i class="fas fa-users"></i> Asignar Clientes Globalmente
+                                    <i class="fas fa-users"></i> Repartir titulares (automático)
                                 </button>
                                 <button type="button" class="btn btn-secondary" onclick="limpiarAsignacionGlobal()">
                                     <i class="fas fa-eraser"></i> Limpiar
@@ -231,7 +232,7 @@ $message = getMessage();
     <div id="assignModal" class="modal coordinador-modal">
         <div class="modal-content">
             <div class="modal-header">
-                <h3>Asignar Cliente</h3>
+                <h3>Asignar titular</h3>
                 <span class="close" onclick="closeAssignModal()">&times;</span>
             </div>
             <div class="modal-body">
@@ -273,7 +274,7 @@ $message = getMessage();
                     <textarea id="notasAsignacionMasiva" class="form-control" rows="3" placeholder="Notas sobre la asignación..."></textarea>
                 </div>
                 <div class="clientes-seleccionados">
-                    <p><strong>Clientes seleccionados:</strong> <span id="cantidadAsignar">0</span></p>
+                    <p><strong>Titulares seleccionados:</strong> <span id="cantidadAsignar">0</span></p>
                 </div>
             </div>
             <div class="modal-footer">
@@ -293,6 +294,20 @@ $message = getMessage();
         let currentPage = 1;
         let itemsPerPage = 5;
         let searchTimeout = null;
+
+        function escHtml(str) {
+            if (str == null) return '';
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;')
+                .replace(/"/g, '&quot;');
+        }
+
+        function fmtTitCampo(v) {
+            if (v == null || String(v).trim() === '') return '—';
+            return escHtml(String(v));
+        }
 
         // Cargar datos al inicializar
         document.addEventListener('DOMContentLoaded', function() {
@@ -371,14 +386,14 @@ $message = getMessage();
                     renderClientes();
                 } else {
                     console.error('Error en respuesta de API:', result.message);
-                    showMessage(result.message || 'Error al cargar los datos de clientes', 'error');
+                    showMessage(result.message || 'Error al cargar titulares', 'error');
                     clientes = [];
                     clientesFiltrados = [];
                     renderClientes();
                 }
             } catch (error) {
                 console.error('Error cargando clientes:', error);
-                showMessage('Error de conexión al cargar clientes. Verifica tu conexión a internet.', 'error');
+                showMessage('Error de conexión al cargar titulares.', 'error');
                 clientes = [];
                 clientesFiltrados = [];
                 renderClientes();
@@ -425,15 +440,15 @@ $message = getMessage();
                         <div class="empty-state">
                             <i class="fas fa-search"></i>
                             <h4>No se encontraron resultados</h4>
-                            <p>No hay clientes que coincidan con "${searchTerm}"</p>
+                            <p>No hay titulares que coincidan con "${searchTerm}"</p>
                         </div>
                     `;
                 } else {
                     container.innerHTML = `
                         <div class="empty-state">
                             <i class="fas fa-users"></i>
-                            <h4>No hay clientes disponibles</h4>
-                            <p>Todavía no se han cargado clientes en el sistema</p>
+                            <h4>No hay titulares</h4>
+                            <p>Importe un CSV de reparto en Gestión CSV o verifique el coordinador del registro.</p>
                         </div>
                     `;
                 }
@@ -441,32 +456,53 @@ $message = getMessage();
                 return;
             }
 
-            // Renderizar tarjetas de clientes
+            // Renderizar tarjetas de titulares
             clientesPagina.forEach(cliente => {
+                const tid = cliente.titular_id;
+                const nombreTit = escHtml(
+                    [cliente.nombre, cliente.apellido].filter(x => x != null && String(x).trim() !== '').join(' ').trim()
+                ) || '—';
+                const emailDis = (cliente.email != null && String(cliente.email).trim() !== '')
+                    ? escHtml(String(cliente.email))
+                    : 'Sin email';
+                const telDis = (cliente.telefono != null && String(cliente.telefono).trim() !== '')
+                    ? escHtml(String(cliente.telefono))
+                    : 'Sin teléfono';
+                const locDis = escHtml(String(cliente.empresa || cliente.condado || '').trim()) || '—';
+                const casoExtra = (cliente.numero_caso != null && String(cliente.numero_caso).trim() !== '')
+                    ? (' · Caso: ' + escHtml(String(cliente.numero_caso)))
+                    : '';
+                const estadoTxt = escHtml(String(cliente.estado || 'reparto'));
+                const asesorTxt = cliente.asesor_nombre ? escHtml(String(cliente.asesor_nombre)) : '';
+
                 const clienteCard = document.createElement('div');
                 clienteCard.className = `cliente-card ${cliente.asesor_nombre ? 'assigned' : ''}`;
-
                 clienteCard.innerHTML = `
                     <div class="cliente-card-header">
                         <div class="cliente-card-info">
-                            <h4>${cliente.nombre} ${cliente.apellido}</h4>
-                            <p><i class="fas fa-id-card"></i> ${cliente.cedula || 'Sin cédula'}</p>
-                            <p><i class="fas fa-envelope"></i> ${cliente.email || 'Sin email'}</p>
-                            <p><i class="fas fa-phone"></i> ${cliente.telefono || 'Sin teléfono'}</p>
-                            <p><i class="fas fa-building"></i> ${cliente.empresa || 'Sin empresa'}</p>
+                            <h4 class="cliente-card-titulo">${nombreTit}</h4>
+                            <p class="cliente-card-linea cliente-card-linea--caso"><i class="fas fa-hashtag" aria-hidden="true"></i><span>ID ${tid}${casoExtra}</span></p>
+                            <p class="cliente-card-linea"><i class="fas fa-envelope" aria-hidden="true"></i><span>${emailDis}</span></p>
+                            <p class="cliente-card-linea"><i class="fas fa-phone" aria-hidden="true"></i><span>${telDis}</span></p>
+                            <p class="cliente-card-linea"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>${locDis}</span></p>
+                            <div class="titular-reparto-meta-cols" aria-label="Datos titular reparto">
+                                <div class="trc-item"><span class="trc-lbl">Reg_Int</span><span class="trc-val">${fmtTitCampo(cliente.reg_int)}</span></div>
+                                <div class="trc-item"><span class="trc-lbl">BaseD</span><span class="trc-val">${fmtTitCampo(cliente.base_d)}</span></div>
+                                <div class="trc-item"><span class="trc-lbl">F_Correo</span><span class="trc-val">${fmtTitCampo(cliente.f_correo)}</span></div>
+                            </div>
                         </div>
-                        <span class="cliente-status status-${cliente.estado || 'nuevo'}">${cliente.estado || 'nuevo'}</span>
+                        <span class="cliente-status status-reparto">${estadoTxt}</span>
                     </div>
                     <div class="cliente-card-actions">
                         ${cliente.asesor_nombre ?
                             `<div class="cliente-assigned-info">
-                                <i class="fas fa-user-check"></i> Asignado a: ${cliente.asesor_nombre}
+                                <i class="fas fa-user-check" aria-hidden="true"></i> Asignado a: ${asesorTxt}
                              </div>` :
-                            `<div style="display: flex; gap: 0.5rem;">
-                                <input type="checkbox" id="cliente_${cliente.cedula}" value="${cliente.cedula}"
-                                       onchange="toggleClienteSeleccion('${cliente.cedula}')">
-                                <button class="btn btn-sm btn-primary" onclick="abrirModalAsignacion('${cliente.cedula}')">
-                                    <i class="fas fa-user-plus"></i> Asignar
+                            `<div class="cliente-card-actions-row">
+                                <input type="checkbox" id="titular_${tid}" value="${tid}"
+                                       onchange="toggleClienteSeleccion(${tid})" aria-label="Seleccionar titular ${tid}">
+                                <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalAsignacion(${tid})">
+                                    <i class="fas fa-user-plus" aria-hidden="true"></i> Asignar
                                 </button>
                             </div>`
                         }
@@ -499,17 +535,29 @@ $message = getMessage();
                 // Búsqueda insensible a mayúsculas y con coincidencias parciales
                 const termLower = searchTerm.toLowerCase();
                 clientesFiltrados = clientes.filter(cliente => {
-                    const cedula = (cliente.cedula || '').toLowerCase();
+                    const tid = String(cliente.titular_id || '');
                     const nombre = (cliente.nombre || '').toLowerCase();
                     const apellido = (cliente.apellido || '').toLowerCase();
                     const nombreCompleto = `${nombre} ${apellido}`.trim();
                     const telefono = (cliente.telefono || '').toLowerCase();
+                    const email = (cliente.email || '').toLowerCase();
+                    const caso = (cliente.numero_caso || '').toLowerCase();
+                    const condado = (cliente.condado || '').toLowerCase();
+                    const regInt = (cliente.reg_int != null ? String(cliente.reg_int) : '').toLowerCase();
+                    const baseD = (cliente.base_d != null ? String(cliente.base_d) : '').toLowerCase();
+                    const fCorreo = (cliente.f_correo != null ? String(cliente.f_correo) : '').toLowerCase();
 
-                    return cedula.includes(termLower) ||
+                    return tid.includes(termLower) ||
                            nombre.includes(termLower) ||
                            apellido.includes(termLower) ||
                            nombreCompleto.includes(termLower) ||
-                           telefono.includes(termLower);
+                           telefono.includes(termLower) ||
+                           email.includes(termLower) ||
+                           caso.includes(termLower) ||
+                           condado.includes(termLower) ||
+                           regInt.includes(termLower) ||
+                           baseD.includes(termLower) ||
+                           fCorreo.includes(termLower);
                 });
             }
 
@@ -622,9 +670,9 @@ $message = getMessage();
         function updatePaginationInfo(start, end, total) {
             const infoElement = document.getElementById('paginationInfo');
             if (total === 0) {
-                infoElement.textContent = 'No hay clientes';
+                infoElement.textContent = 'No hay titulares';
             } else {
-                infoElement.textContent = `Mostrando ${start}-${end} de ${total} clientes`;
+                infoElement.textContent = `Mostrando ${start}-${end} de ${total} titulares`;
             }
         }
 
@@ -681,7 +729,7 @@ $message = getMessage();
                             <div class="asesor-stats">
                                 <span class="stat-item">
                                     <i class="fas fa-users"></i> 
-                                    <span id="clientesAsignados_${asesor.cedula}">0</span> clientes
+                                    <span id="clientesAsignados_${asesor.cedula}">0</span> titulares
                                 </span>
                             </div>
                         </div>
@@ -697,8 +745,8 @@ $message = getMessage();
         }
 
         // Abrir modal de asignación individual
-        function abrirModalAsignacion(clienteCedula) {
-            const cliente = clientes.find(c => c.cedula == clienteCedula);
+        function abrirModalAsignacion(titularId) {
+            const cliente = clientes.find(c => String(c.titular_id) === String(titularId));
             if (!cliente) return;
             
             clienteSeleccionado = cliente;
@@ -710,17 +758,24 @@ $message = getMessage();
         // Mostrar información del cliente en el modal
         function mostrarInformacionCliente(cliente) {
             const clienteInfo = document.getElementById('clienteInfo');
+            const nom = escHtml([cliente.nombre, cliente.apellido].filter(x => x != null && String(x).trim() !== '').join(' ').trim()) || '—';
+            const est = escHtml(String(cliente.estado || 'reparto'));
+            const fmtO = (v) => (v != null && String(v).trim() !== '') ? escHtml(String(v)) : 'No disponible';
             clienteInfo.innerHTML = `
                 <div class="cliente-info-card">
                     <div class="cliente-header">
-                        <h4>${cliente.nombre} ${cliente.apellido}</h4>
-                        <span class="status-badge status-${cliente.estado}">${cliente.estado}</span>
+                        <h4>${nom}</h4>
+                        <span class="status-badge status-reparto">${est}</span>
                     </div>
                     <div class="cliente-details">
-                        <p><strong>Email:</strong> ${cliente.email || 'No disponible'}</p>
-                        <p><strong>Empresa:</strong> ${cliente.empresa || 'No disponible'}</p>
-                        <p><strong>Teléfono:</strong> ${cliente.telefono || 'No disponible'}</p>
-                        <p><strong>Ciudad:</strong> ${cliente.ciudad || 'No disponible'}</p>
+                        <p><strong>Caso:</strong> ${fmtO(cliente.numero_caso)}</p>
+                        <p><strong>Condado:</strong> ${fmtO(cliente.condado)}</p>
+                        <p><strong>Reg_Int:</strong> ${fmtTitCampo(cliente.reg_int)}</p>
+                        <p><strong>BaseD:</strong> ${fmtTitCampo(cliente.base_d)}</p>
+                        <p><strong>F_Correo:</strong> ${fmtTitCampo(cliente.f_correo)}</p>
+                        <p><strong>Email:</strong> ${fmtO(cliente.email)}</p>
+                        <p><strong>Teléfono:</strong> ${fmtO(cliente.telefono)}</p>
+                        <p><strong>Ciudad (mailing):</strong> ${fmtO(cliente.ciudad)}</p>
                     </div>
                 </div>
             `;
@@ -755,8 +810,8 @@ $message = getMessage();
         }
 
         // Renderizar select de asesores
-        function renderAsesoresSelect(asesoresData) {
-            const select = document.getElementById('asesorSelect');
+        function renderAsesoresSelect(asesoresData, selectId = 'asesorSelect') {
+            const select = document.getElementById(selectId);
             select.innerHTML = '<option value="">Seleccionar asesor...</option>';
             
             if (asesoresData.length === 0) {
@@ -772,6 +827,78 @@ $message = getMessage();
             });
         }
 
+        async function cargarAsesoresParaMasivo() {
+            try {
+                const response = await fetch('../api/coordinador_asesores.php', { credentials: 'include' });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.location.href = '../views/login.php';
+                        return;
+                    }
+                    throw new Error('Error HTTP: ' + response.status);
+                }
+                const result = await response.json();
+                if (result.success) {
+                    renderAsesoresSelect(result.data, 'asesorSelectMasivo');
+                } else {
+                    showMessage('Error cargando asesores: ' + result.message, 'error');
+                }
+            } catch (error) {
+                console.error(error);
+                showMessage('Error cargando asesores', 'error');
+            }
+        }
+
+        async function abrirAsignacionMasivaSeleccion() {
+            if (clientesSeleccionados.length === 0) {
+                showMessage('Seleccione al menos un titular con la casilla', 'error');
+                return;
+            }
+            document.getElementById('cantidadAsignar').textContent = clientesSeleccionados.length;
+            await cargarAsesoresParaMasivo();
+            document.getElementById('assignMasivoModal').style.display = 'block';
+        }
+
+        function closeAssignMasivoModal() {
+            document.getElementById('assignMasivoModal').style.display = 'none';
+            document.getElementById('notasAsignacionMasiva').value = '';
+        }
+
+        async function confirmarAsignacionMasiva() {
+            const asesorCedula = document.getElementById('asesorSelectMasivo').value;
+            if (!asesorCedula) {
+                showMessage('Seleccione un asesor', 'error');
+                return;
+            }
+            const ids = [...clientesSeleccionados];
+            let ok = 0;
+            const notas = document.getElementById('notasAsignacionMasiva').value;
+            try {
+                for (const tid of ids) {
+                    const response = await fetch('../api/assign_cliente.php', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        credentials: 'include',
+                        body: JSON.stringify({
+                            titular_id: parseInt(tid, 10),
+                            asesor_cedula: asesorCedula,
+                            notas: notas
+                        })
+                    });
+                    const result = await response.json();
+                    if (result.success) ok++;
+                }
+                showMessage(`Asignados ${ok} de ${ids.length} titular(es)`, ok === ids.length ? 'success' : 'info');
+                closeAssignMasivoModal();
+                limpiarSeleccion();
+                loadClientes();
+                loadDashboardData();
+            } catch (e) {
+                console.error(e);
+                showMessage('Error en asignación masiva', 'error');
+            }
+        }
+
         // Confirmar asignación individual
         async function confirmarAsignacion() {
             const asesorCedula = document.getElementById('asesorSelect').value;
@@ -783,7 +910,7 @@ $message = getMessage();
             }
             
             if (!clienteSeleccionado) {
-                showMessage('No hay cliente seleccionado', 'error');
+                showMessage('No hay titular seleccionado', 'error');
                 return;
             }
             
@@ -795,7 +922,7 @@ $message = getMessage();
                     },
                     credentials: 'include',
                     body: JSON.stringify({
-                        cliente_id: clienteSeleccionado.cedula,
+                        titular_id: clienteSeleccionado.titular_id,
                         asesor_cedula: asesorCedula,
                         notas: notas
                     })
@@ -812,16 +939,16 @@ $message = getMessage();
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('Cliente asignado exitosamente', 'success');
+                    showMessage('Titular asignado correctamente', 'success');
                     closeAssignModal();
                     loadClientes();
                     loadDashboardData();
                 } else {
-                    showMessage('Error asignando cliente: ' + result.message, 'error');
+                    showMessage('Error al asignar titular: ' + result.message, 'error');
                 }
             } catch (error) {
                 console.error('Error asignando cliente:', error);
-                showMessage('Error asignando cliente', 'error');
+                showMessage('Error al asignar titular', 'error');
             }
         }
 
@@ -834,16 +961,17 @@ $message = getMessage();
         }
 
         // Toggle selección de cliente
-        function toggleClienteSeleccion(clienteCedula) {
-            const checkbox = document.getElementById(`cliente_${clienteCedula}`);
-            const cliente = clientes.find(c => c.cedula == clienteCedula);
+        function toggleClienteSeleccion(titularId) {
+            const tid = String(titularId);
+            const checkbox = document.getElementById(`titular_${tid}`);
+            if (!checkbox) return;
             
             if (checkbox.checked) {
-                if (!clientesSeleccionados.includes(clienteCedula)) {
-                    clientesSeleccionados.push(clienteCedula);
+                if (!clientesSeleccionados.includes(tid)) {
+                    clientesSeleccionados.push(tid);
                 }
             } else {
-                clientesSeleccionados = clientesSeleccionados.filter(cedula => cedula !== clienteCedula);
+                clientesSeleccionados = clientesSeleccionados.filter(x => x !== tid);
             }
             
             actualizarPanelAsignacion();
@@ -869,28 +997,27 @@ $message = getMessage();
             actualizarPanelAsignacion();
         }
 
-        // Asignar clientes globalmente
         async function asignarClientesGlobalmente() {
             const totalClientes = parseInt(document.getElementById('totalClientesAsignar').value);
             const notas = document.getElementById('notasAsignacionGlobal').value;
             
             if (!totalClientes || totalClientes <= 0) {
-                showMessage('Ingrese una cantidad válida de clientes', 'error');
+                showMessage('Ingrese una cantidad válida de titulares', 'error');
                 return;
             }
             
             const clientesDisponibles = parseInt(document.getElementById('clientesDisponibles').textContent);
             if (totalClientes > clientesDisponibles) {
-                showMessage(`No puede asignar más de ${clientesDisponibles} clientes`, 'error');
+                showMessage(`No puede asignar más de ${clientesDisponibles} titulares sin asesor`, 'error');
                 return;
             }
             
-            if (!confirm(`¿Está seguro de asignar ${totalClientes} clientes a los asesores?`)) {
+            if (!confirm(`¿Repartir ${totalClientes} titular(es) entre sus asesores en forma automática?`)) {
                 return;
             }
             
             try {
-                showMessage('Asignando clientes globalmente...', 'info');
+                showMessage('Repartiendo titulares…', 'info');
 
                 const response = await fetch('../api/assign_clientes_automatico.php', {
                     method: 'POST',
@@ -920,11 +1047,11 @@ $message = getMessage();
                     loadClientes();
                     loadDashboardData();
                 } else {
-                    showMessage('Error asignando clientes: ' + result.message, 'error');
+                    showMessage('Error al repartir titulares: ' + result.message, 'error');
                 }
             } catch (error) {
                 console.error('Error asignando clientes:', error);
-                showMessage('Error asignando clientes', 'error');
+                showMessage('Error al repartir titulares', 'error');
             }
         }
 

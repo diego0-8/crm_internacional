@@ -11,7 +11,12 @@ if (!isLoggedIn() || !hasRole('asesor')) {
 
 $user = getCurrentUser();
 $asesorCedula = $user['cedula'];
-$archivoId = $_POST['archivo_id'];
+$archivoId = isset($_POST['archivo_id']) ? (int) $_POST['archivo_id'] : 0;
+if ($archivoId <= 0) {
+    http_response_code(400);
+    echo json_encode(['success' => false, 'message' => 'ID de archivo requerido']);
+    exit;
+}
 
 // Obtener conexión a la base de datos
 $db = getDB();

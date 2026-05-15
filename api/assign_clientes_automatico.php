@@ -31,9 +31,9 @@ $coordinadorController = new CoordinadorController();
 $user = getCurrentUser();
 
 try {
-    $result = $coordinadorController->asignarClientesAutomatico(
+    $result = $coordinadorController->asignarTitularesAutomatico(
         $user['cedula'],
-        $input['total_clientes'],
+        (int) $input['total_clientes'],
         $input['notas'] ?? ''
     );
     echo json_encode($result);

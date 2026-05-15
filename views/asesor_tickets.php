@@ -16,7 +16,7 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Mis Tickets - <?php echo APP_NAME; ?></title>
+    <title>Mis tickets CRM - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <link href="../css/variables.css" rel="stylesheet">
     <link href="../css/role-specific.css" rel="stylesheet">
@@ -38,12 +38,16 @@ $message = getMessage();
                 <div class="nav-section">
                     <div class="nav-section-title">Asesor</div>
                     <a href="asesor_dashboard.php" class="nav-item">
-                        <i class="fas fa-users"></i>
-                        Mis Clientes
+                        <i class="fas fa-folder-open"></i>
+                        Mis casos (reparto)
                     </a>
                     <a href="asesor_tickets.php" class="nav-item active">
                         <i class="fas fa-ticket-alt"></i>
-                        Mis Tickets
+                        Mis tickets CRM
+                    </a>
+                    <a href="asesor_estadisticas.php" class="nav-item">
+                        <i class="fas fa-chart-bar"></i>
+                        Estadísticas
                     </a>
                 </div>
             </nav>
@@ -75,8 +79,8 @@ $message = getMessage();
                         <i class="fas fa-bars"></i>
                     </button>
                     <div class="welcome-section">
-                        <h1>Mis Tickets</h1>
-                        <p>Gestiona y da seguimiento a todos tus tickets de soporte.</p>
+                        <h1>Mis tickets CRM</h1>
+                        <p>La tiketera sigue vinculada a <strong>clientes CRM</strong> (cédula). Los titulares del CSV de reparto están en <a href="asesor_dashboard.php">Mis casos</a>.</p>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -100,11 +104,13 @@ $message = getMessage();
                     </div>
                 <?php endif; ?>
 
+                <div class="message info" style="margin-bottom: 1rem;">
+                    <i class="fas fa-info-circle"></i>
+                    La <strong>creación de tickets</strong> la realiza el <strong>coordinador</strong> (o administración). Usted solo gestiona los tickets que ya le fueron asignados. Use <strong>Gestionar</strong> desde el dashboard o desde esta lista para continuar el caso.
+                </div>
+
                 <!-- Action Buttons -->
                 <div class="action-buttons">
-                    <button class="btn btn-primary" onclick="abrirModalCrearTicket()">
-                        <i class="fas fa-plus"></i> Nuevo Ticket
-                    </button>
                     <button class="btn btn-secondary" onclick="loadTickets()">
                         <i class="fas fa-sync-alt"></i> Actualizar
                     </button>
@@ -209,77 +215,6 @@ $message = getMessage();
         </div>
     </div>
 
-    <!-- Modal para crear ticket -->
-    <div id="crearTicketModal" class="modal-cliente">
-        <div class="modal-cliente-content">
-            <div class="modal-cliente-header">
-                <h3 class="modal-cliente-title">Crear Nuevo Ticket</h3>
-                <span class="close-modal" onclick="cerrarModalCrearTicket()">&times;</span>
-            </div>
-            
-            <div class="ticket-form">
-                <form id="crearTicketForm" onsubmit="crearTicket(event)">
-                    <div class="form-row">
-                        <div class="form-group">
-                            <label for="ticketCliente">Cliente *</label>
-                            <select id="ticketCliente" class="form-control" required>
-                                <option value="">Seleccionar cliente</option>
-                            </select>
-                        </div>
-                        <div class="form-group">
-                            <label for="ticketCategoria">Categoría</label>
-                            <select id="ticketCategoria" class="form-control">
-                                <option value="">Sin categoría</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <div class="form-group">
-                        <label for="ticketTitulo">Asunto (opcional)</label>
-                        <input type="text" id="ticketTitulo" class="form-control"
-                               placeholder="El número de ticket se asignará automáticamente. Use este campo para un asunto interno opcional.">
-                        <small class="form-text"><i class="fas fa-info-circle"></i> El número del ticket (TK-AAAA-NNNNNN) se genera de forma automática al crear el caso.</small>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label for="ticketDescripcion">Descripción del Problema</label>
-                        <textarea id="ticketDescripcion" class="form-control" rows="4" 
-                                  placeholder="Describa detalladamente el problema o solicitud del cliente..."></textarea>
-                    </div>
-                    
-                    
-                    <div class="form-group">
-                        <label for="ticketPdfArchivo">Archivo PDF (Opcional)</label>
-                        <input type="file" id="ticketPdfArchivo" name="pdf_archivo" class="form-control" 
-                               accept=".pdf" onchange="previewTicketPDF(this)">
-                        <small class="form-text">
-                            <i class="fas fa-info-circle"></i> 
-                            Sube un documento PDF relacionado con el ticket. Máximo 50MB
-                        </small>
-                        <div id="ticket-pdf-preview" class="pdf-preview" style="display: none;">
-                            <div class="pdf-preview-content">
-                                <i class="fas fa-file-pdf"></i>
-                                <span id="ticket-pdf-filename"></span>
-                                <button type="button" class="btn-remove-pdf" onclick="removeTicketPDF()">
-                                    <i class="fas fa-times"></i>
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div style="text-align: right; margin-top: 20px;">
-                        <button type="button" class="btn btn-secondary" onclick="cerrarModalCrearTicket()">
-                            <i class="fas fa-times"></i> Cancelar
-                        </button>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="fas fa-ticket-alt"></i> Crear Ticket
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    </div>
-
     <!-- Modal para ver detalles del ticket -->
     <div id="ticketDetalleModal" class="modal-cliente">
         <div class="modal-cliente-content">
@@ -324,19 +259,16 @@ $message = getMessage();
         }
 
         // Inicializar página
-        document.addEventListener('DOMContentLoaded', function() {
-            // Verificar si hay filtro por cliente
+        document.addEventListener('DOMContentLoaded', async function() {
             const urlParams = new URLSearchParams(window.location.search);
             const clienteCedula = urlParams.get('cliente');
-            
+            await loadClientes();
             if (clienteCedula) {
-                // Mostrar indicador de filtro por cliente
                 mostrarFiltroCliente(clienteCedula);
                 loadTickets(clienteCedula);
             } else {
                 loadTickets();
             }
-            loadClientes();
         });
 
         // Cargar tickets
@@ -944,126 +876,6 @@ $message = getMessage();
             }
         }
 
-        // Abrir modal crear ticket
-        function abrirModalCrearTicket() {
-            cargarClientesParaTicket();
-            cargarCategoriasTicket();
-            document.getElementById('crearTicketModal').style.display = 'block';
-        }
-
-        async function cargarCategoriasTicket() {
-            const sel = document.getElementById('ticketCategoria');
-            sel.innerHTML = '<option value="">Sin categoría</option>';
-            try {
-                const response = await fetch('../api/ticket_categorias.php', { credentials: 'same-origin' });
-                const result = await response.json();
-                if (result.success && result.data) {
-                    result.data.forEach(function(c) {
-                        const opt = document.createElement('option');
-                        opt.value = c.id;
-                        opt.textContent = c.codigo + ' — ' + c.nombre;
-                        sel.appendChild(opt);
-                    });
-                }
-            } catch (e) {
-                console.warn('Categorías no disponibles', e);
-            }
-        }
-
-        // Cerrar modal crear ticket
-        function cerrarModalCrearTicket() {
-            document.getElementById('crearTicketModal').style.display = 'none';
-            document.getElementById('crearTicketForm').reset();
-            removeTicketPDF();
-        }
-
-        function cargarClientesParaTicket() {
-            const select = document.getElementById('ticketCliente');
-            select.innerHTML = '<option value="">Seleccionar cliente</option>';
-
-            clientes.forEach(cliente => {
-                const option = document.createElement('option');
-                option.value = cliente.cedula;
-                const nombre = cliente.nombre_completo || `${cliente.nombre || ''} ${cliente.apellido || ''}`.trim();
-                option.textContent = `${nombre} (${cliente.cedula})`;
-                select.appendChild(option);
-            });
-        }
-
-        // Preview de PDF para ticket
-        function previewTicketPDF(input) {
-            const file = input.files[0];
-            const preview = document.getElementById('ticket-pdf-preview');
-            const filename = document.getElementById('ticket-pdf-filename');
-
-            if (file) {
-                if (file.type !== 'application/pdf') {
-                    showMessage('Por favor seleccione un archivo PDF válido', 'error');
-                    input.value = '';
-                    return;
-                }
-
-                const maxSize = 50 * 1024 * 1024; // 50MB
-                if (file.size > maxSize) {
-                    showMessage('El archivo PDF no puede ser mayor a 50MB', 'error');
-                    input.value = '';
-                    return;
-                }
-
-                filename.textContent = file.name;
-                preview.style.display = 'block';
-            } else {
-                preview.style.display = 'none';
-            }
-        }
-
-        // Remover PDF del ticket
-        function removeTicketPDF() {
-            document.getElementById('ticketPdfArchivo').value = '';
-            document.getElementById('ticket-pdf-preview').style.display = 'none';
-        }
-
-        async function crearTicket(e) {
-            e.preventDefault();
-
-            const formData = new FormData();
-            formData.append('cliente_cedula', document.getElementById('ticketCliente').value);
-            const titulo = document.getElementById('ticketTitulo').value;
-            if (titulo && titulo.trim()) {
-                formData.append('titulo', titulo.trim());
-            }
-            formData.append('descripcion', document.getElementById('ticketDescripcion').value);
-            const catId = document.getElementById('ticketCategoria').value;
-            if (catId) {
-                formData.append('categoria_id', catId);
-            }
-            
-            const pdfFile = document.getElementById('ticketPdfArchivo').files[0];
-            if (pdfFile) {
-                formData.append('pdf_archivo', pdfFile);
-            }
-            
-            try {
-                const response = await fetch('../api/crear_ticket.php', {
-                    method: 'POST',
-                    body: formData
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    showMessage('Ticket creado exitosamente', 'success');
-                    cerrarModalCrearTicket();
-                    loadTickets();
-                } else {
-                    showMessage(result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error creando ticket:', error);
-                showMessage('Error creando ticket', 'error');
-            }
-        }
-
         // Funciones de utilidad
         function showMessage(message, type) {
             const messageDiv = document.createElement('div');
@@ -1135,12 +947,8 @@ $message = getMessage();
 
         // Cerrar modales al hacer clic fuera
         window.onclick = function(event) {
-            const crearModal = document.getElementById('crearTicketModal');
             const detalleModal = document.getElementById('ticketDetalleModal');
-            
-            if (event.target === crearModal) {
-                cerrarModalCrearTicket();
-            }
+
             if (event.target === detalleModal) {
                 cerrarModalDetalleTicket();
             }

@@ -195,6 +195,7 @@ $message = getMessage();
                                     <th>Teléfono</th>
                                     <th>Rol</th>
                                     <th>Coordinador</th>
+                                    <th>Extensión SIP</th>
                                     <th>Estado</th>
                                     <th>PDF</th>
                                     <th>Acciones</th>
@@ -253,18 +254,18 @@ $message = getMessage();
                                    placeholder="+57 300 123 4567">
                         </div>
                     </div>
-                    <div class="form-row">
+                    <div class="form-row" id="sipAsesorFieldsRow" style="display: none;">
                         <div class="form-group">
-                            <label for="sip_extension">Extensión SIP (WebRTC)</label>
+                            <label for="sip_extension">Extensión SIP (softphone / PBX)</label>
                             <input type="text" id="sip_extension" name="sip_extension" class="form-control" maxlength="40"
                                    placeholder="Ej. 1001" autocomplete="off">
                         </div>
                         <div class="form-group">
-                            <label for="sip_secret">Clave SIP</label>
+                            <label for="sip_secret">Clave SIP (password en texto plano)</label>
                             <input type="text" id="sip_secret" name="sip_secret" class="form-control" maxlength="128"
-                                   placeholder="Secreto tal como lo usa el PBX" autocomplete="off">
+                                   placeholder="Tal como la lee el PBX / softphone" autocomplete="off">
                             <small class="form-text" style="display:block;margin-top:6px;color:#a0aec0;font-size:0.8rem;">
-                                Se guarda en <strong>texto plano</strong> para que Issabel/Asterisk y el softphone WebRTC puedan autenticar.
+                                Solo aplica a <strong>asesores</strong>. Se guarda en texto plano (requisito Asterisk / WebRTC).
                             </small>
                         </div>
                     </div>
@@ -367,29 +368,6 @@ $message = getMessage();
         let users = [];
         let roles = [];
         let coordinators = [];
-
-        // #region agent log
-        function agentLog(hypothesisId, location, message, data) {
-            try {
-                fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Debug-Session-Id': '695289'
-                    },
-                    body: JSON.stringify({
-                        sessionId: '695289',
-                        runId: 'pre-fix',
-                        hypothesisId,
-                        location,
-                        message,
-                        data,
-                        timestamp: Date.now()
-                    })
-                }).catch(() => {});
-            } catch (_) {}
-        }
-        // #endregion
 
         // Inicializar dashboard
         document.addEventListener('DOMContentLoaded', function() {
@@ -531,18 +509,37 @@ $message = getMessage();
             }
         }
 
+        function escapeHtml(str) {
+            return String(str)
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/"/g, '&quot;')
+                .replace(/'/g, '&#039;');
+        }
+
+        function updateSipFieldsVisibility() {
+            const row = document.getElementById('sipAsesorFieldsRow');
+            if (!row) return;
+            const rolId = document.getElementById('rol_id').value;
+            const rol = roles && roles.find(r => String(r.id) === String(rolId));
+            row.style.display = rol && rol.nombre === 'asesor' ? '' : 'none';
+        }
+
         // Renderizar tabla de usuarios
         function renderUsersTable() {
             const tbody = document.getElementById('usersTableBody');
             tbody.innerHTML = '';
 
             if (!users || users.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="10" class="message-no-data">No hay usuarios registrados</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="11" class="message-no-data">No hay usuarios registrados</td></tr>';
                 return;
             }
 
             users.forEach(user => {
                 const row = document.createElement('tr');
+                const sipCol = user.rol_nombre === 'asesor'
+                    ? (user.sip_extension ? escapeHtml(String(user.sip_extension)) : '—')
+                    : '—';
                 row.innerHTML = `
                     <td>
                         <div class="cedula-text">${user.cedula}</div>
@@ -568,6 +565,7 @@ $message = getMessage();
                         </span>
                     </td>
                     <td>${user.coordinador_nombre || 'N/A'}</td>
+                    <td>${sipCol}</td>
                     <td>
                         <span class="status-badge ${user.activo ? 'status-active' : 'status-inactive'}">
                             ${user.activo ? 'Activo' : 'Inactivo'}
@@ -721,48 +719,11 @@ $message = getMessage();
             document.getElementById('password').required = true;
             document.getElementById('confirm_password').required = true;
             document.getElementById('coordinadorGroup').style.display = 'none';
+            updateSipFieldsVisibility();
             document.getElementById('userModal').style.display = 'block';
             
             // Configurar scroll del modal
             configurarScrollModalUsuario();
-
-            // Logs de estilos efectivos del modal (computed styles)
-            requestAnimationFrame(() => {
-                const modal = document.getElementById('userModal');
-                const content = modal?.querySelector('.modal-content');
-                const header = modal?.querySelector('.modal-header');
-                const body = modal?.querySelector('.modal-body');
-                const footer = modal?.querySelector('.modal-footer');
-                const csContent = content ? getComputedStyle(content) : null;
-                const csHeader = header ? getComputedStyle(header) : null;
-                const csBody = body ? getComputedStyle(body) : null;
-                const csFooter = footer ? getComputedStyle(footer) : null;
-
-                agentLog('H1', 'views/admin_dashboard.php:openCreateUserModal', 'Computed styles #userModal', {
-                    content_bg: csContent?.backgroundColor,
-                    content_bg_image: csContent?.backgroundImage,
-                    content_color: csContent?.color,
-                    header_bg: csHeader?.backgroundColor,
-                    header_bg_image: csHeader?.backgroundImage,
-                    header_color: csHeader?.color,
-                    body_bg: csBody?.backgroundColor,
-                    body_color: csBody?.color,
-                    footer_bg: csFooter?.backgroundColor,
-                    footer_bg_image: csFooter?.backgroundImage,
-                    footer_color: csFooter?.color
-                });
-
-                // Variables CSS relevantes (si aplican)
-                const root = document.documentElement;
-                const rcs = getComputedStyle(root);
-                agentLog('H2', 'views/admin_dashboard.php:openCreateUserModal', 'CSS variables snapshot', {
-                    light_gray: rcs.getPropertyValue('--light-gray')?.trim(),
-                    dark_gray: rcs.getPropertyValue('--dark-gray')?.trim(),
-                    white: rcs.getPropertyValue('--white')?.trim(),
-                    gradient_primary: rcs.getPropertyValue('--gradient-primary')?.trim(),
-                    bg_sidebar: rcs.getPropertyValue('--bg-sidebar')?.trim()
-                });
-            });
         }
 
         // Abrir modal de editar usuario
@@ -791,6 +752,7 @@ $message = getMessage();
             } else {
                 document.getElementById('coordinadorGroup').style.display = 'none';
             }
+            updateSipFieldsVisibility();
             
             document.getElementById('userModal').style.display = 'block';
             
@@ -953,6 +915,7 @@ $message = getMessage();
             } else {
                 coordinadorGroup.style.display = 'none';
             }
+            updateSipFieldsVisibility();
         });
 
         // Validar contraseñas

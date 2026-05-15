@@ -49,10 +49,6 @@ $message = getMessage();
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_tickets_import.php" class="nav-item">
-                        <i class="fas fa-file-upload"></i>
-                        Importar tickets CSV
-                    </a>
                     <a href="coordinador_exporte.php" class="nav-item">
                         <i class="fas fa-download"></i>
                         Exporte
@@ -88,7 +84,7 @@ $message = getMessage();
                     </button>
                     <div class="welcome-section">
                         <h1 class="title-asesor">Gestión de Archivos CSV</h1>
-                        <p class="subtitle-asesor">Sube y procesa archivos CSV para importar clientes masivamente.</p>
+                        <p class="subtitle-asesor">Importa reparto (foreclosure) a titulares y tablas relacionadas, o el CSV simple de clientes CRM.</p>
                     </div>
                 </div>
             </div>
@@ -158,117 +154,51 @@ $message = getMessage();
                         <div class="instructions">
                             <div class="alert alert-warning">
                                 <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Importante:</strong> El archivo CSV debe seguir exactamente el formato especificado. Archivos con estructuras diferentes causarán errores de procesamiento y no se guardarán los datos correctamente.
+                                <strong>Importante:</strong> El sistema detecta automáticamente el tipo de CSV. Use la plantilla de reparto (export foreclosure) o el CSV simple de CRM descrito abajo. Si su base ya existía antes de la unificación del esquema, ejecute en MySQL el script <code>database/migration_titulares_archivo_csv.sql</code> una sola vez.
                             </div>
 
-                            <h4>Formato Requerido del Archivo CSV:</h4>
-                            <p>El archivo CSV debe contener exactamente las siguientes columnas en este orden preciso:</p>
+                            <h4>1) CSV reparto / foreclosure (recomendado)</h4>
+                            <p>Primera fila: encabezados en inglés tal como exporta la herramienta (debe incluir al menos <strong>Surplus Amount</strong>, <strong>Case Number</strong> y <strong>First Name</strong>). Cada fila de datos se guarda en:</p>
+                            <ul>
+                                <li><strong>titulares</strong> — titular (nombre, mailing, edad, Deceased, Reg_Int, BaseD, F_Correo, Agente, Prioridad) y vínculo al archivo/coordinador.</li>
+                                <li><strong>propiedades</strong> — caso y predio (montos, fechas, Case Number, Parcel Number, tipo foreclosure, dirección de propiedad, County, Source, etc.).</li>
+                                <li><strong>telefonos</strong> / <strong>correos</strong> — hasta 5 teléfonos y 5 emails del titular (tipo y DNC/Litigator por teléfono).</li>
+                                <li><strong>referencias</strong>, <strong>referencias_telefonos</strong>, <strong>referencias_correos</strong> — hasta 5 familiares con sus teléfonos y correos.</li>
+                            </ul>
+                            <p>Las filas totalmente vacías se omiten. Cada titular debe tener al menos <strong>First Name</strong> o <strong>Last Name</strong>.</p>
 
-                            <div class="alert alert-info">
-                                <i class="fas fa-info-circle"></i>
-                                <strong>Nota importante:</strong> El sistema genera automáticamente una cédula única para cada cliente importado desde CSV. No es necesario incluir una columna de cédula en el archivo.
-                            </div>
-
+                            <h4>2) CSV simple CRM (compatibilidad)</h4>
+                            <p>Si la cabecera <strong>no</strong> coincide con el reparto, se usa el formato de 6 columnas por posición (sin fila de títulos en inglés de export):</p>
                             <div class="csv-format-table">
                                 <table class="format-table">
                                     <thead>
                                         <tr>
                                             <th>Posición</th>
-                                            <th>Columna</th>
+                                            <th>Campo</th>
                                             <th>Requerido</th>
-                                            <th>Descripción</th>
-                                            <th>Tipo de Dato</th>
                                         </tr>
                                     </thead>
                                     <tbody>
-                                        <tr>
-                                            <td>0</td>
-                                            <td><strong>nombre_completo</strong></td>
-                                            <td><span class="required">Sí</span></td>
-                                            <td>Nombre completo del cliente</td>
-                                            <td>Texto (máx. 255 caracteres)</td>
-                                        </tr>
-                                        <tr>
-                                            <td>1</td>
-                                            <td><strong>email</strong></td>
-                                            <td><span class="optional">No</span></td>
-                                            <td>Correo electrónico</td>
-                                            <td>Email válido</td>
-                                        </tr>
-                                        <tr>
-                                            <td>2</td>
-                                            <td><strong>telefono</strong></td>
-                                            <td><span class="optional">No</span></td>
-                                            <td>Número de teléfono</td>
-                                            <td>Texto (máx. 20 caracteres)</td>
-                                        </tr>
-                                        <tr>
-                                            <td>3</td>
-                                            <td><strong>direccion</strong></td>
-                                            <td><span class="optional">No</span></td>
-                                            <td>Dirección completa</td>
-                                            <td>Texto largo</td>
-                                        </tr>
-                                        <tr>
-                                            <td>4</td>
-                                            <td><strong>ciudad</strong></td>
-                                            <td><span class="optional">No</span></td>
-                                            <td>Ciudad de residencia</td>
-                                            <td>Texto (máx. 100 caracteres)</td>
-                                        </tr>
-                                        <tr>
-                                            <td>5</td>
-                                            <td><strong>pais</strong></td>
-                                            <td><span class="optional">No</span></td>
-                                            <td>País de residencia</td>
-                                            <td>Texto (máx. 100 caracteres)</td>
-                                        </tr>
+                                        <tr><td>0</td><td><strong>nombre_completo</strong></td><td><span class="required">Sí</span></td></tr>
+                                        <tr><td>1</td><td>email</td><td><span class="optional">No</span></td></tr>
+                                        <tr><td>2</td><td>telefono</td><td><span class="optional">No</span></td></tr>
+                                        <tr><td>3</td><td>direccion</td><td><span class="optional">No</span></td></tr>
+                                        <tr><td>4</td><td>ciudad</td><td><span class="optional">No</span></td></tr>
+                                        <tr><td>5</td><td>pais</td><td><span class="optional">No</span></td></tr>
                                     </tbody>
                                 </table>
                             </div>
-
-                            <h4>Ejemplo de Archivo CSV Válido:</h4>
                             <div class="csv-example">
                                 <pre><code>nombre_completo,email,telefono,direccion,ciudad,pais
-Juan Pérez,juan@email.com,3001234567,Calle 123 #45-67,Bogotá,Colombia
-María González,maria@email.com,3019876543,Carrera 89 #12-34,Medellín,Colombia
-Carlos Rodríguez,carlos@email.com,,Calle 50 #20-30,Cali,Colombia</code></pre>
+Juan Pérez,juan@email.com,3001234567,Calle 123,Bogotá,Colombia</code></pre>
                             </div>
 
-                            <div class="alert alert-danger">
-                                <i class="fas fa-times-circle"></i>
-                                <strong>Errores Comunes a Evitar:</strong>
-                                <ul>
-                                    <li><strong>Columnas en orden incorrecto:</strong> No use archivos con formato "nombre,cedula,celular" - esto causará mapeo incorrecto</li>
-                                    <li><strong>Falta de columnas requeridas:</strong> Los campos "nombre" y "apellido" son obligatorios</li>
-                                    <li><strong>Tipos de datos incorrectos:</strong> Asegúrese de que los emails tengan formato válido</li>
-                                    <li><strong>Caracteres especiales:</strong> Evite caracteres no UTF-8 que puedan corromper el archivo</li>
-                                    <li><strong>Filas vacías:</strong> No deje filas completamente vacías en el CSV</li>
-                                </ul>
-                            </div>
-
-                            <h4>Recomendaciones para Evitar Errores:</h4>
+                            <h4>Recomendaciones</h4>
                             <ul>
-                                <li>El archivo debe estar en formato CSV con codificación UTF-8 (sin BOM)</li>
-                                <li>La primera fila debe contener exactamente los encabezados mostrados arriba</li>
-                                <li>Use comillas dobles para campos que contengan comas</li>
-                                <li>No incluir caracteres especiales en los nombres de archivo</li>
-                                <li>El tamaño máximo del archivo es de 10MB</li>
-                                <li>Verifique el archivo en Excel o un editor de texto antes de subirlo</li>
-                                <li>Para campos opcionales vacíos, deje la celda completamente vacía (no use espacios)</li>
+                                <li>UTF-8; comillas dobles si hay comas dentro de un campo.</li>
+                                <li>Tamaño máximo razonable (p. ej. 10 MB según configuración del servidor).</li>
+                                <li>Al eliminar un archivo en esta pantalla, se borran los <strong>clientes CRM</strong> con ese <code>archivo_csv_id</code> y los <strong>titulares</strong> importados con el mismo vínculo.</li>
                             </ul>
-
-                            <div class="csv-validation-tips">
-                                <h4><i class="fas fa-check-circle"></i> Consejos de Validación:</h4>
-                                <p>Antes de subir el archivo, verifique:</p>
-                                <ul>
-                                    <li>¿El archivo tiene exactamente 10 columnas?</li>
-                                    <li>¿Las columnas están en el orden correcto?</li>
-                                    <li>¿Todos los registros tienen nombre y apellido?</li>
-                                    <li>¿Los emails tienen formato válido (si se incluyen)?</li>
-                                    <li>¿No hay filas duplicadas o completamente vacías?</li>
-                                </ul>
-                            </div>
                         </div>
                     </div>
                 </div>
@@ -728,7 +658,11 @@ Carlos Rodríguez,carlos@email.com,,Calle 50 #20-30,Cali,Colombia</code></pre>
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage(result.message, 'success');
+                    let msg = result.message;
+                    if (result.formato === 'reparto_foreclosure') {
+                        msg += ' (importación reparto → titulares / propiedades / teléfonos / correos / referencias)';
+                    }
+                    showMessage(msg, 'success');
                     resetForm();
                 } else {
                     showMessage('Error procesando archivo: ' + result.message, 'error');

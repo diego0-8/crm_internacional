@@ -36,12 +36,12 @@ $message = getMessage();
                 <div class="nav-section">
                     <div class="nav-section-title">Asesor</div>
                     <a href="asesor_dashboard.php" class="nav-item">
-                        <i class="fas fa-users"></i>
-                        Mis Clientes
+                        <i class="fas fa-folder-open"></i>
+                        Mis casos (reparto)
                     </a>
                     <a href="asesor_tickets.php" class="nav-item">
                         <i class="fas fa-ticket-alt"></i>
-                        Mis Tickets
+                        Mis tickets CRM
                     </a>
                     <a href="asesor_estadisticas.php" class="nav-item active">
                         <i class="fas fa-chart-bar"></i>
@@ -78,7 +78,7 @@ $message = getMessage();
                     </button>
                     <div class="welcome-section">
                         <h1 style="background: linear-gradient(135deg, #81864E, #AEB669); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text;">Mis Estadísticas</h1>
-                        <p style="color: #E2EC89;">Analiza tu rendimiento y métricas de ventas.</p>
+                        <p style="color: #E2EC89;">Casos de reparto (titulares), clientes CRM, tickets y llamadas.</p>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -101,7 +101,7 @@ $message = getMessage();
                 <div class="stats-grid">
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Total Clientes</div>
+                            <div class="stat-title">Casos reparto</div>
                             <div class="stat-icon" style="background: rgba(96, 100, 58, 0.2); color: #60643A;">
                                 <i class="fas fa-users"></i>
                             </div>
@@ -115,7 +115,7 @@ $message = getMessage();
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Clientes Gestionados</div>
+                            <div class="stat-title">Con email o teléfono</div>
                             <div class="stat-icon" style="background: rgba(129, 134, 78, 0.2); color: #81864E;">
                                 <i class="fas fa-user-check"></i>
                             </div>
@@ -215,7 +215,7 @@ $message = getMessage();
                     </div>
                     <div class="tickets-summary">
                         <div class="ticket-metric">
-                            <div class="metric-label">Clientes Atendidos</div>
+                            <div class="metric-label">CRM distintos (llamadas mes)</div>
                             <div class="metric-value" id="clientesAtendidosMes">0</div>
                         </div>
                         <div class="ticket-metric">
@@ -287,8 +287,8 @@ $message = getMessage();
             const stats = estadisticasData;
 
             // Estadísticas principales
-            document.getElementById('totalClientes').textContent = stats.total_clientes || 0;
-            document.getElementById('clientesGestionados').textContent = stats.clientes_gestionados || 0;
+            document.getElementById('totalClientes').textContent = stats.total_casos_reparto ?? stats.total_clientes ?? 0;
+            document.getElementById('clientesGestionados').textContent = stats.casos_con_contacto ?? stats.clientes_gestionados ?? 0;
             document.getElementById('ticketsResueltos').textContent = stats.tickets_resueltos_mes || 0;
             document.getElementById('tiempoPromedio').textContent = (stats.tiempo_promedio_resolucion || 0) + 'h';
 
@@ -314,10 +314,10 @@ $message = getMessage();
 
             // Cambio en clientes
             const clientesChange = document.getElementById('clientesChange');
-            const clientesNuevos = stats.clientes_nuevos_mes || 0;
+            const clientesNuevos = stats.titulares_actualizados_mes ?? stats.clientes_nuevos_mes ?? 0;
             clientesChange.innerHTML = `
                 <i class="fas fa-${clientesNuevos > 0 ? 'arrow-up' : 'minus'}"></i>
-                <span>${clientesNuevos} nuevos este mes</span>
+                <span>${clientesNuevos} titulares tocados este mes</span>
             `;
 
             // Cambio en gestionados
@@ -325,7 +325,7 @@ $message = getMessage();
             const tasaGestion = stats.tasa_gestion || 0;
             gestionadosChange.innerHTML = `
                 <i class="fas fa-info-circle"></i>
-                <span>${tasaGestion}% tasa de gestión</span>
+                <span>${tasaGestion}% con datos de contacto</span>
             `;
 
             // Cambio en tickets
@@ -397,8 +397,8 @@ $message = getMessage();
                         <i class="fas fa-users" style="color: #60643A;"></i>
                     </div>
                     <div class="actividad-content">
-                        <div class="actividad-title">Clientes Gestionados</div>
-                        <div class="actividad-description">Has gestionado ${estadisticasData.clientes_gestionados || 0} clientes este mes</div>
+                        <div class="actividad-title">Casos de reparto</div>
+                        <div class="actividad-description">Tienes ${estadisticasData.total_casos_reparto ?? estadisticasData.total_clientes ?? 0} titulares asignados en el CSV</div>
                         <div class="actividad-time">Esta semana</div>
                     </div>
                 </div>

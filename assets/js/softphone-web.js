@@ -62,28 +62,6 @@ function createCustomSessionDescriptionHandlerFactory(softphone, peerConnectionC
         // Esto asegura que se use nuestro método personalizado en lugar del predeterminado de SIP.js
         sdhOptions.mediaStreamFactory = softphone.mediaStreamFactory;
 
-        // #region agent log
-        try {
-            fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                body: JSON.stringify({
-                    sessionId: '695289',
-                    runId: 'pre-fix',
-                    hypothesisId: 'H1',
-                    location: 'assets/js/softphone-web.js:createCustomSDHFactory',
-                    message: 'SDHFactory mediaStreamFactory types',
-                    data: {
-                        typeof_softphone_mediaStreamFactory: typeof softphone?.mediaStreamFactory,
-                        typeof_sdhOptions_mediaStreamFactory: typeof sdhOptions?.mediaStreamFactory,
-                        has_bound_marker: !!(softphone && softphone.mediaStreamFactory && softphone.mediaStreamFactory.name && softphone.mediaStreamFactory.name.includes('bound'))
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        } catch (_) {}
-        // #endregion
-
         // FIX CRÍTICO: iceGatheringTimeout
         // Obliga al navegador a esperar candidatos antes de enviar el SDP con 0.0.0.0
         // Optimizado a 1000ms para iniciar llamadas más rápido (suficiente para candidatos locales)
@@ -97,27 +75,6 @@ function createCustomSessionDescriptionHandlerFactory(softphone, peerConnectionC
         // Hardening: asegurar que la instancia SDH vea mediaStreamFactory como función.
         sdh.mediaStreamFactory = sdhOptions.mediaStreamFactory;
 
-        // #region agent log
-        try {
-            fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                body: JSON.stringify({
-                    sessionId: '695289',
-                    runId: 'post-fix',
-                    hypothesisId: 'H_fix',
-                    location: 'assets/js/softphone-web.js:createCustomSDHFactory',
-                    message: 'After SDH construct: typeof mediaStreamFactory',
-                    data: {
-                        typeof_sdh_mediaStreamFactory: typeof sdh?.mediaStreamFactory,
-                        typeof_sdhOptions_mediaStreamFactory: typeof sdhOptions?.mediaStreamFactory
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        } catch (_) {}
-        // #endregion
-
         // FIX CRÍTICO: Interceptar el SDP para configurar codecs y corregir IP pública
         let localCandidateIp = null;
         let candidateListenerAdded = false;
@@ -127,25 +84,6 @@ function createCustomSessionDescriptionHandlerFactory(softphone, peerConnectionC
         if (originalGetDescription) {
             sdh.getDescription = function (constraints, modifiers) {
                 console.log('⚡ [CustomSDH] Interceptando getDescription - ENTRADA');
-                // #region agent log
-                try {
-                    fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                        body: JSON.stringify({
-                            sessionId: '695289',
-                            runId: 'post-fix',
-                            hypothesisId: 'H_fix',
-                            location: 'assets/js/softphone-web.js:sdh.getDescription',
-                            message: 'Before originalGetDescription: typeof this.mediaStreamFactory',
-                            data: {
-                                typeof_this_mediaStreamFactory: typeof this?.mediaStreamFactory
-                            },
-                            timestamp: Date.now()
-                        })
-                    }).catch(() => {});
-                } catch (_) {}
-                // #endregion
                 return originalGetDescription.call(this, constraints, modifiers).then((description) => {
                     console.log('⚡ [CustomSDH] getDescription completado - Procesando SDP');
                     if (description && description.sdp) {
@@ -412,27 +350,6 @@ class WebRTCSoftphone {
         this.audioDevices = [];            // Lista de dispositivos de audio
 
         this.mediaStreamFactory = this._mediaStreamFactory.bind(this);
-
-        // #region agent log
-        try {
-            fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                body: JSON.stringify({
-                    sessionId: '695289',
-                    runId: 'pre-fix',
-                    hypothesisId: 'H2',
-                    location: 'assets/js/softphone-web.js:constructor',
-                    message: 'WebRTCSoftphone mediaStreamFactory bound',
-                    data: {
-                        typeof_mediaStreamFactory: typeof this.mediaStreamFactory,
-                        typeof__mediaStreamFactory: typeof this._mediaStreamFactory
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        } catch (_) {}
-        // #endregion
 
         if (typeof SIP === 'undefined' || !SIP.UserAgent) {
             throw new Error('SIP.js no está cargado');
@@ -1024,29 +941,6 @@ class WebRTCSoftphone {
                 const registrarURI = this._patchUriClone(SIP.UserAgent.makeURI(`sip:${domainStr}`));
 
                 // Mejorar manejo de errores de registro, especialmente 403
-                // #region agent log
-                try {
-                    fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                        body: JSON.stringify({
-                            sessionId: '695289',
-                            runId: 'pre-fix',
-                            hypothesisId: 'H2',
-                            location: 'assets/js/softphone-web.js:beforeRegisterer',
-                            message: 'SIP global shape before new Registerer',
-                            data: {
-                                has_SIP: !!SIP,
-                                sip_keys: SIP ? Object.keys(SIP).slice(0, 30) : [],
-                                typeof_Registerer: SIP ? typeof SIP.Registerer : 'n/a',
-                                typeof_RegistererState: SIP ? typeof SIP.RegistererState : 'n/a',
-                                typeof_makeURI: SIP?.UserAgent ? typeof SIP.UserAgent.makeURI : 'n/a'
-                            },
-                            timestamp: Date.now()
-                        })
-                    }).catch(() => {});
-                } catch (_) {}
-                // #endregion
                 this.registerer = new SIP.Registerer(this.userAgent, {
                     registrar: registrarURI,
                     expires: 300, // Reducido de 600 a 300 segundos (5 min) para registro más frecuente y conexión más estable
@@ -1256,26 +1150,6 @@ class WebRTCSoftphone {
         // IMPORTANTE: Debe estar DENTRO del constructor del Inviter para capturar eventos desde el inicio
         // En redes de Wom, Tigo o Movistar, si el usuario cuelga desde su celular,
         // el operador envía CANCEL (si no ha contestado) o BYE (si ya estaba hablando)
-        // #region agent log
-        try {
-            fetch('http://127.0.0.1:7640/ingest/af766675-bf8a-4133-8bf6-4f5b061f3ae6', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Debug-Session-Id': '695289' },
-                body: JSON.stringify({
-                    sessionId: '695289',
-                    runId: 'pre-fix',
-                    hypothesisId: 'H3',
-                    location: 'assets/js/softphone-web.js:makeCall',
-                    message: 'Before new SIP.Inviter',
-                    data: {
-                        typeof_this_mediaStreamFactory: typeof this.mediaStreamFactory,
-                        typeof_this__mediaStreamFactory: typeof this._mediaStreamFactory
-                    },
-                    timestamp: Date.now()
-                })
-            }).catch(() => {});
-        } catch (_) {}
-        // #endregion
         const inviter = new SIP.Inviter(this.userAgent, targetUri, {
             // En SIP.js, mediaStreamFactory debe ir en sessionDescriptionHandlerFactoryOptions
             // para que sea consumida por el SDH factory al crear el PeerConnection.

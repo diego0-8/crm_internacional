@@ -874,6 +874,22 @@
     font-style: italic;
 }
 
+.nota-estado-line {
+    margin-bottom: 8px;
+    display: flex;
+}
+
+.nota-estado-line .ticket-estado-badge {
+    font-size: 0.7rem;
+    padding: 3px 10px;
+}
+
+.nota-estado-desconocido {
+    background: #f3f4f6;
+    color: #9ca3af;
+    border-color: #d1d5db;
+}
+
 /* Selección de Tickets */
 .tickets-selection {
     padding: 20px;
@@ -1592,102 +1608,318 @@
 }
 
 /* Línea de tiempo del caso */
+.form-section:has(.ticket-timeline) {
+    background: linear-gradient(165deg, #f8fafc 0%, #ffffff 45%, #fafbfc 100%);
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 18px 20px 22px;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.form-section:has(.ticket-timeline) > h4 {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin: 0 0 14px 0;
+    padding-bottom: 10px;
+    border-bottom: 1px solid #e8ecf1;
+    font-size: 1rem;
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: 0.01em;
+}
+
+.form-section:has(.ticket-timeline) > h4 i {
+    color: #6366f1;
+    font-size: 1.05em;
+}
+
+.ticket-timeline-estado-actual {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+    margin: 0 0 16px 0;
+    padding: 14px 16px;
+    background: linear-gradient(135deg, #eef2ff 0%, #f8fafc 55%, #ffffff 100%);
+    border: 1px solid #c7d2fe;
+    border-radius: 12px;
+    box-shadow: 0 1px 2px rgba(99, 102, 241, 0.08);
+}
+
+.ticket-timeline-estado-actual-label {
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #4338ca;
+}
+
+.ticket-timeline-estado-actual-hint {
+    margin: 0;
+    font-size: 0.78rem;
+    line-height: 1.45;
+    color: #64748b;
+    max-width: 52rem;
+}
+
+.ticket-timeline-estado-actual .ticket-estado-badge {
+    font-size: 0.95rem;
+}
+
+.timeline-estado-gestion {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 6px;
+    margin-bottom: 10px;
+    padding-bottom: 10px;
+    border-bottom: 1px dashed #e2e8f0;
+}
+
+.timeline-estado-gestion-label {
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: #64748b;
+}
+
+.timeline-obs-label {
+    display: block;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.timeline-obs-body {
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .ticket-timeline {
     position: relative;
     list-style: none;
     margin: 0;
-    padding: 8px 0 8px 24px;
+    padding: 4px 0 12px 28px;
 }
 
 .ticket-timeline::before {
     content: "";
     position: absolute;
-    left: 8px;
-    top: 0;
-    bottom: 0;
-    width: 2px;
-    background: linear-gradient(to bottom, #e5e7eb 0%, #e5e7eb 100%);
+    left: 10px;
+    top: 6px;
+    bottom: 10px;
+    width: 3px;
+    border-radius: 3px;
+    background: linear-gradient(
+        180deg,
+        #cbd5e1 0%,
+        #94a3b8 18%,
+        #e2e8f0 50%,
+        #94a3b8 82%,
+        #cbd5e1 100%
+    );
+    opacity: 0.85;
 }
 
 .ticket-timeline .timeline-empty {
-    color: #6b7280;
+    color: #64748b;
     font-style: italic;
-    padding: 12px 0;
+    padding: 16px 12px;
+    text-align: center;
+    background: #f1f5f9;
+    border-radius: 10px;
+    border: 1px dashed #cbd5e1;
+    margin-left: -8px;
 }
 
 .ticket-timeline .timeline-step {
     position: relative;
-    padding: 10px 0 14px 22px;
+    padding: 8px 0 18px 8px;
+}
+
+.ticket-timeline .timeline-step:last-child {
+    padding-bottom: 4px;
 }
 
 .ticket-timeline .timeline-marker {
     position: absolute;
-    left: -19px;
-    top: 14px;
-    width: 14px;
-    height: 14px;
+    left: -22.5px;
+    top: 16px;
+    width: 15px;
+    height: 15px;
     border-radius: 50%;
-    background: #d1d5db;
+    background: #cbd5e1;
     border: 3px solid #ffffff;
-    box-shadow: 0 0 0 1px #d1d5db;
+    box-shadow: 0 0 0 2px #e2e8f0, 0 2px 6px rgba(15, 23, 42, 0.12);
+    z-index: 1;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
 }
 
-.timeline-step.estado-comunicacion     .timeline-marker { background: var(--estado-comunicacion-bd);     box-shadow: 0 0 0 1px var(--estado-comunicacion-bd); }
-.timeline-step.estado-validacion       .timeline-marker { background: var(--estado-validacion-bd);       box-shadow: 0 0 0 1px var(--estado-validacion-bd); }
-.timeline-step.estado-proceso_judicial .timeline-marker { background: var(--estado-proceso_judicial-bd); box-shadow: 0 0 0 1px var(--estado-proceso_judicial-bd); }
-.timeline-step.estado-remate           .timeline-marker { background: var(--estado-remate-bd);           box-shadow: 0 0 0 1px var(--estado-remate-bd); }
-.timeline-step.estado-recuperacion     .timeline-marker { background: var(--estado-recuperacion-bd);     box-shadow: 0 0 0 1px var(--estado-recuperacion-bd); }
-.timeline-step.estado-cierre           .timeline-marker { background: var(--estado-cierre-bd);           box-shadow: 0 0 0 1px var(--estado-cierre-bd); }
+.ticket-timeline .timeline-step:hover .timeline-marker {
+    transform: scale(1.08);
+}
+
+.timeline-step.estado-comunicacion     .timeline-marker { background: var(--estado-comunicacion-bd);     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35), 0 2px 8px rgba(59, 130, 246, 0.25); }
+.timeline-step.estado-validacion       .timeline-marker { background: var(--estado-validacion-bd);       box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(245, 158, 11, 0.2); }
+.timeline-step.estado-proceso_judicial .timeline-marker { background: var(--estado-proceso_judicial-bd); box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.35), 0 2px 8px rgba(168, 85, 247, 0.22); }
+.timeline-step.estado-remate           .timeline-marker { background: var(--estado-remate-bd);           box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), 0 2px 8px rgba(239, 68, 68, 0.22); }
+.timeline-step.estado-recuperacion     .timeline-marker { background: var(--estado-recuperacion-bd);     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(16, 185, 129, 0.2); }
+.timeline-step.estado-cierre           .timeline-marker { background: var(--estado-cierre-bd);           box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.4), 0 2px 6px rgba(0, 0, 0, 0.08); }
 
 .timeline-step.active .timeline-marker {
     width: 18px;
     height: 18px;
-    left: -21px;
-    top: 12px;
-    box-shadow: 0 0 0 4px rgba(59, 130, 246, 0.18);
+    left: -24px;
+    top: 14px;
+    border-width: 3px;
 }
+
+.timeline-step.estado-comunicacion.active     .timeline-marker { box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.28), 0 4px 14px rgba(59, 130, 246, 0.35); }
+.timeline-step.estado-validacion.active       .timeline-marker { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.28), 0 4px 14px rgba(245, 158, 11, 0.3); }
+.timeline-step.estado-proceso_judicial.active .timeline-marker { box-shadow: 0 0 0 5px rgba(168, 85, 247, 0.28), 0 4px 14px rgba(168, 85, 247, 0.32); }
+.timeline-step.estado-remate.active           .timeline-marker { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.28), 0 4px 14px rgba(239, 68, 68, 0.3); }
+.timeline-step.estado-recuperacion.active     .timeline-marker { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.28), 0 4px 14px rgba(16, 185, 129, 0.28); }
+.timeline-step.estado-cierre.active           .timeline-marker { box-shadow: 0 0 0 5px rgba(107, 114, 128, 0.22), 0 4px 12px rgba(0, 0, 0, 0.12); }
 
 .timeline-body {
+    position: relative;
     background: #ffffff;
-    border: 1px solid var(--border-color, #e5e7eb);
-    border-radius: 10px;
-    padding: 10px 14px;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 16px 14px;
+    box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+    border-left: 4px solid #cbd5e1;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
 }
 
+.ticket-timeline .timeline-step:not(.active) .timeline-body {
+    background: #fcfcfd;
+    opacity: 0.96;
+}
+
+.ticket-timeline .timeline-step:hover .timeline-body {
+    box-shadow: 0 4px 16px rgba(15, 23, 42, 0.08);
+    transform: translateY(-1px);
+}
+
+.timeline-step.estado-comunicacion     .timeline-body { border-left-color: var(--estado-comunicacion-bd); }
+.timeline-step.estado-validacion       .timeline-body { border-left-color: var(--estado-validacion-bd); }
+.timeline-step.estado-proceso_judicial .timeline-body { border-left-color: var(--estado-proceso_judicial-bd); }
+.timeline-step.estado-remate           .timeline-body { border-left-color: var(--estado-remate-bd); }
+.timeline-step.estado-recuperacion     .timeline-body { border-left-color: var(--estado-recuperacion-bd); }
+.timeline-step.estado-cierre           .timeline-body { border-left-color: var(--estado-cierre-bd); }
+
 .timeline-step.active .timeline-body {
-    border-color: var(--estado-comunicacion-bd);
-    box-shadow: 0 2px 8px rgba(59, 130, 246, 0.12);
+    background: #ffffff;
+    opacity: 1;
+    border-color: #e0e7ff;
+    box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
+}
+
+.timeline-step.estado-comunicacion.active     .timeline-body { border-left-color: var(--estado-comunicacion-bd); border-color: rgba(59, 130, 246, 0.22); }
+.timeline-step.estado-validacion.active       .timeline-body { border-left-color: var(--estado-validacion-bd); border-color: rgba(245, 158, 11, 0.22); }
+.timeline-step.estado-proceso_judicial.active .timeline-body { border-left-color: var(--estado-proceso_judicial-bd); border-color: rgba(168, 85, 247, 0.22); }
+.timeline-step.estado-remate.active           .timeline-body { border-left-color: var(--estado-remate-bd); border-color: rgba(239, 68, 68, 0.2); }
+.timeline-step.estado-recuperacion.active     .timeline-body { border-left-color: var(--estado-recuperacion-bd); border-color: rgba(16, 185, 129, 0.22); }
+.timeline-step.estado-cierre.active           .timeline-body { border-left-color: var(--estado-cierre-bd); border-color: rgba(107, 114, 128, 0.25); }
+
+.timeline-step.active .timeline-body::after {
+    content: "Actual";
+    position: absolute;
+    top: 10px;
+    right: 12px;
+    font-size: 0.65rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #4f46e5;
+    background: linear-gradient(135deg, #eef2ff 0%, #e0e7ff 100%);
+    border: 1px solid #c7d2fe;
+    padding: 3px 8px;
+    border-radius: 999px;
+}
+
+.timeline-step.estado-cierre.active .timeline-body::after {
+    color: #374151;
+    background: #f3f4f6;
+    border-color: #d1d5db;
 }
 
 .timeline-title {
     font-weight: 700;
-    color: #111827;
-    margin-bottom: 4px;
+    color: #0f172a;
+    margin: 0 72px 8px 0;
+    font-size: 0.95rem;
+    line-height: 1.35;
+    letter-spacing: 0.01em;
 }
 
 .timeline-meta {
     display: flex;
     flex-wrap: wrap;
-    gap: 12px;
-    color: #6b7280;
-    font-size: 0.85rem;
+    gap: 8px 14px;
+    color: #64748b;
+    font-size: 0.8rem;
+    align-items: center;
 }
 
-.timeline-meta i { margin-right: 4px; }
+.timeline-meta span {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 4px 10px;
+    background: #f1f5f9;
+    border-radius: 999px;
+    border: 1px solid #e2e8f0;
+    color: #475569;
+    font-weight: 500;
+}
+
+.timeline-meta i {
+    margin-right: 0;
+    color: #64748b;
+    font-size: 0.85em;
+}
 
 .timeline-obs {
-    margin-top: 6px;
-    color: #374151;
-    font-size: 0.92rem;
-    background: #f9fafb;
-    border-left: 3px solid #d1d5db;
-    padding: 6px 10px;
-    border-radius: 4px;
-    white-space: pre-wrap;
+    margin-top: 10px;
+    color: #334155;
+    font-size: 0.88rem;
+    line-height: 1.45;
+    background: linear-gradient(180deg, #f8fafc 0%, #f1f5f9 100%);
+    border: 1px solid #e2e8f0;
+    border-left: 4px solid #94a3b8;
+    padding: 10px 12px;
+    border-radius: 8px;
+}
+
+.timeline-step.active .timeline-obs {
+    border-left-color: #6366f1;
+    background: linear-gradient(180deg, #fafbff 0%, #f5f3ff 100%);
+    border-color: #e0e7ff;
 }
 
 @media (max-width: 640px) {
+    .form-section:has(.ticket-timeline) {
+        padding: 14px 14px 18px;
+    }
+    .ticket-timeline {
+        padding-left: 24px;
+    }
+    .timeline-title {
+        margin-right: 0;
+        padding-right: 0;
+    }
+    .timeline-step.active .timeline-body::after {
+        position: static;
+        display: inline-block;
+        margin-bottom: 8px;
+    }
     .ticket-pro-header { flex-direction: column; align-items: flex-start; }
     .ticket-pro-header-right { width: 100%; justify-content: flex-start; }
 }
@@ -1700,6 +1932,63 @@
     gap: 12px;
     margin-top: 20px;
     flex-wrap: wrap;
+}
+
+/* Mailing titular (reparto) + barra días mora */
+.detalle-subtitulo-reparto {
+    margin: 12px 0 8px 0;
+    font-size: 0.82rem;
+    font-weight: 700;
+    color: #374151;
+    letter-spacing: 0.02em;
+}
+.titular-reparto-mailing {
+    margin-top: 4px;
+    padding-top: 8px;
+    border-top: 1px solid #e5e7eb;
+}
+
+/* Etiquetas largas (p. ej. mailing_codigo_postal): no usar grid 110px+1fr del resto del aside */
+.titular-reparto-mailing .detalle-fila {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 4px;
+    align-items: start;
+    min-width: 0;
+}
+
+.titular-reparto-mailing .detalle-label {
+    max-width: 100%;
+    word-break: break-word;
+    overflow-wrap: anywhere;
+    line-height: 1.3;
+}
+
+.titular-reparto-mailing .detalle-valor {
+    min-width: 0;
+    padding-left: 0;
+    margin-top: 0;
+}
+.detalle-mora-meta {
+    font-weight: 600;
+    color: #b45309;
+    margin-left: 4px;
+}
+.mora-meter-bar {
+    margin-top: 8px;
+    height: 10px;
+    border-radius: 6px;
+    background: #e5e7eb;
+    overflow: hidden;
+    max-width: 100%;
+}
+.mora-meter-fill {
+    display: block;
+    height: 100%;
+    width: 0%;
+    border-radius: 6px;
+    background: linear-gradient(90deg, #22c55e 0%, #eab308 55%, #ef4444 100%);
+    transition: width 0.35s ease;
 }
 
 /* Botones compactos: se adaptan al contenido, sin estirarse */

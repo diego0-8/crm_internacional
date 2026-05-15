@@ -49,10 +49,6 @@ $message = getMessage();
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_tickets_import.php" class="nav-item">
-                        <i class="fas fa-file-upload"></i>
-                        Importar tickets CSV
-                    </a>
                     <a href="coordinador_exporte.php" class="nav-item">
                         <i class="fas fa-download"></i>
                         Exporte
@@ -587,12 +583,6 @@ $message = getMessage();
 
                 if (result.success) {
                     dashboardData = result.data;
-                    // #region agent log
-                    (function(){
-                        const a = (dashboardData.asesores && dashboardData.asesores[0]) ? dashboardData.asesores[0] : null;
-                        fetch('http://127.0.0.1:7895/ingest/5fcbb579-d53a-47d5-84e9-86a55388551f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7f7f84'},body:JSON.stringify({sessionId:'7f7f84',runId:'pre-fix',hypothesisId:'H1-H3',location:'coordinador_dashboard.php:loadDashboardData',message:'sample asesor from API',data:{hasAsesores:!!(dashboardData.asesores&&dashboardData.asesores.length),keys:a?Object.keys(a):[],estado:a&&a.estado,activo:a&&a.activo},timestamp:Date.now()})}).catch(function(){});
-                    })();
-                    // #endregion
                     updateStats();
                     renderAsesores();
 
@@ -730,16 +720,11 @@ $message = getMessage();
                 return;
             }
 
-            dashboardData.asesores.forEach((asesor, idx) => {
+            dashboardData.asesores.forEach((asesor) => {
                 const tickets = asesor.tickets || {};
                 const rendimiento = asesor.rendimiento || {};
                 const estadoBadge = badgeEstadoAsesorCard(asesor);
-                // #region agent log
-                if (idx === 0) {
-                    fetch('http://127.0.0.1:7895/ingest/5fcbb579-d53a-47d5-84e9-86a55388551f',{method:'POST',headers:{'Content-Type':'application/json','X-Debug-Session-Id':'7f7f84'},body:JSON.stringify({sessionId:'7f7f84',runId:'post-fix',hypothesisId:'H1-H4',location:'coordinador_dashboard.php:renderAsesores',message:'badge after mapping',data:{estadoRaw:asesor.estado,activo:asesor.activo,badgeText:estadoBadge.text,badgeClass:estadoBadge.className},timestamp:Date.now()})}).catch(function(){});
-                }
-                // #endregion
-                
+
                 const asesorCard = document.createElement('div');
                 asesorCard.className = 'asesor-card';
                 asesorCard.innerHTML = `

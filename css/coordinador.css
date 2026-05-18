@@ -498,10 +498,6 @@
     width: 100%;
     height: auto;
     min-height: 0;
-    overflow-wrap: anywhere;
-    word-wrap: break-word;
-    container-type: inline-size;
-    container-name: titular-card;
 }
 
 .coordinador-dashboard .cliente-card:hover {
@@ -516,17 +512,25 @@
 
 .coordinador-dashboard .cliente-card-header {
     display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    margin-bottom: var(--space-md);
+    gap: 0;
+    width: 100%;
+}
+
+.coordinador-dashboard .cliente-card-header-top {
+    display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: var(--space-md);
     gap: 0.75rem;
-    flex-wrap: wrap;
+    width: 100%;
+    min-width: 0;
 }
 
 .coordinador-dashboard .cliente-card-info {
     flex: 1;
     min-width: 0;
-    width: 100%;
 }
 
 .coordinador-dashboard .cliente-card-titulo {
@@ -554,7 +558,7 @@
     align-items: flex-start;
     gap: 0.5rem;
     word-break: break-word;
-    overflow-wrap: anywhere;
+    overflow-wrap: break-word;
 }
 
 .coordinador-dashboard .cliente-card-linea > span {
@@ -589,26 +593,23 @@
 
 .coordinador-dashboard .titular-reparto-meta-cols {
     display: grid;
-    grid-template-columns: 1fr;
-    gap: 0.6rem 0.75rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.5rem 0.65rem;
+    width: 100%;
     margin-top: 0.85rem;
     padding-top: 0.85rem;
     border-top: 1px dashed var(--border-color);
     font-size: var(--font-size-xs);
-}
-
-@container titular-card (min-width: 300px) {
-    .coordinador-dashboard .titular-reparto-meta-cols {
-        grid-template-columns: repeat(3, minmax(0, 1fr));
-    }
+    box-sizing: border-box;
 }
 
 .coordinador-dashboard .titular-reparto-meta-cols .trc-item {
     min-width: 0;
-    padding: 0.35rem 0.4rem;
+    padding: 0.4rem 0.5rem;
     background: rgba(0, 0, 0, 0.02);
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-color);
+    overflow: hidden;
 }
 
 .coordinador-dashboard .titular-reparto-meta-cols .trc-lbl {
@@ -617,14 +618,27 @@
     color: var(--text-light);
     margin-bottom: 4px;
     letter-spacing: 0.02em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
 .coordinador-dashboard .titular-reparto-meta-cols .trc-val {
     display: block;
     color: var(--dark-gray);
-    word-break: break-word;
-    overflow-wrap: anywhere;
-    line-height: 1.4;
+    line-height: 1.35;
+    word-break: normal;
+    overflow-wrap: normal;
+    hyphens: none;
+}
+
+.coordinador-dashboard .titular-reparto-meta-cols .trc-item--fecha .trc-val {
+    white-space: nowrap;
+    font-variant-numeric: tabular-nums;
+}
+
+.coordinador-dashboard .titular-reparto-meta-cols .trc-item--fecha .trc-lbl {
+    white-space: nowrap;
 }
 
 .coordinador-dashboard .cliente-status {
@@ -637,11 +651,16 @@
     text-transform: uppercase;
     flex-shrink: 0;
     align-self: flex-start;
-    max-width: 100%;
+    max-width: 42%;
     word-break: break-word;
     white-space: normal;
     text-align: center;
     line-height: 1.25;
+}
+
+.coordinador-dashboard .cliente-status.status-reparto {
+    background-color: rgba(30, 136, 229, 0.12);
+    color: var(--primary-blue);
 }
 
 .coordinador-dashboard .cliente-status.status-nuevo {
@@ -1044,4 +1063,153 @@
     .coordinador-exporte .exporte-form-row {
         grid-template-columns: 1fr;
     }
+}
+
+/* Gestión CSV — columnas requeridas y filas rechazadas */
+.card-csv-requeridos .csv-requeridos-intro,
+.card-filas-rechazadas .csv-requeridos-intro {
+    margin: 0 0 1rem 0;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+.card-filas-rechazadas {
+    border-left: 4px solid var(--warning-yellow);
+}
+
+.card-filas-rechazadas .card-header h3 {
+    color: var(--dark-gray);
+}
+
+.rechazos-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.88rem;
+}
+
+.rechazos-table th,
+.rechazos-table td {
+    padding: 0.5rem 0.65rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border-color);
+    vertical-align: top;
+}
+
+.rechazos-table th {
+    background: var(--light-gray);
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.rechazos-table tbody tr:hover {
+    background: rgba(30, 136, 229, 0.04);
+}
+
+.rechazos-table td:nth-child(1) {
+    white-space: nowrap;
+    width: 5rem;
+}
+
+.rechazos-table td:nth-child(3) {
+    color: var(--text-muted);
+    max-width: 28rem;
+}
+
+.card-filas-importadas {
+    border-left: 4px solid var(--success-green, #2e7d32);
+}
+
+.card-filas-importadas .card-header h3 {
+    color: var(--dark-gray);
+}
+
+.card-filas-importadas .csv-requeridos-intro {
+    margin: 0 0 1rem 0;
+    font-size: 0.92rem;
+    color: var(--text-muted);
+    line-height: 1.5;
+}
+
+/* Modal resultado importación CSV */
+.import-result-modal-content {
+    max-width: 640px;
+}
+
+.import-result-body {
+    padding: 0 1.25rem 1rem;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.import-result-resumen {
+    margin: 0 0 1rem;
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--dark-gray);
+}
+
+.import-result-section {
+    margin-bottom: 1.25rem;
+}
+
+.import-result-section h4 {
+    margin: 0 0 0.35rem;
+    font-size: 0.95rem;
+    color: var(--dark-gray);
+}
+
+.import-result-section h4 .fa-check-circle {
+    color: var(--success-green, #2e7d32);
+}
+
+.import-result-section--fail h4 .fa-exclamation-triangle {
+    color: var(--warning-yellow);
+}
+
+.import-result-hint {
+    margin: 0 0 0.5rem;
+    font-size: 0.82rem;
+    color: var(--text-muted);
+}
+
+.import-result-list {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.import-result-list li {
+    padding: 0.45rem 0.55rem;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.import-result-list li:last-child {
+    border-bottom: none;
+}
+
+.import-result-list--fail li {
+    background: rgba(255, 193, 7, 0.06);
+}
+
+.import-result-fila {
+    font-weight: 600;
+    color: var(--dark-gray);
+    margin-right: 0.35rem;
+}
+
+.import-result-ref {
+    font-weight: 600;
+    color: var(--primary-blue, #1e88e5);
+}
+
+.import-result-tipo {
+    color: var(--text-muted);
+    font-size: 0.82rem;
+}
+
+.import-result-faltantes {
+    color: var(--text-muted);
 }

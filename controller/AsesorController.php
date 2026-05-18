@@ -360,13 +360,13 @@ class AsesorController {
             $stmt = $db->prepare("
                 SELECT
                     COUNT(*) as total_tickets,
-                    SUM(CASE WHEN estado = 'comunicacion'     THEN 1 ELSE 0 END) as tickets_comunicacion,
-                    SUM(CASE WHEN estado = 'validacion'       THEN 1 ELSE 0 END) as tickets_validacion,
-                    SUM(CASE WHEN estado = 'proceso_judicial' THEN 1 ELSE 0 END) as tickets_proceso_judicial,
-                    SUM(CASE WHEN estado = 'remate'           THEN 1 ELSE 0 END) as tickets_remate,
-                    SUM(CASE WHEN estado = 'recuperacion'     THEN 1 ELSE 0 END) as tickets_recuperacion,
-                    SUM(CASE WHEN estado = 'cierre'           THEN 1 ELSE 0 END) as tickets_cierre,
-                    SUM(CASE WHEN estado <> 'cierre'          THEN 1 ELSE 0 END) as tickets_abiertos
+                    SUM(CASE WHEN estado IN ('contactabilidad_cliente', 'comunicacion') THEN 1 ELSE 0 END) as tickets_comunicacion,
+                    SUM(CASE WHEN estado IN ('acuerdo_comercial', 'validacion') THEN 1 ELSE 0 END) as tickets_validacion,
+                    SUM(CASE WHEN estado IN ('documentos_corte', 'proceso_judicial') THEN 1 ELSE 0 END) as tickets_proceso_judicial,
+                    SUM(CASE WHEN estado IN ('documentos_adicionales', 'remate') THEN 1 ELSE 0 END) as tickets_remate,
+                    SUM(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 ELSE 0 END) as tickets_recuperacion,
+                    SUM(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as tickets_cierre,
+                    SUM(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as tickets_abiertos
                 FROM tiketera
                 WHERE asesor_cedula = ?
             ");
@@ -405,7 +405,7 @@ class AsesorController {
                     AVG(TIMESTAMPDIFF(HOUR, fecha_creacion, fecha_cierre)) as tiempo_promedio_horas
                 FROM tiketera
                 WHERE asesor_cedula = ?
-                AND estado = 'cierre'
+                AND estado IN ('desembolso', 'cierre')
                 AND fecha_cierre IS NOT NULL
             ");
             $stmt->execute([$asesorCedula]);

@@ -80,7 +80,6 @@ $message = getMessage();
                     </button>
                     <div class="welcome-section">
                         <h1>Mis tickets CRM</h1>
-                        <p>La tiketera sigue vinculada a <strong>clientes CRM</strong> (cédula). Los titulares del CSV de reparto están en <a href="asesor_dashboard.php">Mis casos</a>.</p>
                     </div>
                 </div>
                 <div class="header-actions">
@@ -104,10 +103,7 @@ $message = getMessage();
                     </div>
                 <?php endif; ?>
 
-                <div class="message info" style="margin-bottom: 1rem;">
-                    <i class="fas fa-info-circle"></i>
-                    La <strong>creación de tickets</strong> la realiza el <strong>coordinador</strong> (o administración). Usted solo gestiona los tickets que ya le fueron asignados. Use <strong>Gestionar</strong> desde el dashboard o desde esta lista para continuar el caso.
-                </div>
+                
 
                 <!-- Action Buttons -->
                 <div class="action-buttons">
@@ -129,39 +125,39 @@ $message = getMessage();
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Comunicación</div>
-                            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;"><i class="fas fa-comments"></i></div>
+                            <div class="stat-title">Contactabilidad</div>
+                            <div class="stat-icon" style="background: rgba(59, 130, 246, 0.2); color: #3b82f6;"><i class="fas fa-phone-volume"></i></div>
                         </div>
                         <div class="stat-value" id="statComunicacion">0</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Validación</div>
-                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><i class="fas fa-clipboard-check"></i></div>
+                            <div class="stat-title">Acuerdo comercial</div>
+                            <div class="stat-icon" style="background: rgba(245, 158, 11, 0.2); color: #f59e0b;"><i class="fas fa-handshake"></i></div>
                         </div>
                         <div class="stat-value" id="statValidacion">0</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Proceso judicial</div>
-                            <div class="stat-icon" style="background: rgba(168, 85, 247, 0.2); color: #a855f7;"><i class="fas fa-gavel"></i></div>
+                            <div class="stat-title">Docs. a la corte</div>
+                            <div class="stat-icon" style="background: rgba(168, 85, 247, 0.2); color: #a855f7;"><i class="fas fa-landmark"></i></div>
                         </div>
                         <div class="stat-value" id="statProcesoJudicial">0</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Remate</div>
-                            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;"><i class="fas fa-hammer"></i></div>
+                            <div class="stat-title">Docs. adicionales</div>
+                            <div class="stat-icon" style="background: rgba(239, 68, 68, 0.2); color: #ef4444;"><i class="fas fa-file-alt"></i></div>
                         </div>
                         <div class="stat-value" id="statRemate">0</div>
                     </div>
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Recuperación</div>
+                            <div class="stat-title">Giro · Swift · etc.</div>
                             <div class="stat-icon" style="background: rgba(16, 185, 129, 0.2); color: #10b981;"><i class="fas fa-coins"></i></div>
                         </div>
                         <div class="stat-value" id="statRecuperacion">0</div>
@@ -169,7 +165,7 @@ $message = getMessage();
 
                     <div class="stat-card">
                         <div class="stat-header">
-                            <div class="stat-title">Cierre</div>
+                            <div class="stat-title">Desembolso</div>
                             <div class="stat-icon" style="background: rgba(107, 114, 128, 0.2); color: #6b7280;"><i class="fas fa-flag-checkered"></i></div>
                         </div>
                         <div class="stat-value" id="statCierre">0</div>
@@ -181,12 +177,20 @@ $message = getMessage();
                         <label>Filtrar por estado:</label>
                         <select id="filtroEstado" onchange="filtrarTickets()">
                             <option value="">Todos</option>
-                            <option value="comunicacion">Comunicación</option>
-                            <option value="validacion">Validación</option>
-                            <option value="proceso_judicial">Proceso judicial</option>
-                            <option value="remate">Remate</option>
-                            <option value="recuperacion">Recuperación</option>
-                            <option value="cierre">Cierre</option>
+                            <option value="contactabilidad_cliente">Contactabilidad con el cliente</option>
+                            <option value="acuerdo_comercial">Acuerdo comercial</option>
+                            <option value="documentos_corte">Documentos a la corte</option>
+                            <option value="documentos_adicionales">Documentos adicionales</option>
+                            <option value="corte_giro_saldo">Corte giró saldo</option>
+                            <option value="cliente_swift">Cliente generó Swift</option>
+                            <option value="desembolso">Desembolso</option>
+                            <option disabled>────────── Histórico ──────────</option>
+                            <option value="comunicacion">Comunicación (histórico)</option>
+                            <option value="validacion">Validación (histórico)</option>
+                            <option value="proceso_judicial">Proceso judicial (histórico)</option>
+                            <option value="remate">Remate (histórico)</option>
+                            <option value="recuperacion">Recuperación (histórico)</option>
+                            <option value="cierre">Cierre (histórico)</option>
                         </select>
                     </div>
                     <div class="filter-group">
@@ -235,20 +239,34 @@ $message = getMessage();
         let clientes = [];
 
         const ESTADO_LABELS = {
-            'comunicacion':     'Comunicación',
-            'validacion':       'Validación',
-            'proceso_judicial': 'Proceso judicial',
-            'remate':           'Remate',
-            'recuperacion':     'Recuperación',
-            'cierre':           'Cierre'
+            contactabilidad_cliente: 'Contactabilidad con el cliente',
+            acuerdo_comercial: 'Acuerdo comercial',
+            documentos_corte: 'Documentos a la corte',
+            documentos_adicionales: 'Documentos adicionales',
+            corte_giro_saldo: 'Corte giró saldo',
+            cliente_swift: 'Cliente Swift',
+            desembolso: 'Desembolso',
+            comunicacion: 'Comunicación',
+            validacion: 'Validación',
+            proceso_judicial: 'Proceso judicial',
+            remate: 'Remate',
+            recuperacion: 'Recuperación',
+            cierre: 'Cierre'
         };
         const ESTADO_ICONS = {
-            'comunicacion':     'fas fa-comments',
-            'validacion':       'fas fa-clipboard-check',
-            'proceso_judicial': 'fas fa-gavel',
-            'remate':           'fas fa-hammer',
-            'recuperacion':     'fas fa-coins',
-            'cierre':           'fas fa-flag-checkered'
+            contactabilidad_cliente: 'fas fa-phone-volume',
+            acuerdo_comercial: 'fas fa-handshake',
+            documentos_corte: 'fas fa-landmark',
+            documentos_adicionales: 'fas fa-file-alt',
+            corte_giro_saldo: 'fas fa-money-bill-wave',
+            cliente_swift: 'fas fa-exchange-alt',
+            desembolso: 'fas fa-flag-checkered',
+            comunicacion: 'fas fa-comments',
+            validacion: 'fas fa-clipboard-check',
+            proceso_judicial: 'fas fa-gavel',
+            remate: 'fas fa-hammer',
+            recuperacion: 'fas fa-coins',
+            cierre: 'fas fa-flag-checkered'
         };
 
         function escapeHtml(text) {
@@ -381,7 +399,7 @@ $message = getMessage();
 
             ticketsFiltrados.forEach(ticket => {
                 const ticketCard = document.createElement('div');
-                ticketCard.className = `ticket-card estado-${ticket.estado}`;
+                ticketCard.className = 'ticket-card estado-' + String(ticket.estado || '').replace(/[^a-z0-9_]/gi, '_');
 
                 const refTicket   = ticket.numero_ticket ? escapeHtml(ticket.numero_ticket) : ('#' + ticket.id);
                 const catLine     = ticket.categoria_nombre ? `<p><strong>Categoría:</strong> ${escapeHtml(ticket.categoria_nombre)}</p>` : '';
@@ -398,7 +416,7 @@ $message = getMessage();
                             ${ticket.cliente_telefono ? `<p><strong>Teléfono:</strong> ${escapeHtml(ticket.cliente_telefono)}</p>` : ''}
                         </div>
                         <div class="ticket-status">
-                            <span class="ticket-estado-badge estado-${ticket.estado}">
+                            <span class="ticket-estado-badge estado-${String(ticket.estado || '').replace(/[^a-z0-9_]/gi, '_')}">
                                 <i class="${estadoIcon}"></i> ${escapeHtml(estadoLabel)}
                             </span>
                         </div>
@@ -418,7 +436,7 @@ $message = getMessage();
                         <button class="btn btn-sm btn-info" onclick="verDetalleTicket(${ticket.id})">
                             <i class="fas fa-eye"></i> Ver detalle
                         </button>
-                        ${ticket.estado !== 'cierre' ? `
+                        ${(ticket.estado !== 'desembolso' && ticket.estado !== 'cierre') ? `
                             <a href="asesor_gestionar_ticket.php?id=${ticket.id}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i> Gestionar
                             </a>
@@ -437,13 +455,23 @@ $message = getMessage();
             document.getElementById('ticketsCount').textContent = `${ticketsFiltrados.length} tickets encontrados`;
         }
 
+        function incrementEstadoBucket(counts, estado) {
+            const e = estado || '';
+            if (e === 'contactabilidad_cliente' || e === 'comunicacion') counts.comunicacion++;
+            else if (e === 'acuerdo_comercial' || e === 'validacion') counts.validacion++;
+            else if (e === 'documentos_corte' || e === 'proceso_judicial') counts.proceso_judicial++;
+            else if (e === 'documentos_adicionales' || e === 'remate') counts.remate++;
+            else if (e === 'corte_giro_saldo' || e === 'cliente_swift' || e === 'recuperacion') counts.recuperacion++;
+            else if (e === 'desembolso' || e === 'cierre') counts.cierre++;
+        }
+
         function updateStats() {
             const total = tickets.length;
             const counts = {
                 comunicacion: 0, validacion: 0, proceso_judicial: 0,
                 remate: 0, recuperacion: 0, cierre: 0
             };
-            tickets.forEach(t => { if (counts.hasOwnProperty(t.estado)) counts[t.estado]++; });
+            tickets.forEach(t => incrementEstadoBucket(counts, t.estado));
             document.getElementById('totalTickets').textContent = total;
             document.getElementById('statComunicacion').textContent     = counts.comunicacion;
             document.getElementById('statValidacion').textContent       = counts.validacion;
@@ -463,7 +491,21 @@ $message = getMessage();
                 ticketsFiltrados = ticketsFiltrados.filter(t => t.estado === estado);
             }
 
-            const estadoOrder = { comunicacion:1, validacion:2, proceso_judicial:3, remate:4, recuperacion:5, cierre:6 };
+            const estadoOrder = {
+                contactabilidad_cliente: 1,
+                comunicacion: 1,
+                acuerdo_comercial: 2,
+                validacion: 2,
+                documentos_corte: 3,
+                proceso_judicial: 3,
+                documentos_adicionales: 4,
+                remate: 4,
+                corte_giro_saldo: 5,
+                cliente_swift: 5,
+                recuperacion: 5,
+                desembolso: 6,
+                cierre: 6
+            };
             ticketsFiltrados.sort((a, b) => {
                 switch (ordenar) {
                     case 'fecha_creacion':
@@ -580,7 +622,7 @@ $message = getMessage();
                             <div class="info-item">
                                 <span class="info-label">Estado:</span>
                                 <span class="info-value">
-                                    <span class="ticket-estado-badge estado-${ticket.estado}">
+                                    <span class="ticket-estado-badge estado-${String(ticket.estado || '').replace(/[^a-z0-9_]/gi, '_')}">
                                         ${escapeHtml(ticket.estado_label || ESTADO_LABELS[ticket.estado] || ticket.estado || '')}
                                     </span>
                                 </span>
@@ -750,7 +792,7 @@ $message = getMessage();
                         <div class="info-item">
                             <span class="info-label">Estado:</span>
                             <span class="info-value">
-                                <span class="ticket-estado-badge estado-${ticket.estado}">
+                                <span class="ticket-estado-badge estado-${String(ticket.estado || '').replace(/[^a-z0-9_]/gi, '_')}">
                                     ${escapeHtml(ESTADO_LABELS[ticket.estado] || ticket.estado || '')}
                                 </span>
                             </span>

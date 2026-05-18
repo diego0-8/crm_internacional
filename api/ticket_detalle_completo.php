@@ -144,7 +144,7 @@ try {
     }
 
     $estadoActual = (string) ($ticket['estado'] ?? '');
-    $ticket['estado_label'] = TiketeraModel::ESTADO_LABELS[$estadoActual] ?? $estadoActual;
+    $ticket['estado_label'] = TiketeraModel::estadoLabelFor($estadoActual);
     $ticket['transiciones_permitidas'] = TiketeraModel::allowedTransitions()[$estadoActual] ?? [];
 
     // Estados disponibles UI: el actual + los permitidos. Resto van como deshabilitados.
@@ -152,7 +152,7 @@ try {
     foreach (TiketeraModel::ESTADOS as $k) {
         $estadosUI[] = [
             'key'      => $k,
-            'label'    => TiketeraModel::ESTADO_LABELS[$k] ?? $k,
+            'label'    => TiketeraModel::estadoLabelFor($k),
             'enabled'  => ($k === $estadoActual) || in_array($k, $ticket['transiciones_permitidas'], true),
         ];
     }

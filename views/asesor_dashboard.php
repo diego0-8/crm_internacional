@@ -80,7 +80,7 @@ $message = getMessage();
                     </button>
                     <div class="welcome-section">
                         <h1 class="title-asesor">Mis casos (reparto)</h1>
-                        <p class="subtitle-asesor">Titulares que el coordinador te asignó desde el CSV de reparto.</p>
+                        <p class="subtitle-asesor">Titulares recién en reparto: solo aparecen aquí hasta que registras la <strong>primera gestión</strong> del ticket; después los verás en <strong>Mis tickets</strong>.</p>
                     </div>
                 </div>
                 <div class="header-actions">

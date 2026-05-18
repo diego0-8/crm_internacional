@@ -113,14 +113,14 @@ class CoordinadorController {
             $stmt = $db->prepare("
                 SELECT
                     COUNT(*) as total_tickets,
-                    COUNT(CASE WHEN estado = 'comunicacion'     THEN 1 END) as tickets_comunicacion,
-                    COUNT(CASE WHEN estado = 'validacion'       THEN 1 END) as tickets_validacion,
-                    COUNT(CASE WHEN estado = 'proceso_judicial' THEN 1 END) as tickets_proceso_judicial,
-                    COUNT(CASE WHEN estado = 'remate'           THEN 1 END) as tickets_remate,
-                    COUNT(CASE WHEN estado = 'recuperacion'     THEN 1 END) as tickets_recuperacion,
-                    COUNT(CASE WHEN estado = 'cierre'           THEN 1 END) as tickets_cierre,
-                    COUNT(CASE WHEN estado <> 'cierre'          THEN 1 END) as tickets_abiertos,
-                    AVG(CASE WHEN estado = 'cierre' THEN
+                    COUNT(CASE WHEN estado IN ('contactabilidad_cliente', 'comunicacion') THEN 1 END) as tickets_comunicacion,
+                    COUNT(CASE WHEN estado IN ('acuerdo_comercial', 'validacion') THEN 1 END) as tickets_validacion,
+                    COUNT(CASE WHEN estado IN ('documentos_corte', 'proceso_judicial') THEN 1 END) as tickets_proceso_judicial,
+                    COUNT(CASE WHEN estado IN ('documentos_adicionales', 'remate') THEN 1 END) as tickets_remate,
+                    COUNT(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 END) as tickets_recuperacion,
+                    COUNT(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 END) as tickets_cierre,
+                    COUNT(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 END) as tickets_abiertos,
+                    AVG(CASE WHEN estado IN ('desembolso', 'cierre') THEN
                         TIMESTAMPDIFF(HOUR, fecha_creacion, COALESCE(fecha_cierre, fecha_actualizacion))
                     END) as tiempo_promedio_resolucion
                 FROM tiketera
@@ -192,13 +192,13 @@ class CoordinadorController {
             $stmt = $db->prepare("
                 SELECT
                     COUNT(*) as total_tickets,
-                    COUNT(CASE WHEN estado = 'comunicacion'     THEN 1 END) as tickets_comunicacion,
-                    COUNT(CASE WHEN estado = 'validacion'       THEN 1 END) as tickets_validacion,
-                    COUNT(CASE WHEN estado = 'proceso_judicial' THEN 1 END) as tickets_proceso_judicial,
-                    COUNT(CASE WHEN estado = 'remate'           THEN 1 END) as tickets_remate,
-                    COUNT(CASE WHEN estado = 'recuperacion'     THEN 1 END) as tickets_recuperacion,
-                    COUNT(CASE WHEN estado = 'cierre'           THEN 1 END) as tickets_cierre,
-                    COUNT(CASE WHEN estado <> 'cierre'          THEN 1 END) as tickets_abiertos
+                    COUNT(CASE WHEN estado IN ('contactabilidad_cliente', 'comunicacion') THEN 1 END) as tickets_comunicacion,
+                    COUNT(CASE WHEN estado IN ('acuerdo_comercial', 'validacion') THEN 1 END) as tickets_validacion,
+                    COUNT(CASE WHEN estado IN ('documentos_corte', 'proceso_judicial') THEN 1 END) as tickets_proceso_judicial,
+                    COUNT(CASE WHEN estado IN ('documentos_adicionales', 'remate') THEN 1 END) as tickets_remate,
+                    COUNT(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 END) as tickets_recuperacion,
+                    COUNT(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 END) as tickets_cierre,
+                    COUNT(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 END) as tickets_abiertos
                 FROM tiketera
                 WHERE asesor_cedula IN ($placeholders)
             ");
@@ -231,8 +231,8 @@ class CoordinadorController {
                 SELECT
                     COUNT(DISTINCT c.cedula) as clientes_contactados,
                     COUNT(t.id) as tickets_creados,
-                    COUNT(CASE WHEN t.estado = 'cierre' THEN 1 END) as tickets_resueltos,
-                    AVG(CASE WHEN t.estado = 'cierre' THEN
+                    COUNT(CASE WHEN t.estado IN ('desembolso', 'cierre') THEN 1 END) as tickets_resueltos,
+                    AVG(CASE WHEN t.estado IN ('desembolso', 'cierre') THEN
                         TIMESTAMPDIFF(HOUR, t.fecha_creacion, COALESCE(t.fecha_cierre, t.fecha_actualizacion))
                     END) as tiempo_promedio_resolucion
                 FROM clientes c
@@ -288,8 +288,8 @@ class CoordinadorController {
                 SELECT
                     COUNT(DISTINCT c.cedula) as total_clientes_activos,
                     COUNT(DISTINCT t.id) as total_tickets_creados,
-                    COUNT(CASE WHEN t.estado = 'cierre' THEN 1 END) as total_tickets_resueltos,
-                    AVG(CASE WHEN t.estado = 'cierre' THEN
+                    COUNT(CASE WHEN t.estado IN ('desembolso', 'cierre') THEN 1 END) as total_tickets_resueltos,
+                    AVG(CASE WHEN t.estado IN ('desembolso', 'cierre') THEN
                         TIMESTAMPDIFF(HOUR, t.fecha_creacion, COALESCE(t.fecha_cierre, t.fecha_actualizacion))
                     END) as tiempo_promedio_resolucion_general,
                     COUNT(DISTINCT CASE WHEN c.asesor_cedula IS NOT NULL THEN c.asesor_cedula END) as asesores_activos

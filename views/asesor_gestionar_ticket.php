@@ -125,13 +125,47 @@ $message = getMessage();
                                 <div class="detalle-fila detalle-fila-multilinea">
                                     <dt class="detalle-label">Teléfonos</dt>
                                     <dd class="detalle-valor detalle-valor-flush">
-                                        <ul class="detalle-lista-inline" id="detClienteTelefonosLista"></ul>
+                                        <div id="detClienteTelefonosEmpty" class="detalle-sublinha vacio">Sin teléfonos registrados</div>
+                                        <div id="detClienteTelefonosToolbar" class="detalle-telefonos-toolbar" hidden>
+                                            <div class="det-tel-col-select">
+                                                <span class="det-tel-mini-label" id="detClienteTelefonoSelectLbl">Todos los números (CRM / CSV)</span>
+                                                <select id="detClienteTelefonoSelect" class="form-control det-tel-select" aria-labelledby="detClienteTelefonoSelectLbl"></select>
+                                            </div>
+                                            <div class="det-tel-col-vista">
+                                                <span class="det-tel-mini-label">Número seleccionado</span>
+                                                <button type="button" class="det-tel-numero-btn" id="detClienteTelefonoAccion"
+                                                        title="Copiar número e iniciar llamada WebRTC">
+                                                    <span class="det-tel-numero-text" id="detClienteTelefonoSeleccionadoVisual">—</span>
+                                                    <span class="det-tel-accion-icons" aria-hidden="true">
+                                                        <i class="fas fa-copy"></i><i class="fas fa-phone-alt"></i>
+                                                    </span>
+                                                </button>
+                                                <p class="det-tel-hint">Clic para copiar al portapapeles y llamar</p>
+                                            </div>
+                                        </div>
                                     </dd>
                                 </div>
                                 <div class="detalle-fila detalle-fila-multilinea">
                                     <dt class="detalle-label">Emails</dt>
                                     <dd class="detalle-valor detalle-valor-flush">
-                                        <ul class="detalle-lista-emails" id="detClienteEmailsLista"></ul>
+                                        <div id="detClienteEmailsEmpty" class="detalle-sublinha vacio">Sin emails registrados</div>
+                                        <div id="detClienteEmailsToolbar" class="detalle-telefonos-toolbar det-toolbar-contacto-mail" hidden>
+                                            <div class="det-tel-col-select">
+                                                <span class="det-tel-mini-label" id="detClienteEmailSelectLbl">Todos los correos (CRM / CSV)</span>
+                                                <select id="detClienteEmailSelect" class="form-control det-tel-select" aria-labelledby="detClienteEmailSelectLbl"></select>
+                                            </div>
+                                            <div class="det-tel-col-vista">
+                                                <span class="det-tel-mini-label">Correo seleccionado</span>
+                                                <button type="button" class="det-tel-numero-btn det-mail-copy-btn" id="detClienteEmailAccion"
+                                                        title="Copiar correo seleccionado al portapapeles">
+                                                    <span class="det-tel-numero-text" id="detClienteEmailSeleccionadoVisual">—</span>
+                                                    <span class="det-tel-accion-icons" aria-hidden="true">
+                                                        <i class="fas fa-copy"></i><i class="fas fa-envelope"></i>
+                                                    </span>
+                                                </button>
+                                                <p class="det-tel-hint">Clic para copiar al portapapeles</p>
+                                            </div>
+                                        </div>
                                     </dd>
                                 </div>
                                 <div class="detalle-fila detalle-fila-multilinea">
@@ -273,12 +307,7 @@ $message = getMessage();
                                 <div class="form-group">
                                     <label for="gestionEstado">Cambiar estado</label>
                                     <select id="gestionEstado" name="estado" class="form-control">
-                                        <option value="comunicacion">Comunicación</option>
-                                        <option value="validacion">Validación</option>
-                                        <option value="proceso_judicial">Proceso judicial</option>
-                                        <option value="remate">Remate</option>
-                                        <option value="recuperacion">Recuperación</option>
-                                        <option value="cierre">Cierre</option>
+                                        <option value="">Cargando estados…</option>
                                     </select>
                                     <small class="form-text" id="gestionEstadoHelp">
                                         <i class="fas fa-info-circle"></i>
@@ -300,6 +329,36 @@ $message = getMessage();
                             <ol class="ticket-timeline" id="ticketTimeline" aria-live="polite">
                                 <li class="timeline-empty">Cargando línea de tiempo…</li>
                             </ol>
+                        </div>
+
+                        <div class="form-section perfilacion-contactabilidad-section" id="perfilacionContactabilidadSection" style="display: none;">
+                            <h4><i class="fas fa-sitemap"></i> Tipificación: contactabilidad con el cliente</h4>
+                            <p class="form-text perfilacion-intro">Visible solo cuando el estado del caso es <strong>«Contactabilidad con el cliente»</strong>.
+                            Los desplegables están en columna; el siguiente solo se habilita cuando cierra bien el nivel anterior.</p>
+                            <div id="perfilacionNiveles" class="perfilacion-niveles" aria-label="Niveles de tipificación"></div>
+                            <p id="perfilacionEstadoAyuda" class="form-text perfilacion-ayuda" style="display: none;"></p>
+                        </div>
+
+                        <div class="form-section perfilacion-actualizacion-section" id="perfilacionActualizacionSection" style="display: none;">
+                            <h4><i class="fas fa-exchange-alt"></i> Tipificación: actualización vs escalamiento</h4>
+                            <p id="perfilActualizacionIntro" class="form-text perfilacion-intro">Según las reglas definidas para el estado seleccionado, indique Si o No.</p>
+                            <div class="form-group">
+                                <label for="perfilActualizacionRespuesta">¿Aplica esta gestión?</label>
+                                <select id="perfilActualizacionRespuesta" class="form-control" name="perfil_actualizacion_respuesta" autocomplete="off">
+                                    <option value="">Seleccione…</option>
+                                    <option value="si">Sí</option>
+                                    <option value="no">No</option>
+                                </select>
+                            </div>
+                            <div class="form-group" id="wrapPerfilActualizacionConfirm" style="display: none;">
+                                <label for="perfilActualizacionConfirmacion">Confirmar siguiente acción</label>
+                                <select id="perfilActualizacionConfirmacion" class="form-control perfilacion-select" autocomplete="off"></select>
+                                <small class="form-text">Se habilita después de elegir Sí o No. Debe coincidir con una de las acciones descritas abajo.</small>
+                            </div>
+                            <div class="perfil-actualizacion-leyenda" id="perfilActualizacionLeyenda">
+                                <p class="leyenda-row"><strong>Si elige «Sí»:</strong> <span id="perfilActualizacionTxtSi"></span></p>
+                                <p class="leyenda-row"><strong>Si elige «No»:</strong> <span id="perfilActualizacionTxtNo"></span></p>
+                            </div>
                         </div>
 
                         <div class="form-section">
@@ -330,6 +389,7 @@ $message = getMessage();
 
                         <div class="form-section">
                             <h4><i class="fas fa-sticky-note"></i> Notas del Asesor</h4>
+                            <p class="form-text" style="margin-top: -6px;"><strong>Tipificación:</strong> en estados distintos de «contactabilidad», al guardar, la sección anterior y estos campos de <em>Próxima acción</em> y <em>Fecha</em> generan también un ítem aparte en el historial solo para tipificación.</p>
                             <div class="form-group">
                                 <label for="nuevaNota">Agregar Nueva Nota</label>
                                 <textarea id="nuevaNota" name="nueva_nota" class="form-control" rows="3"
@@ -401,6 +461,179 @@ $message = getMessage();
         const TICKET_ID = <?php echo $ticketId; ?>;
 
         var __gestionarSoftphoneInitDone = false;
+        var __detalleTelToolbarHandlersBound = false;
+        var __detalleEmailToolbarHandlersBound = false;
+
+        async function copiarTextoPortapapeles(texto) {
+            var s = String(texto || '').trim();
+            if (!s) return false;
+            if (navigator.clipboard && typeof navigator.clipboard.writeText === 'function') {
+                await navigator.clipboard.writeText(s);
+                return true;
+            }
+            return new Promise(function(resolve) {
+                try {
+                    var ta = document.createElement('textarea');
+                    ta.value = s;
+                    ta.setAttribute('readonly', '');
+                    ta.style.position = 'fixed';
+                    ta.style.opacity = '0';
+                    document.body.appendChild(ta);
+                    ta.select();
+                    ta.setSelectionRange(0, 99999);
+                    document.execCommand('copy');
+                    document.body.removeChild(ta);
+                    resolve(true);
+                } catch (eTa) {
+                    resolve(false);
+                }
+            });
+        }
+
+        function actualizarDetalleTelefonoSeleccionVisual() {
+            actualizarSeleccionVisualDesdeSelect(
+                document.getElementById('detClienteTelefonoSelect'),
+                document.getElementById('detClienteTelefonoSeleccionadoVisual')
+            );
+        }
+
+        function syncSoftphoneNumberFromTicketSelect() {
+            var sel = document.getElementById('detClienteTelefonoSelect');
+            if (!sel || sel.selectedIndex < 0) return;
+            var raw = String(sel.options[sel.selectedIndex].value || '').trim();
+            var digits = raw.replace(/\D/g, '');
+            var nombre = '';
+            try {
+                if (window.__ticketActual && window.__ticketActual.cliente_nombre) {
+                    nombre = String(window.__ticketActual.cliente_nombre);
+                }
+            } catch (_) {}
+            var line = document.getElementById('softphoneClienteLine');
+            if (line) {
+                line.textContent = digits
+                    ? (nombre ? nombre + ' · Tel. ' + raw : 'Tel. ' + raw)
+                    : (nombre ? nombre + ' · Sin teléfono en ficha' : 'Cliente sin datos');
+            }
+            if (digits && window.webrtcSoftphone && typeof window.webrtcSoftphone.setNumber === 'function') {
+                window.webrtcSoftphone.setNumber(digits);
+            } else if (digits) {
+                var nd = document.getElementById('number-display');
+                if (nd) nd.value = digits;
+            }
+        }
+
+        function bindDetalleTelefonosToolbarOnce() {
+            if (__detalleTelToolbarHandlersBound) return;
+            var sel = document.getElementById('detClienteTelefonoSelect');
+            var btn = document.getElementById('detClienteTelefonoAccion');
+            if (!sel || !btn) return;
+            __detalleTelToolbarHandlersBound = true;
+            sel.addEventListener('change', function() {
+                actualizarDetalleTelefonoSeleccionVisual();
+                syncSoftphoneNumberFromTicketSelect();
+            });
+            btn.addEventListener('click', function(ev) {
+                ev.preventDefault();
+                ejecutarCopiarYllamarDetalleTel();
+            });
+        }
+
+        function actualizarDetalleEmailSeleccionVisual() {
+            var sel = document.getElementById('detClienteEmailSelect');
+            var viz = document.getElementById('detClienteEmailSeleccionadoVisual');
+            actualizarSeleccionVisualDesdeSelect(sel, viz);
+        }
+
+        function bindDetalleEmailsToolbarOnce() {
+            if (__detalleEmailToolbarHandlersBound) return;
+            var sel = document.getElementById('detClienteEmailSelect');
+            var btn = document.getElementById('detClienteEmailAccion');
+            if (!sel || !btn) return;
+            __detalleEmailToolbarHandlersBound = true;
+            sel.addEventListener('change', function() {
+                actualizarDetalleEmailSeleccionVisual();
+            });
+            btn.addEventListener('click', function(ev) {
+                ev.preventDefault();
+                ejecutarCopiarDetalleEmail();
+            });
+        }
+
+        function actualizarSeleccionVisualDesdeSelect(sel, vizEl) {
+            if (!vizEl) return;
+            var raw = '';
+            if (sel && sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) {
+                raw = String(sel.options[sel.selectedIndex].value || '').trim();
+            }
+            vizEl.textContent = raw || '—';
+        }
+
+        function obtenerTelefonoPrincipalParaSoftphone(ticket) {
+            var sel = document.getElementById('detClienteTelefonoSelect');
+            if (sel && sel.options.length > 0 && sel.selectedIndex >= 0) {
+                var vv = String(sel.options[sel.selectedIndex].value || '').trim();
+                if (vv) return vv;
+            }
+            if (ticket && ticket.cliente_telefono) return String(ticket.cliente_telefono);
+            if (ticket && ticket.cliente_telefonos && ticket.cliente_telefonos.length > 0 && ticket.cliente_telefonos[0].numero) {
+                return String(ticket.cliente_telefonos[0].numero);
+            }
+            return '';
+        }
+
+        async function ejecutarCopiarYLlamarTelDesdeSelect(sel) {
+            if (!sel || sel.selectedIndex < 0) return;
+            var raw = String(sel.options[sel.selectedIndex].value || '').trim();
+            if (!raw) {
+                showMessage('Seleccione un número en la lista.', 'error');
+                return;
+            }
+            var digits = raw.replace(/\D/g, '');
+            try {
+                await copiarTextoPortapapeles(raw);
+            } catch (eCopy) {
+                showMessage('No se pudo copiar al portapapeles.', 'error');
+                return;
+            }
+            if (!digits) {
+                showMessage('Número copiado (no hay dígitos para marcar por WebRTC).', 'info');
+                return;
+            }
+            if (!window.webrtcSoftphone || typeof window.webrtcSoftphone.callNumber !== 'function') {
+                showMessage('Número copiado. Conecte el softphone lateral para llamar.', 'warning');
+                return;
+            }
+            try {
+                await window.webrtcSoftphone.callNumber(digits);
+                showMessage('Llamando a ' + raw + '…', 'success');
+            } catch (errCall) {
+                showMessage('Número copiado; error al iniciar llamada WebRTC.', 'error');
+                console.error(errCall);
+            }
+        }
+
+        async function ejecutarCopiarYllamarDetalleTel() {
+            await ejecutarCopiarYLlamarTelDesdeSelect(document.getElementById('detClienteTelefonoSelect'));
+        }
+
+        async function ejecutarCopiarEmailDesdeSelect(sel) {
+            if (!sel || sel.selectedIndex < 0) return;
+            var raw = String(sel.options[sel.selectedIndex].value || '').trim();
+            if (!raw) {
+                showMessage('Seleccione un correo en la lista.', 'error');
+                return;
+            }
+            try {
+                await copiarTextoPortapapeles(raw);
+                showMessage('Correo copiado.', 'success');
+            } catch (eCopy) {
+                showMessage('No se pudo copiar al portapapeles.', 'error');
+            }
+        }
+
+        async function ejecutarCopiarDetalleEmail() {
+            await ejecutarCopiarEmailDesdeSelect(document.getElementById('detClienteEmailSelect'));
+        }
 
         async function initSoftphoneSidebar(ticket) {
             if (__gestionarSoftphoneInitDone) return;
@@ -411,13 +644,7 @@ $message = getMessage();
             var mount = document.getElementById('webrtc-softphone');
             if (!line || !banner || !mount) return;
 
-            var tel = '';
-            if (ticket && ticket.cliente_telefono) {
-                tel = String(ticket.cliente_telefono);
-            } else if (ticket && ticket.cliente_telefonos && ticket.cliente_telefonos.length > 0 &&
-                ticket.cliente_telefonos[0].numero) {
-                tel = String(ticket.cliente_telefonos[0].numero);
-            }
+            var tel = obtenerTelefonoPrincipalParaSoftphone(ticket);
             var nombre = (ticket && ticket.cliente_nombre) ? String(ticket.cliente_nombre) : '';
             line.textContent = tel ? (nombre + ' · Tel. ' + tel) : (nombre ? nombre + ' · Sin teléfono en ficha' : 'Cliente sin datos');
 
@@ -467,18 +694,15 @@ $message = getMessage();
                 }
 
                 if (window.webrtcSoftphone) {
-                    var digitsOnly = tel.replace(/\D/g, '');
-                    var nd0 = document.getElementById('number-display');
-                    if (nd0 && digitsOnly) nd0.value = digitsOnly;
+                    syncSoftphoneNumberFromTicketSelect();
                     return;
                 }
 
                 new WebRTCSoftphone(res.config);
 
-                var digits = tel.replace(/\D/g, '');
-                var nd = document.getElementById('number-display');
-                if (nd && digits) nd.value = digits;
+                syncSoftphoneNumberFromTicketSelect();
 
+                var digits = obtenerTelefonoPrincipalParaSoftphone(ticket).replace(/\D/g, '');
                 window.__callLogContext = { cliente_id: 0, telefono_contacto: digits.slice(-12) };
                 if (window.webrtcSoftphone && typeof window.webrtcSoftphone.setCallContext === 'function') {
                     window.webrtcSoftphone.setCallContext(window.__callLogContext);
@@ -512,6 +736,25 @@ $message = getMessage();
                 renderDetallesCaso(ticket);
                 renderEstadoControls(ticket);
                 renderTimeline(ticket.historial_estado || [], ticket.estado || '');
+                initPerfilacionDesdeTicket(ticket);
+                syncTipificacionesTicket();
+                document.getElementById('gestionEstado').addEventListener('change', syncTipificacionesTicket);
+
+                var perfActPx = document.getElementById('perfilActualizacionRespuesta');
+                if (perfActPx && !perfActPx.dataset.perfilListen) {
+                    perfActPx.dataset.perfilListen = '1';
+                    perfActPx.addEventListener('change', function() {
+                        var ge = document.getElementById('gestionEstado');
+                        actualizarDesplegableConfirmacionActualizacion();
+                        var g = window.__perfilActualizacionGuardada;
+                        var geo = ge ? ge.value : '';
+                        if (perfActPx.value && g && geo === g.estado_al_guardar && g.accion_confirmada &&
+                            g.respuesta !== perfActPx.value) {
+                            var cf = document.getElementById('perfilActualizacionConfirmacion');
+                            if (cf) cf.value = '';
+                        }
+                    });
+                }
 
                 var refLabel = ticket.numero_ticket ? ticket.numero_ticket : ('#' + ticket.id);
                 var subParts = [refLabel, ticket.cliente_nombre || ''].filter(Boolean);
@@ -552,6 +795,40 @@ $message = getMessage();
             }
         });
 
+        function parseTipificacionNotaJson(text) {
+            var s = String(text || '').trim();
+            if (!s || s.charAt(0) !== '{') return null;
+            try {
+                var o = JSON.parse(s);
+                if (o && o.tipo === 'tipificacion_actualizacion_v1') return o;
+            } catch (eJ) {}
+            return null;
+        }
+
+        function buildTipificacionHistorialHtml(parsed) {
+            var ek = String(parsed.estado_key || '').trim();
+            var el = String(parsed.estado_label || '').trim() || ek;
+            var claseEst = ek.replace(/[^a-z0-9_]/gi, '') || 'sin_estado';
+            var h = '<div class="nota-tipif-fields">';
+            h += '<div class="nota-tipif-field">';
+            h += '<span class="nota-tipif-field-label">Estado</span>';
+            h += '<div class="nota-estado-line"><span class="ticket-estado-badge estado-' + claseEst + '">';
+            h += '<i class="fas fa-flag-checkered" aria-hidden="true"></i> ';
+            h += escapeHtml(el) + '</span></div></div>';
+            h += '<div class="nota-tipif-field">';
+            h += '<span class="nota-tipif-field-label">¿Aplica esta gestión?</span>';
+            h += '<div class="nota-estado-line"><span class="ticket-estado-badge nota-tipif-valor nota-tipif-valor-aplica">';
+            h += '<i class="fas fa-exchange-alt" aria-hidden="true"></i> ';
+            h += escapeHtml(String(parsed.aplica_gestion || '—')) + '</span></div></div>';
+            h += '<div class="nota-tipif-field">';
+            h += '<span class="nota-tipif-field-label">Confirmar la siguiente acción</span>';
+            h += '<div class="nota-estado-line"><span class="ticket-estado-badge nota-tipif-valor nota-tipif-valor-accion">';
+            h += '<i class="fas fa-check-double" aria-hidden="true"></i> ';
+            h += escapeHtml(String(parsed.accion_confirmada || '—')) + '</span></div></div>';
+            h += '</div>';
+            return h;
+        }
+
         async function cargarHistorialNotas(ticketId) {
             try {
                 const response = await fetch('../api/ticket_notas.php?ticket_id=' + ticketId, {
@@ -565,22 +842,48 @@ $message = getMessage();
                     historialContainer.innerHTML = result.data.map(function(nota) {
                         var estKey = (nota.estado_ticket || '').trim();
                         var estLabel = (nota.estado_label || estKey || '').trim();
+                        var tipoNota = ((nota.tipo_nota || 'asesor').trim() !== '') ? String(nota.tipo_nota).trim() : 'asesor';
+                        var esTipifTipo = tipoNota === 'tipificacion_actualizacion';
+                        var parsedTip = parseTipificacionNotaJson(nota.contenido);
+                        var esVistaTipif = esTipifTipo || parsedTip !== null;
                         var estadoHtml = '';
-                        if (estKey && estLabel) {
+                        if (!parsedTip && estKey && estLabel) {
                             estadoHtml = '<div class="nota-estado-line"><span class="ticket-estado-badge estado-' +
                                 estKey.replace(/[^a-z0-9_]/gi, '') + '">' +
                                 '<i class="fas fa-route" aria-hidden="true"></i> ' + escapeHtml(estLabel) +
                                 '</span></div>';
                         }
-                        return '<div class="nota-item">' +
+                        var badgeTipo = '';
+                        if (esVistaTipif) {
+                            badgeTipo = '<div class="nota-tipo-line"><span class="nota-tipo-badge tipificacion">' +
+                                '<i class="fas fa-sitemap" aria-hidden="true"></i> Tipificación (actualización)</span></div>';
+                        }
+                        var cuerpoTipif = '';
+                        if (parsedTip) {
+                            cuerpoTipif = buildTipificacionHistorialHtml(parsedTip);
+                        } else if (String(nota.contenido || '').trim() !== '') {
+                            cuerpoTipif = '<div class="nota-contenido">' + escapeHtml(nota.contenido) + '</div>';
+                        }
+                        var fechaProx = '';
+                        if (nota.fecha_proxima_accion) {
+                            try {
+                                fechaProx = '<div class="nota-fecha-prox"><strong>Fecha próxima acción:</strong> ' +
+                                    escapeHtml(String(new Date(nota.fecha_proxima_accion).toLocaleString())) + '</div>';
+                            } catch (eFp) {
+                                fechaProx = '';
+                            }
+                        }
+                        return '<div class="nota-item' + (esVistaTipif ? ' nota-item-tipificacion' : '') + '">' +
                             '<div class="nota-header">' +
                             '<span class="nota-fecha">' + new Date(nota.fecha_creacion).toLocaleString() + '</span>' +
                             '<span class="nota-asesor">' + escapeHtml(nota.asesor_nombre || '') + '</span>' +
                             '</div>' +
+                            badgeTipo +
                             estadoHtml +
-                            '<div class="nota-contenido">' + escapeHtml(nota.contenido || '') + '</div>' +
+                            cuerpoTipif +
                             (nota.proxima_accion ? '<div class="nota-accion"><strong>Próxima acción:</strong> ' +
                                 escapeHtml(nota.proxima_accion) + '</div>' : '') +
+                            fechaProx +
                             '</div>';
                     }).join('');
                 } else {
@@ -667,14 +970,521 @@ $message = getMessage();
             }
         }
 
+        const ESTADO_CONTACTABILIDAD = 'contactabilidad_cliente';
+        const ESTADO_DESEMBOLSO = 'desembolso';
+
+        function getTextosActualizacion(esDesembolso) {
+            if (esDesembolso) {
+                return {
+                    si: 'Actualizamos sistema',
+                    no: 'Lanzamos alerta Clean Trust'
+                };
+            }
+            return {
+                si: 'Actualización en el sistema',
+                no: 'Escalamos con director de la operación'
+            };
+        }
+
         const ESTADO_LABELS = {
-            'comunicacion':     'Comunicación',
-            'validacion':       'Validación',
-            'proceso_judicial': 'Proceso judicial',
-            'remate':           'Remate',
-            'recuperacion':     'Recuperación',
-            'cierre':           'Cierre'
+            contactabilidad_cliente: 'Contactabilidad con el cliente',
+            acuerdo_comercial: 'Acuerdo comercial',
+            documentos_corte: 'Documentos a la corte',
+            documentos_adicionales: 'Documentos adicionales',
+            corte_giro_saldo: 'Corte giró saldo',
+            cliente_swift: 'Cliente Swift',
+            desembolso: 'Desembolso'
         };
+        var ESTADO_LEGACY_LABELS = {
+            comunicacion: 'Comunicación',
+            validacion: 'Validación',
+            proceso_judicial: 'Proceso judicial',
+            remate: 'Remate',
+            recuperacion: 'Recuperación',
+            cierre: 'Cierre'
+        };
+
+        function labelEstadoTicket(k) {
+            if (!k) return '—';
+            return ESTADO_LABELS[k] || ESTADO_LEGACY_LABELS[k] || k;
+        }
+
+        function perfilSlug(text, idx) {
+            var s = String(text || '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_|_$/g, '');
+            return 'n_' + idx + '_' + (s || 'x');
+        }
+
+        var PERFIL_RAMAS_SI = [
+            { key: 'cuelga_llamada', label: 'Cuelga la llamada', pasos: ['Se agenda nueva llamada'] },
+            { key: 'estafa', label: 'Estafa', pasos: ['Solicitamos correo electrónico', 'Remitimos información'] },
+            { key: 'recibe_informacion', label: 'Recibe información', pasos: ['Solicitamos correo electrónico', 'Remitimos información'] },
+            { key: 'indica_averiguar', label: 'Indica va a averiguar', pasos: ['Le indicamos nuestros datos de contacto', 'Se agenda nueva llamada'] },
+            { key: 'mismo_tramite', label: 'El mismo hace el trámite', pasos: ['Le indicamos nuestros datos de contacto', 'Se agenda nueva llamada'] },
+            { key: 'dan_vobo', label: 'Dan el VoBo', pasos: ['Solicitamos correo electrónico', 'Remitimos información'] }
+        ];
+
+        var PERFIL_NO_CANALES = [
+            { key: 'google', label: 'Google' },
+            { key: 'linkedin', label: 'LinkedIn' }
+        ];
+
+        window.__perfilPath = [];
+
+        function trimPerfilRowsAfter(box, el) {
+            if (!box || !el) return;
+            var n = el.nextSibling;
+            while (n) {
+                var nx = n.nextSibling;
+                n.parentNode.removeChild(n);
+                n = nx;
+            }
+        }
+
+        function pasoKeySi(ramaKey, texto, stepIdx) {
+            return String(ramaKey) + '__' + perfilSlug(texto, stepIdx);
+        }
+
+        function isPerfilContactabilidadCompleta() {
+            var p = window.__perfilPath;
+            if (!p || p.length < 2) return false;
+            if (p[0].key !== 'si' && p[0].key !== 'no') return false;
+            if (p[0].key === 'si') {
+                var rama = PERFIL_RAMAS_SI.find(function(r) { return r.key === p[1].key; });
+                if (!rama) return false;
+                /* Acepta perfiles históricos con más pasos (cuando el árbol tenía niveles extra). */
+                return p.length >= 2 + rama.pasos.length;
+            }
+            if (p[1].key !== 'localizacion') return false;
+            var canalOk = PERFIL_NO_CANALES.some(function(c) { return c.key === p[2].key; });
+            if (!canalOk) return false;
+            return p.length >= 4 && p[3].key === 'agenda_interaccion';
+        }
+
+        function renderPerfilacionNiveles() {
+            var box = document.getElementById('perfilacionNiveles');
+            var help = document.getElementById('perfilacionEstadoAyuda');
+            if (!box) return;
+            box.innerHTML = '';
+            window.__perfilPath = [];
+
+            var wrap0 = document.createElement('div');
+            wrap0.className = 'perfilacion-col';
+            wrap0.innerHTML = '<label class="perfilacion-lbl">Nivel 1 · Contactabilidad con el cliente</label>';
+            var sel0 = document.createElement('select');
+            sel0.className = 'form-control perfilacion-select';
+            sel0.innerHTML = '<option value="">Seleccione…</option>' +
+                '<option value="si">Sí — hubo contactabilidad</option><option value="no">No — sin contactabilidad</option>';
+            sel0.addEventListener('change', function() {
+                onPerfilNivelCambio(0, sel0.value);
+            });
+            wrap0.appendChild(sel0);
+            box.appendChild(wrap0);
+            if (help) {
+                help.style.display = 'none';
+                help.textContent = '';
+            }
+        }
+
+        function onPerfilNivelCambio(nivelDepth, valorKey) {
+            var box = document.getElementById('perfilacionNiveles');
+            var cols = box.querySelectorAll('.perfilacion-col');
+            for (var i = cols.length - 1; i > nivelDepth; i--) {
+                cols[i].remove();
+            }
+            window.__perfilPath = window.__perfilPath.slice(0, nivelDepth);
+
+            function pushPaso(key, label) {
+                window.__perfilPath.push({ key: key, label: label });
+            }
+
+            if (valorKey === '') return;
+
+            if (nivelDepth === 0) {
+                if (valorKey === 'si') {
+                    pushPaso('si', 'Sí');
+                    crearSelectRamaSi();
+                } else if (valorKey === 'no') {
+                    pushPaso('no', 'No');
+                    crearBloqueNoLocalizacion();
+                }
+                return;
+            }
+
+            var pSlice = window.__perfilPath;
+            if (pSlice[0] && pSlice[0].key === 'si' && nivelDepth === 1) {
+                var rama = PERFIL_RAMAS_SI.find(function(r) { return r.key === valorKey; });
+                if (!rama) return;
+                pushPaso(rama.key, rama.label);
+                iniciarPasosRamaSi(rama);
+            }
+        }
+
+        function crearSelectRamaSi() {
+            var box = document.getElementById('perfilacionNiveles');
+            var wrap = document.createElement('div');
+            wrap.className = 'perfilacion-col';
+            wrap.innerHTML = '<label class="perfilacion-lbl">Nivel 2 · Desenlace del contacto</label>';
+            var sel = document.createElement('select');
+            sel.className = 'form-control perfilacion-select';
+            sel.innerHTML = '<option value="">Seleccione…</option>' +
+                PERFIL_RAMAS_SI.map(function(r) {
+                    return '<option value="' + r.key + '">' + escapeHtml(r.label) + '</option>';
+                }).join('');
+            sel.addEventListener('change', function() {
+                onPerfilNivelCambio(1, sel.value);
+            });
+            wrap.appendChild(sel);
+            box.appendChild(wrap);
+        }
+
+        function iniciarPasosRamaSi(rama) {
+            var box = document.getElementById('perfilacionNiveles');
+            function addPaso(stepIdx) {
+                if (stepIdx >= rama.pasos.length) return;
+                var texto = rama.pasos[stepIdx];
+                var k = pasoKeySi(rama.key, texto, stepIdx);
+                var nivelNum = 3 + stepIdx;
+                var wrap = document.createElement('div');
+                wrap.className = 'perfilacion-col perfilacion-paso-seq';
+                wrap.innerHTML = '<label class="perfilacion-lbl">Nivel ' + nivelNum + ' · ' + escapeHtml(texto) + '</label>';
+                var sel = document.createElement('select');
+                sel.className = 'form-control perfilacion-select';
+                sel.innerHTML = '<option value="">Seleccione…</option>' +
+                    '<option value="' + escapeHtml(k) + '">' + escapeHtml(texto) + '</option>';
+                sel.addEventListener('change', function() {
+                    trimPerfilRowsAfter(box, wrap);
+                    window.__perfilPath = window.__perfilPath.slice(0, 2 + stepIdx);
+                    if (!sel.value) return;
+                    window.__perfilPath.push({ key: k, label: texto });
+                    addPaso(stepIdx + 1);
+                });
+                wrap.appendChild(sel);
+                box.appendChild(wrap);
+            }
+            addPaso(0);
+        }
+
+        function crearBloqueNoLocalizacion() {
+            var box = document.getElementById('perfilacionNiveles');
+
+            var wrapLoc = document.createElement('div');
+            wrapLoc.className = 'perfilacion-col';
+            wrapLoc.innerHTML = '<label class="perfilacion-lbl">Nivel 2 · Localización</label>';
+            var selLoc = document.createElement('select');
+            selLoc.className = 'form-control perfilacion-select';
+            selLoc.innerHTML = '<option value="">Seleccione…</option><option value="localizacion">Localización</option>';
+
+            var wrapCanal = document.createElement('div');
+            wrapCanal.className = 'perfilacion-col perfilacion-no-canal';
+            wrapCanal.innerHTML = '<label class="perfilacion-lbl">Nivel 3 · Canal</label>';
+            var selCanal = document.createElement('select');
+            selCanal.className = 'form-control perfilacion-select';
+            selCanal.disabled = true;
+            selCanal.innerHTML = '<option value="">Seleccione…</option>' +
+                PERFIL_NO_CANALES.map(function(c) {
+                    return '<option value="' + c.key + '">' + escapeHtml(c.label) + '</option>';
+                }).join('');
+
+            selLoc.addEventListener('change', function() {
+                trimPerfilRowsAfter(box, wrapCanal);
+                selCanal.value = '';
+                selCanal.disabled = true;
+                window.__perfilPath = window.__perfilPath.slice(0, 1);
+                if (!selLoc.value) return;
+                window.__perfilPath.push({ key: 'localizacion', label: 'Localización' });
+                selCanal.disabled = false;
+            });
+
+            selCanal.addEventListener('change', function() {
+                trimPerfilRowsAfter(box, wrapCanal);
+                window.__perfilPath = window.__perfilPath.slice(0, 2);
+                if (!selCanal.value) return;
+                var canal = PERFIL_NO_CANALES.find(function(c) { return c.key === selCanal.value; });
+                if (!canal) return;
+                window.__perfilPath.push({ key: canal.key, label: canal.label });
+                appendNoAgendaInteraccionRow(box, wrapCanal);
+            });
+
+            wrapLoc.appendChild(selLoc);
+            wrapCanal.appendChild(selCanal);
+            box.appendChild(wrapLoc);
+            box.appendChild(wrapCanal);
+        }
+
+        function appendNoAgendaInteraccionRow(box, insertAfter) {
+            trimPerfilRowsAfter(box, insertAfter);
+            var wrap = document.createElement('div');
+            wrap.className = 'perfilacion-col perfilacion-paso-final';
+            wrap.innerHTML = '<label class="perfilacion-lbl">Nivel 4 · Se agenda nuevamente interacción</label>';
+            var sel = document.createElement('select');
+            sel.className = 'form-control perfilacion-select';
+            sel.innerHTML = '<option value="">Seleccione…</option>' +
+                '<option value="agenda_interaccion">Confirmar · Se agenda nuevamente interacción</option>';
+            sel.addEventListener('change', function() {
+                window.__perfilPath = window.__perfilPath.slice(0, 3);
+                if (!sel.value) return;
+                window.__perfilPath.push({ key: 'agenda_interaccion', label: 'Se agenda nuevamente interacción' });
+            });
+            wrap.appendChild(sel);
+            if (insertAfter.nextSibling) {
+                box.insertBefore(wrap, insertAfter.nextSibling);
+            } else {
+                box.appendChild(wrap);
+            }
+        }
+
+        function resetSegundoNivelActualizacion() {
+            var wrap = document.getElementById('wrapPerfilActualizacionConfirm');
+            var c = document.getElementById('perfilActualizacionConfirmacion');
+            if (!c) return;
+            c.innerHTML = '';
+            var o0 = document.createElement('option');
+            o0.value = '';
+            o0.textContent = 'Seleccione…';
+            c.appendChild(o0);
+            c.value = '';
+            if (wrap) wrap.style.display = 'none';
+        }
+
+        function actualizarDesplegableConfirmacionActualizacion() {
+            var selAct = document.getElementById('perfilActualizacionRespuesta');
+            var estSel = document.getElementById('gestionEstado');
+            var wrap = document.getElementById('wrapPerfilActualizacionConfirm');
+            var c = document.getElementById('perfilActualizacionConfirmacion');
+            if (!selAct || !estSel || !wrap || !c) return;
+
+            var v = String(selAct.value || '').trim();
+            if (v !== 'si' && v !== 'no') {
+                resetSegundoNivelActualizacion();
+                return;
+            }
+            var des = estSel.value === ESTADO_DESEMBOLSO;
+            var t = getTextosActualizacion(des);
+            var label = v === 'si' ? t.si : t.no;
+
+            c.innerHTML = '';
+            var oEmpty = document.createElement('option');
+            oEmpty.value = '';
+            oEmpty.textContent = 'Seleccione…';
+            c.appendChild(oEmpty);
+            var o1 = document.createElement('option');
+            o1.value = label;
+            o1.textContent = label;
+            c.appendChild(o1);
+
+            wrap.style.display = 'block';
+        }
+
+        function syncTipificacionesTicket() {
+            var sec = document.getElementById('perfilacionContactabilidadSection');
+            var ayuda = document.getElementById('perfilacionEstadoAyuda');
+            var sel = document.getElementById('gestionEstado');
+            var secAct = document.getElementById('perfilacionActualizacionSection');
+            var selAct = document.getElementById('perfilActualizacionRespuesta');
+            if (!sel) return;
+
+            var est = sel.value || '';
+
+            if (sec) {
+                if (est === ESTADO_CONTACTABILIDAD) {
+                    sec.style.display = 'block';
+                    if (!window.__perfilPath || window.__perfilPath.length === 0) {
+                        renderPerfilacionNiveles();
+                    }
+                    if (ayuda) {
+                        ayuda.style.display = 'block';
+                        ayuda.innerHTML = '<i class="fas fa-info-circle"></i> Complete todos los niveles de la tipificación antes de guardar.';
+                    }
+                } else {
+                    sec.style.display = 'none';
+                    if (ayuda) ayuda.style.display = 'none';
+                    window.__perfilPath = [];
+                }
+            }
+
+            if (secAct && selAct) {
+                if (est && est !== ESTADO_CONTACTABILIDAD) {
+                    secAct.style.display = 'block';
+                    var txt = getTextosActualizacion(est === ESTADO_DESEMBOLSO);
+                    var elSi = document.getElementById('perfilActualizacionTxtSi');
+                    var elNo = document.getElementById('perfilActualizacionTxtNo');
+                    if (elSi) elSi.textContent = txt.si;
+                    if (elNo) elNo.textContent = txt.no;
+                    var intro = document.getElementById('perfilActualizacionIntro');
+                    if (intro) {
+                        intro.innerHTML = est === ESTADO_DESEMBOLSO
+                            ? 'Estado <strong>Desembolso</strong>: las acciones asociadas a Sí / No son las indicadas abajo.'
+                            : 'Para los demás estados del pipeline, las acciones asociadas a Sí / No son las indicadas abajo.';
+                    }
+                    var g = window.__perfilActualizacionGuardada;
+                    if (g && g.estado_al_guardar === est && (g.respuesta === 'si' || g.respuesta === 'no')) {
+                        selAct.value = g.respuesta;
+                    } else {
+                        selAct.value = '';
+                    }
+                    if (selAct.value) {
+                        actualizarDesplegableConfirmacionActualizacion();
+                        var selConf = document.getElementById('perfilActualizacionConfirmacion');
+                        if (selConf && g && g.estado_al_guardar === est && g.accion_confirmada) {
+                            for (var oi = 0; oi < selConf.options.length; oi++) {
+                                if (selConf.options[oi].value === g.accion_confirmada) {
+                                    selConf.value = g.accion_confirmada;
+                                    break;
+                                }
+                            }
+                        }
+                    } else {
+                        resetSegundoNivelActualizacion();
+                    }
+                } else {
+                    secAct.style.display = 'none';
+                    selAct.value = '';
+                    resetSegundoNivelActualizacion();
+                }
+            }
+        }
+
+        function reconstruirPerfilDesdePasos(pasos) {
+            if (!pasos || !pasos.length) {
+                renderPerfilacionNiveles();
+                return;
+            }
+            window.__perfilPath = [];
+            var box = document.getElementById('perfilacionNiveles');
+            if (!box) return;
+            box.innerHTML = '';
+
+            /* Nivel 1 */
+            var wrap0 = document.createElement('div');
+            wrap0.className = 'perfilacion-col';
+            wrap0.innerHTML = '<label class="perfilacion-lbl">Nivel 1 · Contactabilidad con el cliente</label>';
+            var sel0 = document.createElement('select');
+            sel0.className = 'form-control perfilacion-select';
+            sel0.innerHTML = '<option value="">Seleccione…</option>' +
+                '<option value="si">Sí — hubo contactabilidad</option><option value="no">No — sin contactabilidad</option>';
+            sel0.value = pasos[0].key === 'si' || pasos[0].key === 'no' ? pasos[0].key : '';
+            sel0.disabled = true;
+            wrap0.appendChild(sel0);
+            box.appendChild(wrap0);
+
+            window.__perfilPath.push(pasos[0]);
+
+            if (pasos[0].key === 'si' && pasos[1]) {
+                var wrap1 = document.createElement('div');
+                wrap1.className = 'perfilacion-col';
+                wrap1.innerHTML = '<label class="perfilacion-lbl">Nivel 2 · Desenlace del contacto</label>';
+                var sel1 = document.createElement('select');
+                sel1.className = 'form-control perfilacion-select';
+                sel1.innerHTML = '<option value="">Seleccione…</option>' +
+                    PERFIL_RAMAS_SI.map(function(r) {
+                        var selAttr = pasos[1] && pasos[1].key === r.key ? ' selected' : '';
+                        return '<option value="' + r.key + '"' + selAttr + '>' + escapeHtml(r.label) + '</option>';
+                    }).join('');
+                sel1.disabled = true;
+                wrap1.appendChild(sel1);
+                box.appendChild(wrap1);
+
+                window.__perfilPath.push(pasos[1]);
+                var rama = PERFIL_RAMAS_SI.find(function(r) { return r.key === pasos[1].key; });
+                if (!rama) {
+                    window.__perfilPath = pasos.slice(0);
+                    return;
+                }
+                var offset = 2;
+                for (var i = 0; i < rama.pasos.length; i++) {
+                    var texto = rama.pasos[i];
+                    var esperado = pasos[offset + i];
+                    var keyEsperado = esperado ? esperado.key : pasoKeySi(rama.key, texto, i);
+                    crearColumnaUnicaPasoSoloVisual(
+                        keyEsperado,
+                        texto,
+                        2 + i,
+                        !!(esperado && (esperado.label === texto || esperado.key === keyEsperado))
+                    );
+                }
+                window.__perfilPath = pasos.slice(0);
+                return;
+            }
+
+            if (pasos[0].key === 'no') {
+                var wrapLoc = document.createElement('div');
+                wrapLoc.className = 'perfilacion-col';
+                wrapLoc.innerHTML = '<label class="perfilacion-lbl">Nivel 2 · Localización</label>';
+                var selLoc = document.createElement('select');
+                selLoc.className = 'form-control perfilacion-select';
+                selLoc.innerHTML = '<option value="">Seleccione…</option><option value="localizacion">Localización</option>';
+                selLoc.value = pasos[1] && pasos[1].key === 'localizacion' ? 'localizacion' : '';
+                selLoc.disabled = true;
+                wrapLoc.appendChild(selLoc);
+                box.appendChild(wrapLoc);
+                if (pasos[1]) window.__perfilPath.push(pasos[1]);
+
+                var wrap2 = document.createElement('div');
+                wrap2.className = 'perfilacion-col';
+                wrap2.innerHTML = '<label class="perfilacion-lbl">Nivel 3 · Canal</label>';
+                var sel2 = document.createElement('select');
+                sel2.className = 'form-control perfilacion-select';
+                sel2.innerHTML = '<option value="">Seleccione…</option>' +
+                    PERFIL_NO_CANALES.map(function(c) {
+                        var selAttr = pasos[2] && pasos[2].key === c.key ? ' selected' : '';
+                        return '<option value="' + c.key + '"' + selAttr + '>' + escapeHtml(c.label) + '</option>';
+                    }).join('');
+                sel2.disabled = true;
+                wrap2.appendChild(sel2);
+                box.appendChild(wrap2);
+                if (pasos[2]) window.__perfilPath.push(pasos[2]);
+                if (pasos[3]) {
+                    crearColumnaUnicaPasoSoloVisual(pasos[3].key, pasos[3].label || 'Se agenda nuevamente interacción', 3, true);
+                }
+                window.__perfilPath = pasos.slice(0);
+            }
+        }
+
+        function crearColumnaUnicaPasoSoloVisual(keyFinal, texto, nivelLabelIdx, seleccionado) {
+            var box = document.getElementById('perfilacionNiveles');
+            var wrap = document.createElement('div');
+            wrap.className = 'perfilacion-col perfilacion-paso-seq';
+            wrap.innerHTML = '<label class="perfilacion-lbl">Nivel ' + (nivelLabelIdx + 1) + ' · ' + escapeHtml(texto) + '</label>';
+            var sel = document.createElement('select');
+            sel.className = 'form-control perfilacion-select';
+            sel.disabled = true;
+            if (seleccionado) {
+                sel.innerHTML = '<option value="' + escapeHtml(keyFinal) + '" selected>' + escapeHtml(texto) + '</option>';
+            } else {
+                sel.innerHTML = '<option value="">' + escapeHtml(texto) + '</option>';
+            }
+            wrap.appendChild(sel);
+            box.appendChild(wrap);
+        }
+
+        function initPerfilacionDesdeTicket(ticket) {
+            window.__perfilGuardadaParse = null;
+            if (ticket.perfilacion_contactabilidad) {
+                try {
+                    var raw = ticket.perfilacion_contactabilidad;
+                    window.__perfilGuardadaParse = typeof raw === 'string' ? JSON.parse(raw) : raw;
+                } catch (e) {
+                    window.__perfilGuardadaParse = null;
+                }
+            }
+            window.__perfilActualizacionGuardada = null;
+            if (ticket.perfilacion_actualizacion) {
+                try {
+                    var ra = ticket.perfilacion_actualizacion;
+                    window.__perfilActualizacionGuardada = typeof ra === 'string' ? JSON.parse(ra) : ra;
+                } catch (e2) {
+                    window.__perfilActualizacionGuardada = null;
+                }
+            }
+            window.__perfilPath = [];
+            if (ticket.estado === ESTADO_CONTACTABILIDAD) {
+                if (window.__perfilGuardadaParse && window.__perfilGuardadaParse.pasos) {
+                    reconstruirPerfilDesdePasos(window.__perfilGuardadaParse.pasos);
+                } else {
+                    renderPerfilacionNiveles();
+                }
+            }
+        }
 
         function renderHeaderPro(ticket) {
             var num = ticket.numero_ticket || ('#' + ticket.id);
@@ -682,19 +1492,30 @@ $message = getMessage();
 
             var meta = [];
             if (ticket.cliente_nombre)   meta.push(escapeHtml(ticket.cliente_nombre));
-            var telMeta = ticket.cliente_telefono;
-            if (!telMeta && ticket.cliente_telefonos && ticket.cliente_telefonos.length > 0) {
-                telMeta = ticket.cliente_telefonos[0].numero;
+            var phonesHdr = ticket.cliente_telefonos ? ticket.cliente_telefonos.slice() : [];
+            if ((!phonesHdr.length) && ticket.cliente_telefono) {
+                phonesHdr.push({ numero: ticket.cliente_telefono });
             }
-            if (telMeta) meta.push('Tel. ' + escapeHtml(String(telMeta)));
+            var numsHdr = phonesHdr.filter(function(p) {
+                return p && String(p.numero || '').trim();
+            }).map(function(p) { return String(p.numero).trim(); });
+            var telMeta = numsHdr.length ? numsHdr[0] : '';
+            if (telMeta) {
+                if (numsHdr.length > 1) {
+                    meta.push('Tel. ' + escapeHtml(telMeta) + ' · ' + numsHdr.length + ' números en ficha');
+                } else {
+                    meta.push('Tel. ' + escapeHtml(telMeta));
+                }
+            }
             if (ticket.categoria_nombre) meta.push(escapeHtml(ticket.categoria_nombre));
             if (ticket.fecha_creacion)   meta.push('Abierto: ' + new Date(ticket.fecha_creacion).toLocaleString());
             document.getElementById('ticketProMeta').innerHTML = meta.join(' · ');
 
             var estado = ticket.estado || '';
+            var estadoClass = String(estado).replace(/[^a-z0-9_]/gi, '_');
             var badge = document.getElementById('ticketEstadoBadge');
-            badge.className = 'ticket-estado-badge estado-' + estado;
-            badge.innerHTML = '<i class="fas fa-route"></i> ' + escapeHtml(ticket.estado_label || ESTADO_LABELS[estado] || estado);
+            badge.className = 'ticket-estado-badge estado-' + estadoClass;
+            badge.innerHTML = '<i class="fas fa-route"></i> ' + escapeHtml(ticket.estado_label || labelEstadoTicket(estado));
 
             var desde = document.getElementById('ticketEstadoDesde');
             if (ticket.estado_actual_desde) {
@@ -747,120 +1568,327 @@ $message = getMessage();
         }
 
         function renderClienteTelefonosYEmails(ticket) {
-            var ulTel = document.getElementById('detClienteTelefonosLista');
-            var ulMail = document.getElementById('detClienteEmailsLista');
-            if (ulTel) ulTel.innerHTML = '';
-            if (ulMail) ulMail.innerHTML = '';
+            var emptyEl = document.getElementById('detClienteTelefonosEmpty');
+            var toolbar = document.getElementById('detClienteTelefonosToolbar');
+            var sel = document.getElementById('detClienteTelefonoSelect');
 
-            var phones = ticket.cliente_telefonos || [];
-            if ((!phones || phones.length === 0) && ticket.cliente_telefono) {
-                phones = [{ numero: ticket.cliente_telefono, tipo: 'other', dnc_litigator: null, orden: 1 }];
+            var phonesRaw = ticket.cliente_telefonos || [];
+            if ((!phonesRaw || phonesRaw.length === 0) && ticket.cliente_telefono) {
+                phonesRaw = [{ numero: ticket.cliente_telefono, tipo: 'other', dnc_litigator: null, orden: 1 }];
             }
+            var phones = phonesRaw.slice().sort(function(a, b) {
+                return (parseInt(a.orden, 10) || 999) - (parseInt(b.orden, 10) || 999);
+            }).filter(function(p) {
+                return p && String(p.numero || '').trim();
+            });
 
-            if (ulTel) {
-                if (!phones || phones.length === 0) {
-                    ulTel.innerHTML = '<li class="detalle-sublinha vacio">Sin teléfonos registrados</li>';
+            if (emptyEl && toolbar && sel) {
+                sel.innerHTML = '';
+                if (!phones.length) {
+                    emptyEl.hidden = false;
+                    toolbar.hidden = true;
                 } else {
+                    emptyEl.hidden = true;
+                    toolbar.hidden = false;
                     phones.forEach(function(p) {
                         var orden = parseInt(p.orden, 10) || 1;
                         var tipoLbl = tipoTelefonoLabel(p.tipo);
-                        var dnc = p.dnc_litigator === 'Y' ? 'Y' : (p.dnc_litigator === 'N' ? 'N' : '—');
-                        var li = document.createElement('li');
-                        li.className = 'detalle-phone-row';
-                        li.innerHTML =
-                            '<span class="det-phone-slot">Phone ' + orden + '</span>' +
-                            '<span class="det-phone-num">' + escapeHtml(String(p.numero || '').trim()) + '</span>' +
-                            '<span class="det-phone-meta">' +
-                            '<span class="det-phone-meta-label">Phone ' + orden + ': Type</span> · ' + escapeHtml(tipoLbl) +
-                            ' · <span class="det-phone-meta-label">Phone ' + orden + ': DNC/Litigator</span> · ' + escapeHtml(dnc) +
-                            '</span>';
-                        ulTel.appendChild(li);
+                        var raw = String(p.numero || '').trim();
+                        var opt = document.createElement('option');
+                        opt.value = raw;
+                        opt.textContent = 'Phone ' + orden + ' · ' + tipoLbl + ' · ' + raw;
+                        sel.appendChild(opt);
                     });
+                    bindDetalleTelefonosToolbarOnce();
+                    actualizarDetalleTelefonoSeleccionVisual();
+                    syncSoftphoneNumberFromTicketSelect();
                 }
             }
 
-            var mails = ticket.cliente_emails_list || [];
-            if (ulMail) {
-                if ((!mails || mails.length === 0) && ticket.cliente_email) {
-                    mails = [{ email: ticket.cliente_email, orden: 1 }];
-                }
-                if (!mails || mails.length === 0) {
-                    ulMail.innerHTML = '<li class="detalle-sublinha vacio">Sin emails registrados</li>';
+            var mailsRaw = ticket.cliente_emails_list || [];
+            if ((!mailsRaw || mailsRaw.length === 0) && ticket.cliente_email) {
+                mailsRaw = [{ email: ticket.cliente_email, orden: 1 }];
+            }
+            var mailList = mailsRaw.slice().sort(function(a, b) {
+                return (parseInt(a.orden, 10) || 999) - (parseInt(b.orden, 10) || 999);
+            }).filter(function(em) {
+                return em && String(em.email || '').trim();
+            });
+
+            var emptyMail = document.getElementById('detClienteEmailsEmpty');
+            var toolbarMail = document.getElementById('detClienteEmailsToolbar');
+            var selMail = document.getElementById('detClienteEmailSelect');
+
+            if (emptyMail && toolbarMail && selMail) {
+                selMail.innerHTML = '';
+                if (!mailList.length) {
+                    emptyMail.hidden = false;
+                    toolbarMail.hidden = true;
                 } else {
-                    mails.forEach(function(m) {
+                    emptyMail.hidden = true;
+                    toolbarMail.hidden = false;
+                    mailList.forEach(function(m) {
                         var orden = parseInt(m.orden, 10) || 1;
-                        var li = document.createElement('li');
-                        li.className = 'detalle-email-row';
-                        li.innerHTML =
-                            '<span class="det-email-slot">Email ' + orden + '</span>' +
-                            '<span class="det-email-val">' + escapeHtml(String(m.email || '').trim()) + '</span>';
-                        ulMail.appendChild(li);
+                        var raw = String(m.email || '').trim();
+                        var opt = document.createElement('option');
+                        opt.value = raw;
+                        opt.textContent = 'Email ' + orden + ' · ' + raw;
+                        selMail.appendChild(opt);
                     });
+                    bindDetalleEmailsToolbarOnce();
+                    actualizarDetalleEmailSeleccionVisual();
                 }
             }
         }
 
-        function buildReferenciasHtml(ticket) {
-            var refs = ticket.referencias_personales || [];
+        function crearToolbarRefTelefonos(telsSorted) {
+            var block = document.createElement('div');
+            block.className = 'modal-ref-tel-block';
+            block.appendChild(crearSubtituloModalRef('Teléfonos'));
+            var toolbar = document.createElement('div');
+            toolbar.className = 'detalle-telefonos-toolbar modal-ref-toolbar';
+
+            var colSel = document.createElement('div');
+            colSel.className = 'det-tel-col-select';
+            var lblTel = document.createElement('span');
+            lblTel.className = 'det-tel-mini-label';
+            lblTel.textContent = 'Números del referido';
+            var sel = document.createElement('select');
+            sel.className = 'form-control det-tel-select modal-ref-tel-select';
+            sel.setAttribute('aria-label', 'Teléfonos del referido');
+            telsSorted.forEach(function(p) {
+                var orden = parseInt(p.orden, 10) || 1;
+                var tipoLbl = tipoTelefonoLabel(p.tipo);
+                var raw = String(p.numero || '').trim();
+                var opt = document.createElement('option');
+                opt.value = raw;
+                opt.textContent = 'Phone ' + orden + ' · ' + tipoLbl + ' · ' + raw;
+                sel.appendChild(opt);
+            });
+            colSel.appendChild(lblTel);
+            colSel.appendChild(sel);
+
+            var colViz = document.createElement('div');
+            colViz.className = 'det-tel-col-vista';
+            var lblSel = document.createElement('span');
+            lblSel.className = 'det-tel-mini-label';
+            lblSel.textContent = 'Número seleccionado';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'det-tel-numero-btn modal-ref-tel-accion';
+            btn.title = 'Copiar número e iniciar llamada WebRTC';
+            var spanViz = document.createElement('span');
+            spanViz.className = 'det-tel-numero-text modal-ref-tel-viz';
+            spanViz.textContent = '—';
+            var icons = document.createElement('span');
+            icons.className = 'det-tel-accion-icons';
+            icons.setAttribute('aria-hidden', 'true');
+            icons.innerHTML = '<i class="fas fa-copy"></i><i class="fas fa-phone-alt"></i>';
+            btn.appendChild(spanViz);
+            btn.appendChild(icons);
+            var hint = document.createElement('p');
+            hint.className = 'det-tel-hint';
+            hint.textContent = 'Clic para copiar al portapapeles y llamar';
+            colViz.appendChild(lblSel);
+            colViz.appendChild(btn);
+            colViz.appendChild(hint);
+
+            toolbar.appendChild(colSel);
+            toolbar.appendChild(colViz);
+            block.appendChild(toolbar);
+
+            actualizarSeleccionVisualDesdeSelect(sel, spanViz);
+            return block;
+        }
+
+        function crearToolbarRefEmails(emailsSorted) {
+            var block = document.createElement('div');
+            block.className = 'modal-ref-email-block';
+            block.appendChild(crearSubtituloModalRef('Correos'));
+
+            var toolbar = document.createElement('div');
+            toolbar.className = 'detalle-telefonos-toolbar det-toolbar-contacto-mail modal-ref-toolbar';
+
+            var colSel = document.createElement('div');
+            colSel.className = 'det-tel-col-select';
+            var lbl = document.createElement('span');
+            lbl.className = 'det-tel-mini-label';
+            lbl.textContent = 'Correos del referido';
+            var sel = document.createElement('select');
+            sel.className = 'form-control det-tel-select modal-ref-email-select';
+            sel.setAttribute('aria-label', 'Correos del referido');
+            emailsSorted.forEach(function(em) {
+                var orden = parseInt(em.orden, 10) || 1;
+                var raw = String(em.email || '').trim();
+                var opt = document.createElement('option');
+                opt.value = raw;
+                opt.textContent = 'Email ' + orden + ' · ' + raw;
+                sel.appendChild(opt);
+            });
+            colSel.appendChild(lbl);
+            colSel.appendChild(sel);
+
+            var colViz = document.createElement('div');
+            colViz.className = 'det-tel-col-vista';
+            var lblSel = document.createElement('span');
+            lblSel.className = 'det-tel-mini-label';
+            lblSel.textContent = 'Correo seleccionado';
+            var btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'det-tel-numero-btn det-mail-copy-btn modal-ref-email-accion';
+            btn.title = 'Copiar correo seleccionado al portapapeles';
+            var spanViz = document.createElement('span');
+            spanViz.className = 'det-tel-numero-text modal-ref-email-viz';
+            spanViz.textContent = '—';
+            var icons = document.createElement('span');
+            icons.className = 'det-tel-accion-icons';
+            icons.setAttribute('aria-hidden', 'true');
+            icons.innerHTML = '<i class="fas fa-copy"></i><i class="fas fa-envelope"></i>';
+            btn.appendChild(spanViz);
+            btn.appendChild(icons);
+            var hint = document.createElement('p');
+            hint.className = 'det-tel-hint';
+            hint.textContent = 'Clic para copiar al portapapeles';
+            colViz.appendChild(lblSel);
+            colViz.appendChild(btn);
+            colViz.appendChild(hint);
+
+            toolbar.appendChild(colSel);
+            toolbar.appendChild(colViz);
+            block.appendChild(toolbar);
+
+            actualizarSeleccionVisualDesdeSelect(sel, spanViz);
+            return block;
+        }
+
+        function crearSubtituloModalRef(texto) {
+            var h = document.createElement('h5');
+            h.className = 'modal-ref-section-title';
+            h.textContent = texto;
+            return h;
+        }
+
+        function ordenarTelefonosRef(list) {
+            return (list || []).slice().sort(function(a, b) {
+                return (parseInt(a.orden, 10) || 999) - (parseInt(b.orden, 10) || 999);
+            }).filter(function(p) {
+                return p && String(p.numero || '').trim();
+            });
+        }
+
+        function ordenarEmailsRef(list) {
+            return (list || []).slice().sort(function(a, b) {
+                return (parseInt(a.orden, 10) || 999) - (parseInt(b.orden, 10) || 999);
+            }).filter(function(em) {
+                return em && String(em.email || '').trim();
+            });
+        }
+
+        function bindReferenciasModalDelegatedOnce() {
+            var host = document.getElementById('referenciasModalBody');
+            if (!host || host.dataset.refToolbarDelBound === '1') return;
+            host.dataset.refToolbarDelBound = '1';
+            host.addEventListener('change', function(ev) {
+                var t = ev.target;
+                if (!(t instanceof HTMLElement)) return;
+                var telBlk = t.closest('.modal-ref-tel-block');
+                if (telBlk && t.classList.contains('modal-ref-tel-select')) {
+                    actualizarSeleccionVisualDesdeSelect(t, telBlk.querySelector('.modal-ref-tel-viz'));
+                }
+                var mailBlk = t.closest('.modal-ref-email-block');
+                if (mailBlk && t.classList.contains('modal-ref-email-select')) {
+                    actualizarSeleccionVisualDesdeSelect(t, mailBlk.querySelector('.modal-ref-email-viz'));
+                }
+            });
+            host.addEventListener('click', function(ev) {
+                var telBtn = ev.target.closest ? ev.target.closest('.modal-ref-tel-accion') : null;
+                if (telBtn) {
+                    ev.preventDefault();
+                    var blk = telBtn.closest('.modal-ref-tel-block');
+                    var s = blk ? blk.querySelector('.modal-ref-tel-select') : null;
+                    ejecutarCopiarYLlamarTelDesdeSelect(s);
+                    return;
+                }
+                var mailBtn = ev.target.closest ? ev.target.closest('.modal-ref-email-accion') : null;
+                if (mailBtn) {
+                    ev.preventDefault();
+                    var mb = mailBtn.closest('.modal-ref-email-block');
+                    var ms = mb ? mb.querySelector('.modal-ref-email-select') : null;
+                    ejecutarCopiarEmailDesdeSelect(ms);
+                }
+            });
+        }
+
+        function renderReferenciasModalBody(ticket) {
+            var body = document.getElementById('referenciasModalBody');
+            if (!body) return;
+            bindReferenciasModalDelegatedOnce();
+
+            body.innerHTML = '';
+
+            var refs = (ticket && ticket.referencias_personales) ? ticket.referencias_personales : [];
             if (!refs.length) {
-                return '<p class="modal-ref-empty">No hay referencias registradas para este cliente.</p>';
+                var p = document.createElement('p');
+                p.className = 'modal-ref-empty';
+                p.textContent = 'No hay referencias registradas para este cliente.';
+                body.appendChild(p);
+                return;
             }
-            var html = '';
+
             refs.forEach(function(ref, idx) {
-                var orden = parseInt(ref.orden, 10) || (idx + 1);
+                var ordenRel = parseInt(ref.orden, 10) || (idx + 1);
                 var nombre = [ref.nombre, ref.apellido].filter(Boolean).join(' ').trim() || 'Sin nombre';
-                html += '<article class="modal-ref-card">';
-                html += '<h4 class="modal-ref-card-title">RELATIVE ' + orden + ' · ' + escapeHtml(nombre) + '</h4>';
+
+                var card = document.createElement('article');
+                card.className = 'modal-ref-card';
+
+                var hTitle = document.createElement('h4');
+                hTitle.className = 'modal-ref-card-title';
+                hTitle.textContent = 'RELATIVE ' + ordenRel + ' · ' + nombre.replace(/\s+/g, ' ');
+                card.appendChild(hTitle);
+
                 var tieneTipo = ref.possible_type && String(ref.possible_type).trim() !== '';
                 var tieneEdad = ref.age !== null && ref.age !== undefined && String(ref.age).trim() !== '';
                 if (tieneTipo || tieneEdad) {
-                    html += '<p class="modal-ref-meta">';
-                    if (tieneTipo) html += '<strong>Tipo:</strong> ' + escapeHtml(String(ref.possible_type));
-                    if (tieneTipo && tieneEdad) html += ' · ';
-                    if (tieneEdad) html += '<strong>Edad:</strong> ' + escapeHtml(String(ref.age));
-                    html += '</p>';
+                    var meta = document.createElement('p');
+                    meta.className = 'modal-ref-meta';
+                    meta.textContent = (tieneTipo ? 'Tipo: ' + ref.possible_type : '') +
+                        (tieneTipo && tieneEdad ? ' · ' : '') +
+                        (tieneEdad ? 'Edad: ' + ref.age : '');
+                    card.appendChild(meta);
                 }
 
-                var tels = ref.telefonos || [];
-                if (!tels.length) {
-                    html += '<p class="modal-ref-subtle">Sin teléfonos</p>';
+                var telsSorted = ordenarTelefonosRef(ref.telefonos || []);
+                if (!telsSorted.length) {
+                    card.appendChild(crearSubtituloModalRef('Teléfonos'));
+                    var pSin = document.createElement('p');
+                    pSin.className = 'modal-ref-subtle';
+                    pSin.textContent = 'Sin teléfonos';
+                    card.appendChild(pSin);
                 } else {
-                    tels.forEach(function(p) {
-                        var k = parseInt(p.orden, 10) || 1;
-                        var tipoLbl = tipoTelefonoLabel(p.tipo);
-                        var dnc = p.dnc_litigator === 'Y' ? 'Y' : (p.dnc_litigator === 'N' ? 'N' : '—');
-                        html += '<div class="modal-ref-phone-group">';
-                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Phone ' + k + '</span><span class="ref-csv-v">' +
-                            escapeHtml(String(p.numero || '').trim()) + '</span></div>';
-                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Phone ' + k + ': Type</span><span class="ref-csv-v">' +
-                            escapeHtml(tipoLbl) + '</span></div>';
-                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Phone ' + k + ': DNC/Litigator</span><span class="ref-csv-v">' +
-                            escapeHtml(dnc) + '</span></div>';
-                        html += '</div>';
-                    });
+                    card.appendChild(crearToolbarRefTelefonos(telsSorted));
                 }
 
-                var mails = ref.emails || [];
-                if (mails.length) {
-                    html += '<div class="modal-ref-emails"><strong>Correos</strong>';
-                    mails.forEach(function(em) {
-                        var ek = parseInt(em.orden, 10) || 1;
-                        html += '<div class="ref-csv-row"><span class="ref-csv-k">Email ' + ek + '</span><span class="ref-csv-v">' +
-                            escapeHtml(String(em.email || '').trim()) + '</span></div>';
-                    });
-                    html += '</div>';
+                var mailsSorted = ordenarEmailsRef(ref.emails || []);
+                if (!mailsSorted.length) {
+                    card.appendChild(crearSubtituloModalRef('Correos'));
+                    var pSinE = document.createElement('p');
+                    pSinE.className = 'modal-ref-subtle';
+                    pSinE.textContent = 'Sin correos';
+                    card.appendChild(pSinE);
+                } else {
+                    card.appendChild(crearToolbarRefEmails(mailsSorted));
                 }
 
-                html += '</article>';
+                body.appendChild(card);
             });
-            return html;
         }
 
         function abrirModalReferencias() {
             var modal = document.getElementById('modalReferencias');
             var body = document.getElementById('referenciasModalBody');
             if (!modal || !body) return;
-            body.innerHTML = buildReferenciasHtml(window.__ticketActual || {});
+            renderReferenciasModalBody(window.__ticketActual || {});
             modal.style.display = 'block';
             modal.setAttribute('aria-hidden', 'false');
         }
@@ -1069,10 +2097,10 @@ $message = getMessage();
 
             // Si el estado es terminal (cierre) deshabilitar el select y el botón.
             var help = document.getElementById('gestionEstadoHelp');
-            if (actual === 'cierre' || permitidas.length === 0) {
+            if (actual === 'desembolso' || permitidas.length === 0) {
                 sel.disabled = true;
                 if (help) {
-                    help.innerHTML = '<i class="fas fa-lock"></i> El caso está en estado terminal (Cierre): no admite más cambios de estado.';
+                    help.innerHTML = '<i class="fas fa-lock"></i> El caso está en estado terminal (desembolso): no admite más cambios de estado.';
                 }
             } else {
                 sel.disabled = false;
@@ -1083,7 +2111,7 @@ $message = getMessage();
             var badge = document.getElementById('ticketTimelineEstadoBadge');
             if (!badge) return;
             var key = (estadoActual || '').trim();
-            var lab = ESTADO_LABELS[key] || (key || '—');
+            var lab = labelEstadoTicket(key) || (key || '—');
             badge.className = 'ticket-estado-badge' + (key ? (' estado-' + key) : '');
             badge.innerHTML = '<i class="fas fa-flag-checkered" aria-hidden="true"></i> ' + escapeHtml(lab);
         }
@@ -1102,8 +2130,8 @@ $message = getMessage();
             var html = historial.map(function(h, idx) {
                 var esUltimo = (idx === historial.length - 1);
                 var esActual = esUltimo;
-                var labelNuevo = h.estado_guardado_label || h.estado_label || ESTADO_LABELS[h.estado_nuevo] || h.estado_nuevo;
-                var labelAnt = h.estado_anterior_label || (h.estado_anterior ? (ESTADO_LABELS[h.estado_anterior] || h.estado_anterior) : null);
+                var labelNuevo = h.estado_guardado_label || h.estado_label || labelEstadoTicket(h.estado_nuevo) || h.estado_nuevo;
+                var labelAnt = h.estado_anterior_label || (h.estado_anterior ? (labelEstadoTicket(h.estado_anterior) || h.estado_anterior) : null);
                 var fecha = h.fecha_cambio ? new Date(h.fecha_cambio).toLocaleString() : '';
                 var asesor = h.asesor_nombre_completo ? escapeHtml(h.asesor_nombre_completo) : 'Sistema';
                 var dur = h.duracion_legible || '';
@@ -1149,9 +2177,60 @@ $message = getMessage();
             const estado = sel.value;
             const ticketId = document.getElementById('gestionTicketId').value;
 
+            if (estado === ESTADO_CONTACTABILIDAD) {
+                if (!isPerfilContactabilidadCompleta()) {
+                    showMessage('Complete la tipificación de contactabilidad (todos los niveles).', 'error');
+                    return;
+                }
+            } else {
+                var selActP = document.getElementById('perfilActualizacionRespuesta');
+                var vr = selActP ? String(selActP.value || '').trim() : '';
+                if (vr !== 'si' && vr !== 'no') {
+                    showMessage('Seleccione Sí o No en la tipificación de actualización o escalamiento para este estado.', 'error');
+                    return;
+                }
+                var selConfP = document.getElementById('perfilActualizacionConfirmacion');
+                var vc = selConfP ? String(selConfP.value || '').trim() : '';
+                var desG = estado === ESTADO_DESEMBOLSO;
+                var tG = getTextosActualizacion(desG);
+                var esperadoSeg = vr === 'si' ? tG.si : tG.no;
+                if (!vc || vc !== esperadoSeg) {
+                    showMessage('Complete el segundo desplegable con la acción que sigue a su elección (Sí / No).', 'error');
+                    return;
+                }
+                var px = String(document.getElementById('proximaAccion').value || '').trim();
+                var fx = String(document.getElementById('fechaProximaAccion').value || '').trim();
+                if (!px || !fx) {
+                    showMessage('Indique «Próxima acción» y «Fecha de próxima acción» (obligatorios para dejar constancia de la tipificación en el historial).', 'error');
+                    return;
+                }
+            }
+
             const formData = new FormData();
             formData.append('ticket_id', ticketId);
             formData.append('estado', estado);
+
+            if (estado === ESTADO_CONTACTABILIDAD && isPerfilContactabilidadCompleta()) {
+                formData.append('perfilacion_contactabilidad', JSON.stringify({
+                    tipo: 'contactabilidad',
+                    version: 1,
+                    pasos: window.__perfilPath
+                }));
+            }
+
+            if (estado !== ESTADO_CONTACTABILIDAD) {
+                var selAct2 = document.getElementById('perfilActualizacionRespuesta');
+                var selConf2 = document.getElementById('perfilActualizacionConfirmacion');
+                var rAct = selAct2 ? String(selAct2.value || '').trim() : '';
+                var cAct = selConf2 ? String(selConf2.value || '').trim() : '';
+                if (rAct === 'si' || rAct === 'no') {
+                    formData.append('perfilacion_actualizacion', JSON.stringify({
+                        version: 2,
+                        respuesta: rAct,
+                        accion_confirmada: cAct
+                    }));
+                }
+            }
 
 
             const nuevaNota = document.getElementById('nuevaNota').value;

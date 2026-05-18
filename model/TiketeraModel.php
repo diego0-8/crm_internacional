@@ -27,21 +27,33 @@ class TiketeraModel {
     }
 
     /**
-     * Lista canónica de los 6 estados del workflow profesional.
+     * Estados del pipeline (contactabilidad hasta desembolso).
      */
     public const ESTADOS = [
-        'comunicacion',
-        'validacion',
-        'proceso_judicial',
-        'remate',
-        'recuperacion',
-        'cierre',
+        'contactabilidad_cliente',
+        'acuerdo_comercial',
+        'documentos_corte',
+        'documentos_adicionales',
+        'corte_giro_saldo',
+        'cliente_swift',
+        'desembolso',
     ];
 
     /**
-     * Etiquetas legibles para UI (pueden usarse como label de badges).
+     * Etiquetas legibles para UI (badges, timelíne).
      */
     public const ESTADO_LABELS = [
+        'contactabilidad_cliente'   => 'Contactabilidad con el cliente',
+        'acuerdo_comercial'         => 'Se generó acuerdo comercial',
+        'documentos_corte'          => 'Se remiten documentos a la corte',
+        'documentos_adicionales'    => 'Se solicitan documentos adicionales',
+        'corte_giro_saldo'          => 'La corte giró saldo a favor',
+        'cliente_swift'             => 'Cliente generó el Swift',
+        'desembolso'                => 'Se generó desembolso',
+    ];
+
+    /** Claves antiguas solo para leer historiales previos a la migración. */
+    public const ESTADO_LEGACY_LABELS = [
         'comunicacion'     => 'Comunicación',
         'validacion'       => 'Validación',
         'proceso_judicial' => 'Proceso judicial',
@@ -50,24 +62,37 @@ class TiketeraModel {
         'cierre'           => 'Cierre',
     ];
 
+    /**
+     * Etiqueta para cualquier clave (actual o histórica).
+     */
+    public static function estadoLabelFor(?string $key): string {
+        if ($key === null || $key === '') {
+            return '';
+        }
+        return self::ESTADO_LABELS[$key]
+            ?? self::ESTADO_LEGACY_LABELS[$key]
+            ?? $key;
+    }
+
     public function __construct() {
         $this->db = getDB();
     }
 
     /**
      * Mapa central de transiciones permitidas (única fuente de verdad).
-     * El estado `cierre` es terminal (no tiene transiciones de salida).
+     * El estado `desembolso` es terminal (no tiene transiciones de salida).
      *
      * @return array<string, string[]>
      */
     public static function allowedTransitions() {
         return [
-            'comunicacion'     => ['validacion'],
-            'validacion'       => ['comunicacion', 'proceso_judicial'],
-            'proceso_judicial' => ['validacion', 'remate'],
-            'remate'           => ['proceso_judicial', 'recuperacion'],
-            'recuperacion'     => ['cierre'],
-            'cierre'           => [],
+            'contactabilidad_cliente'   => ['acuerdo_comercial'],
+            'acuerdo_comercial'         => ['contactabilidad_cliente', 'documentos_corte'],
+            'documentos_corte'          => ['acuerdo_comercial', 'documentos_adicionales'],
+            'documentos_adicionales'    => ['documentos_corte', 'corte_giro_saldo'],
+            'corte_giro_saldo'          => ['documentos_adicionales', 'cliente_swift'],
+            'cliente_swift'             => ['corte_giro_saldo', 'desembolso'],
+            'desembolso'                => [],
         ];
     }
 
@@ -127,7 +152,7 @@ class TiketeraModel {
     }
 
     /**
-     * Crear nuevo ticket. Estado inicial siempre `comunicacion`.
+     * Crear nuevo ticket. Estado inicial siempre `contactabilidad_cliente`.
      * Se registra fila inicial en ticket_estado_historial (estado_anterior=NULL).
      */
     public function createTicket($data) {
@@ -138,7 +163,7 @@ class TiketeraModel {
         }
         $this->db->beginTransaction();
         try {
-            $estadoInicial = 'comunicacion';
+            $estadoInicial = 'contactabilidad_cliente';
             if (!empty($data['estado']) && in_array($data['estado'], self::ESTADOS, true)) {
                 $estadoInicial = $data['estado'];
             }
@@ -317,7 +342,7 @@ class TiketeraModel {
                 );
             }
 
-            $fechaCierre = ($nuevoEstado === 'cierre') ? date('Y-m-d H:i:s') : null;
+            $fechaCierre = ($nuevoEstado === 'desembolso') ? date('Y-m-d H:i:s') : null;
 
             $upd = $this->db->prepare("
                 UPDATE tiketera
@@ -397,10 +422,10 @@ class TiketeraModel {
             $durSeg = max(0, $end - $start);
             $rows[$i]['duracion_segundos'] = $durSeg;
             $rows[$i]['duracion_legible']  = self::humanizeSeconds($durSeg);
-            $rows[$i]['estado_label']      = self::ESTADO_LABELS[$rows[$i]['estado_nuevo']] ?? $rows[$i]['estado_nuevo'];
+            $rows[$i]['estado_label']      = self::estadoLabelFor($rows[$i]['estado_nuevo']);
             $ea = $rows[$i]['estado_anterior'] ?? null;
             $rows[$i]['estado_anterior_label'] = ($ea !== null && $ea !== '')
-                ? (self::ESTADO_LABELS[$ea] ?? $ea)
+                ? self::estadoLabelFor($ea)
                 : null;
             $rows[$i]['estado_guardado_label'] = $rows[$i]['estado_label'];
             $rows[$i]['asesor_nombre_completo'] = trim(
@@ -456,13 +481,13 @@ class TiketeraModel {
             $stmt = $this->db->prepare("
                 SELECT
                     COUNT(*) as total_tickets,
-                    SUM(CASE WHEN estado = 'comunicacion'     THEN 1 ELSE 0 END) as tickets_comunicacion,
-                    SUM(CASE WHEN estado = 'validacion'       THEN 1 ELSE 0 END) as tickets_validacion,
-                    SUM(CASE WHEN estado = 'proceso_judicial' THEN 1 ELSE 0 END) as tickets_proceso_judicial,
-                    SUM(CASE WHEN estado = 'remate'           THEN 1 ELSE 0 END) as tickets_remate,
-                    SUM(CASE WHEN estado = 'recuperacion'     THEN 1 ELSE 0 END) as tickets_recuperacion,
-                    SUM(CASE WHEN estado = 'cierre'           THEN 1 ELSE 0 END) as tickets_cierre,
-                    SUM(CASE WHEN estado <> 'cierre'          THEN 1 ELSE 0 END) as tickets_abiertos
+                    SUM(CASE WHEN estado IN ('contactabilidad_cliente', 'comunicacion') THEN 1 ELSE 0 END) as tickets_comunicacion,
+                    SUM(CASE WHEN estado IN ('acuerdo_comercial', 'validacion') THEN 1 ELSE 0 END) as tickets_validacion,
+                    SUM(CASE WHEN estado IN ('documentos_corte', 'proceso_judicial') THEN 1 ELSE 0 END) as tickets_proceso_judicial,
+                    SUM(CASE WHEN estado IN ('documentos_adicionales', 'remate') THEN 1 ELSE 0 END) as tickets_remate,
+                    SUM(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 ELSE 0 END) as tickets_recuperacion,
+                    SUM(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as tickets_cierre,
+                    SUM(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as tickets_abiertos
                 FROM tiketera
                 WHERE asesor_cedula = ?
             ");

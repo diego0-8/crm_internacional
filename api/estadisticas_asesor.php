@@ -98,8 +98,8 @@ try {
         $stmt = $db->prepare("
             SELECT
                 COUNT(*) AS total_tickets,
-                SUM(CASE WHEN estado <> 'cierre' THEN 1 ELSE 0 END) AS tickets_abiertos,
-                SUM(CASE WHEN estado = 'cierre' THEN 1 ELSE 0 END) AS tickets_cerrados
+                SUM(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) AS tickets_abiertos,
+                SUM(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) AS tickets_cerrados
             FROM tiketera
             WHERE asesor_cedula = ?
         ");
@@ -110,7 +110,7 @@ try {
             SELECT COUNT(*) AS tickets_resueltos_mes
             FROM tiketera
             WHERE asesor_cedula = ?
-              AND estado = 'cierre'
+              AND estado IN ('desembolso', 'cierre')
               AND fecha_cierre IS NOT NULL
               AND fecha_cierre >= DATE_FORMAT(NOW(), '%Y-%m-01')
         ");
@@ -130,7 +130,7 @@ try {
             SELECT AVG(TIMESTAMPDIFF(HOUR, fecha_creacion, fecha_cierre)) AS tiempo_promedio_horas
             FROM tiketera
             WHERE asesor_cedula = ?
-              AND estado = 'cierre'
+              AND estado IN ('desembolso', 'cierre')
               AND fecha_cierre IS NOT NULL
               AND fecha_cierre >= DATE_FORMAT(NOW(), '%Y-%m-01')
         ");

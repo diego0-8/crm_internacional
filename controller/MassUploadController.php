@@ -72,6 +72,9 @@ class MassUploadController {
             $esReparto = RepartoImportModel::esCabeceraReparto($headers);
             $totalRegistros = 0;
             $registrosProcesados = 0;
+            $registrosRechazados = 0;
+            $filasRechazadas = [];
+            $filasImportadas = [];
             $errores = [];
             
             // Crear registro del archivo
@@ -92,15 +95,54 @@ class MassUploadController {
                 while (($data = fgetcsv($handle)) !== false) {
                     $filaArchivo++;
                     $rowAssoc = $repartoImporter->filaAsociativa($headers, $data);
-                    if ($repartoImporter->filaVacia($rowAssoc)) {
+
+                    $validacion = $repartoImporter->validarFila($rowAssoc, $coordinadorId);
+                    if ($validacion['fila_vacia']) {
                         continue;
                     }
+
                     $totalRegistros++;
+
+                    if (!$validacion['valid']) {
+                        $registrosRechazados++;
+                        $refRech = RepartoImportModel::referenciaDesdeFila($rowAssoc);
+                        $filasRechazadas[] = [
+                            'fila_csv' => $filaArchivo,
+                            'identificador' => $validacion['identificador'] ?: ($refRech['referencia'] ?: '—'),
+                            'case_number' => $refRech['case_number'],
+                            'parcel_number' => $refRech['parcel_number'],
+                            'faltantes' => $validacion['faltantes'],
+                        ];
+                        $motivo = implode('; ', $validacion['faltantes']);
+                        $errores[] = 'Fila CSV ' . $filaArchivo
+                            . ($validacion['identificador'] !== '' ? ' [' . $validacion['identificador'] . ']' : '')
+                            . ': ' . $motivo;
+                        continue;
+                    }
+
                     try {
-                        $repartoImporter->importarFila($rowAssoc, $archivoId, $coordinadorId);
+                        $idTitular = $repartoImporter->importarFila($rowAssoc, $archivoId, $coordinadorId);
                         $registrosProcesados++;
+                        $refOk = RepartoImportModel::referenciaDesdeFila($rowAssoc);
+                        $filasImportadas[] = [
+                            'fila_csv' => $filaArchivo,
+                            'id_titular' => $idTitular,
+                            'referencia' => $refOk['referencia'],
+                            'tipo_referencia' => $refOk['tipo_referencia'],
+                            'case_number' => $refOk['case_number'],
+                            'parcel_number' => $refOk['parcel_number'],
+                        ];
                     } catch (Exception $e) {
-                        $errores[] = "Fila CSV $filaArchivo: " . $e->getMessage();
+                        $registrosRechazados++;
+                        $refErr = RepartoImportModel::referenciaDesdeFila($rowAssoc);
+                        $filasRechazadas[] = [
+                            'fila_csv' => $filaArchivo,
+                            'identificador' => $validacion['identificador'] ?: ($refErr['referencia'] ?: '—'),
+                            'case_number' => $refErr['case_number'],
+                            'parcel_number' => $refErr['parcel_number'],
+                            'faltantes' => [$e->getMessage()],
+                        ];
+                        $errores[] = 'Fila CSV ' . $filaArchivo . ': ' . $e->getMessage();
                     }
                 }
             } else {
@@ -153,17 +195,19 @@ class MassUploadController {
             
             fclose($handle);
             
-            $estadoFinal = empty($errores) ? 'completado' : ($registrosProcesados === 0 ? 'error' : 'completado');
+            $hayProblemas = !empty($errores) || $registrosRechazados > 0;
+            $estadoFinal = !$hayProblemas ? 'completado' : ($registrosProcesados === 0 ? 'error' : 'completado');
             $this->archivoCsvModel->updateEstado($archivoId, $estadoFinal, $registrosProcesados, $totalRegistros);
-            
-            // Preparar mensaje de resultado
-            $mensaje = "Archivo procesado exitosamente. ";
-            $mensaje .= "$registrosProcesados de $totalRegistros registros importados.";
-            
-            if (!empty($errores)) {
-                $mensaje .= " Errores: " . count($errores);
+
+            $mensaje = "Procesamiento finalizado: $registrosProcesados importados";
+            if ($totalRegistros > 0) {
+                $mensaje .= " de $totalRegistros filas con datos";
             }
-            
+            if ($registrosRechazados > 0) {
+                $mensaje .= ", $registrosRechazados rechazadas";
+            }
+            $mensaje .= '.';
+
             return [
                 'success' => true,
                 'message' => $mensaje,
@@ -171,8 +215,11 @@ class MassUploadController {
                 'formato' => $esReparto ? 'reparto_foreclosure' : 'crm_simple',
                 'total_registros' => $totalRegistros,
                 'registros_procesados' => $registrosProcesados,
+                'registros_rechazados' => $registrosRechazados,
+                'filas_importadas' => $filasImportadas,
+                'filas_rechazadas' => $filasRechazadas,
                 'errores' => count($errores),
-                'detalles_errores' => $errores
+                'detalles_errores' => $errores,
             ];
             
         } catch (Exception $e) {

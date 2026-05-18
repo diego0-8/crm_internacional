@@ -34,7 +34,7 @@ try {
         'titulo'         => sanitize($_POST['titulo'] ?? ''),
         'descripcion'    => sanitize($_POST['descripcion'] ?? ''),
         'observaciones'  => sanitize($_POST['observaciones'] ?? ''),
-        'estado'         => 'comunicacion',
+        'estado'         => 'contactabilidad_cliente',
     ];
 
     $categoriaId = isset($_POST['categoria_id']) ? (int) $_POST['categoria_id'] : 0;

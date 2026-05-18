@@ -44,6 +44,19 @@ try {
         $tieneColEstado = false;
     }
 
+    $tieneColTipo = false;
+    try {
+        $chkT = $db->query("
+            SELECT COUNT(*) FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'ticket_notas'
+              AND COLUMN_NAME = 'tipo_nota'
+        ");
+        $tieneColTipo = ((int) $chkT->fetchColumn()) > 0;
+    } catch (Exception $e) {
+        $tieneColTipo = false;
+    }
+
     $sql = "
         SELECT
             tn.id,
@@ -54,6 +67,7 @@ try {
             u.nombre AS asesor_nombre,
             u.apellido AS asesor_apellido"
         . ($tieneColEstado ? ", tn.estado_ticket" : ", NULL AS estado_ticket")
+        . ($tieneColTipo ? ", tn.tipo_nota" : ", 'asesor' AS tipo_nota")
         . "
         FROM ticket_notas tn
         JOIN usuarios u ON tn.asesor_cedula = u.cedula
@@ -71,6 +85,10 @@ try {
         $nota['estado_label'] = $estKey !== ''
             ? (TiketeraModel::ESTADO_LABELS[$estKey] ?? $estKey)
             : '';
+        $nota['tipo_nota'] = trim((string) ($nota['tipo_nota'] ?? 'asesor'));
+        if ($nota['tipo_nota'] === '') {
+            $nota['tipo_nota'] = 'asesor';
+        }
     }
     unset($nota);
 

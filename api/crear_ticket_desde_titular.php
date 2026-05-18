@@ -158,7 +158,7 @@ try {
         INSERT INTO tiketera (
             cliente_cedula, asesor_cedula, titulo, descripcion, 
             estado, numero_ticket, origen
-        ) VALUES (?, ?, ?, ?, 'comunicacion', ?, 'csv')
+        ) VALUES (?, ?, ?, ?, 'contactabilidad_cliente', ?, 'csv')
     ");
     $tituloTicket = 'Caso ' . $caseNumber;
     $stmt->execute([

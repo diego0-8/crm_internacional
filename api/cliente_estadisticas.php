@@ -18,13 +18,13 @@ try {
     $stmt = $db->prepare("
         SELECT
             COUNT(*) as total,
-            SUM(CASE WHEN estado = 'comunicacion'     THEN 1 ELSE 0 END) as comunicacion,
-            SUM(CASE WHEN estado = 'validacion'       THEN 1 ELSE 0 END) as validacion,
-            SUM(CASE WHEN estado = 'proceso_judicial' THEN 1 ELSE 0 END) as proceso_judicial,
-            SUM(CASE WHEN estado = 'remate'           THEN 1 ELSE 0 END) as remate,
-            SUM(CASE WHEN estado = 'recuperacion'     THEN 1 ELSE 0 END) as recuperacion,
-            SUM(CASE WHEN estado = 'cierre'           THEN 1 ELSE 0 END) as cierre,
-            SUM(CASE WHEN estado <> 'cierre'          THEN 1 ELSE 0 END) as abiertos
+            SUM(CASE WHEN estado IN ('contactabilidad_cliente', 'comunicacion') THEN 1 ELSE 0 END) as comunicacion,
+            SUM(CASE WHEN estado IN ('acuerdo_comercial', 'validacion') THEN 1 ELSE 0 END) as validacion,
+            SUM(CASE WHEN estado IN ('documentos_corte', 'proceso_judicial') THEN 1 ELSE 0 END) as proceso_judicial,
+            SUM(CASE WHEN estado IN ('documentos_adicionales', 'remate') THEN 1 ELSE 0 END) as remate,
+            SUM(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 ELSE 0 END) as recuperacion,
+            SUM(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as cierre,
+            SUM(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as abiertos
         FROM tiketera
         WHERE cliente_cedula = ?
     ");

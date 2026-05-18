@@ -84,7 +84,7 @@ $message = getMessage();
                     </button>
                     <div class="welcome-section">
                         <h1 class="title-asesor">Gestión de Archivos CSV</h1>
-                        <p class="subtitle-asesor">Importa reparto (foreclosure) a titulares y tablas relacionadas, o el CSV simple de clientes CRM.</p>
+                        <p class="subtitle-asesor">Importa reparto (foreclosure) a titulares y propiedades. Solo se procesan filas completas según las columnas requeridas.</p>
                     </div>
                 </div>
             </div>
@@ -145,64 +145,87 @@ $message = getMessage();
                     </div>
                 </div>
 
-                <!-- Instructions -->
-                <div class="card">
+                <!-- Columnas requeridas -->
+                <div class="card card-csv-requeridos">
                     <div class="card-header">
-                        <h3><i class="fas fa-info-circle"></i> Instrucciones para CSV</h3>
+                        <h3><i class="fas fa-table"></i> Columnas requeridas (CSV en inglés)</h3>
                     </div>
                     <div class="card-content">
-                        <div class="instructions">
-                            <div class="alert alert-warning">
-                                <i class="fas fa-exclamation-triangle"></i>
-                                <strong>Importante:</strong> El sistema detecta automáticamente el tipo de CSV. Use la plantilla de reparto (export foreclosure) o el CSV simple de CRM descrito abajo. Si su base ya existía antes de la unificación del esquema, ejecute en MySQL el script <code>database/migration_titulares_archivo_csv.sql</code> una sola vez.
-                            </div>
-
-                            <h4>1) CSV reparto / foreclosure (recomendado)</h4>
-                            <p>Primera fila: encabezados en inglés tal como exporta la herramienta (debe incluir al menos <strong>Surplus Amount</strong>, <strong>Case Number</strong> y <strong>First Name</strong>). Cada fila de datos se guarda en:</p>
-                            <ul>
-                                <li><strong>titulares</strong> — titular (nombre, mailing, edad, Deceased, Reg_Int, BaseD, F_Correo, Agente, Prioridad) y vínculo al archivo/coordinador.</li>
-                                <li><strong>propiedades</strong> — caso y predio (montos, fechas, Case Number, Parcel Number, tipo foreclosure, dirección de propiedad, County, Source, etc.).</li>
-                                <li><strong>telefonos</strong> / <strong>correos</strong> — hasta 5 teléfonos y 5 emails del titular (tipo y DNC/Litigator por teléfono).</li>
-                                <li><strong>referencias</strong>, <strong>referencias_telefonos</strong>, <strong>referencias_correos</strong> — hasta 5 familiares con sus teléfonos y correos.</li>
-                            </ul>
-                            <p>Las filas totalmente vacías se omiten. Cada titular debe tener al menos <strong>First Name</strong> o <strong>Last Name</strong>.</p>
-
-                            <h4>2) CSV simple CRM (compatibilidad)</h4>
-                            <p>Si la cabecera <strong>no</strong> coincide con el reparto, se usa el formato de 6 columnas por posición (sin fila de títulos en inglés de export):</p>
-                            <div class="csv-format-table">
-                                <table class="format-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Posición</th>
-                                            <th>Campo</th>
-                                            <th>Requerido</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        <tr><td>0</td><td><strong>nombre_completo</strong></td><td><span class="required">Sí</span></td></tr>
-                                        <tr><td>1</td><td>email</td><td><span class="optional">No</span></td></tr>
-                                        <tr><td>2</td><td>telefono</td><td><span class="optional">No</span></td></tr>
-                                        <tr><td>3</td><td>direccion</td><td><span class="optional">No</span></td></tr>
-                                        <tr><td>4</td><td>ciudad</td><td><span class="optional">No</span></td></tr>
-                                        <tr><td>5</td><td>pais</td><td><span class="optional">No</span></td></tr>
-                                    </tbody>
-                                </table>
-                            </div>
-                            <div class="csv-example">
-                                <pre><code>nombre_completo,email,telefono,direccion,ciudad,pais
-Juan Pérez,juan@email.com,3001234567,Calle 123,Bogotá,Colombia</code></pre>
-                            </div>
-
-                            <h4>Recomendaciones</h4>
-                            <ul>
-                                <li>UTF-8; comillas dobles si hay comas dentro de un campo.</li>
-                                <li>Tamaño máximo razonable (p. ej. 10 MB según configuración del servidor).</li>
-                                <li>Al eliminar un archivo en esta pantalla, se borran los <strong>clientes CRM</strong> con ese <code>archivo_csv_id</code> y los <strong>titulares</strong> importados con el mismo vínculo.</li>
-                            </ul>
+                        <p class="csv-requeridos-intro">
+                            Se importan filas con <strong>todos</strong> los campos llenos y con <strong>Case Number</strong> o <strong>Parcel Number</strong>.
+                            Las demás aparecen en «Filas no importadas» con el motivo. Teléfonos, correos y referencias son opcionales.
+                        </p>
+                        <div class="csv-format-table">
+                            <table class="format-table rechazos-table">
+                                <thead>
+                                    <tr>
+                                        <th>Campo (BD)</th>
+                                        <th>Columna CSV</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <tr><td>primer_nombre</td><td>First Name</td></tr>
+                                    <tr><td>apellido</td><td>Last Name</td></tr>
+                                    <tr><td>mailing_calle</td><td>Mailing Street</td></tr>
+                                    <tr><td>mailing_ciudad</td><td>Mailing City</td></tr>
+                                    <tr><td>mailing_estado</td><td>Mailing State</td></tr>
+                                    <tr><td>mailing_codigo_postal</td><td>Mailing ZIP Code</td></tr>
+                                    <tr><td>excedente</td><td>Surplus Amount</td></tr>
+                                    <tr><td>monetizacion</td><td>Monetizacion</td></tr>
+                                    <tr><td>puja_cierre</td><td>Closing Bid</td></tr>
+                                    <tr><td>puja_apertura</td><td>Opening Bid</td></tr>
+                                    <tr><td>fecha_venta</td><td>Date Sold</td></tr>
+                                    <tr><td>dias_transcurridos</td><td>Dias_Transc</td></tr>
+                                    <tr><td>numero_caso <em>o</em> numero_parcela</td><td>Case Number <em>o</em> Parcel Number</td></tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
 
+                <!-- Resultado última importación: casos creados -->
+                <div class="card card-filas-importadas" id="filasImportadasCard" style="display: none;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-check-circle"></i> Casos importados (reparto)</h3>
+                    </div>
+                    <div class="card-content">
+                        <p id="filasImportadasResumen" class="csv-requeridos-intro"></p>
+                        <div class="csv-format-table">
+                            <table class="format-table rechazos-table" id="filasImportadasTable">
+                                <thead>
+                                    <tr>
+                                        <th>Fila CSV</th>
+                                        <th>Referencia</th>
+                                        <th>Tipo</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="filasImportadasBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Resultado última importación: no creados -->
+                <div class="card card-filas-rechazadas" id="filasRechazadasCard" style="display: none;">
+                    <div class="card-header">
+                        <h3><i class="fas fa-exclamation-circle"></i> Casos no creados (información incompleta)</h3>
+                    </div>
+                    <div class="card-content">
+                        <p id="filasRechazadasResumen" class="csv-requeridos-intro"></p>
+                        <div class="csv-format-table">
+                            <table class="format-table rechazos-table" id="filasRechazadasTable">
+                                <thead>
+                                    <tr>
+                                        <th>Fila CSV</th>
+                                        <th>Referencia</th>
+                                        <th>Datos / columnas faltantes</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="filasRechazadasBody"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
                 <!-- Archivos Subidos Section -->
                 <div class="card">
                     <div class="card-header">
@@ -247,6 +270,31 @@ Juan Pérez,juan@email.com,3001234567,Calle 123,Bogotá,Colombia</code></pre>
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal resultado importación CSV -->
+    <div id="importResultModal" class="modal import-result-modal">
+        <div class="modal-content modal-scroll import-result-modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-file-csv"></i> Resultado de la importación</h3>
+                <span class="close" onclick="closeImportResultModal()">&times;</span>
+            </div>
+            <div class="import-result-body">
+                <p id="importResultResumen" class="import-result-resumen"></p>
+                <section id="importResultOkSection" class="import-result-section" style="display: none;">
+                    <h4><i class="fas fa-check-circle"></i> Casos importados</h4>
+                    <p class="import-result-hint">Se muestra Case Number; si no existe, Parcel Number.</p>
+                    <ul id="importResultOkList" class="import-result-list"></ul>
+                </section>
+                <section id="importResultFailSection" class="import-result-section import-result-section--fail" style="display: none;">
+                    <h4><i class="fas fa-exclamation-triangle"></i> Casos no creados</h4>
+                    <ul id="importResultFailList" class="import-result-list import-result-list--fail"></ul>
+                </section>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" onclick="closeImportResultModal()">Entendido</button>
             </div>
         </div>
     </div>
@@ -635,6 +683,212 @@ Juan Pérez,juan@email.com,3001234567,Calle 123,Bogotá,Colombia</code></pre>
             document.getElementById('uploadForm').reset();
         }
 
+        function escapeHtmlCsv(text) {
+            const div = document.createElement('div');
+            div.textContent = text == null ? '' : String(text);
+            return div.innerHTML;
+        }
+
+        function referenciaDesdeFilaImport(fila) {
+            if (fila.referencia) {
+                return fila.referencia;
+            }
+            if (fila.identificador) {
+                return fila.identificador;
+            }
+            if (fila.case_number) {
+                return fila.case_number;
+            }
+            if (fila.parcel_number) {
+                return fila.parcel_number;
+            }
+            return '—';
+        }
+
+        function etiquetaTipoReferencia(fila) {
+            if (fila.tipo_referencia === 'case_number') {
+                return 'Case Number';
+            }
+            if (fila.tipo_referencia === 'parcel_number') {
+                return 'Parcel Number';
+            }
+            if (fila.case_number) {
+                return 'Case Number';
+            }
+            if (fila.parcel_number) {
+                return 'Parcel Number';
+            }
+            return '—';
+        }
+
+        function textoFaltantesFila(fila) {
+            if (Array.isArray(fila.faltantes) && fila.faltantes.length > 0) {
+                return fila.faltantes.join('; ');
+            }
+            return String(fila.motivo || fila.error || '');
+        }
+
+        function renderFilasImportadas(result) {
+            const card = document.getElementById('filasImportadasCard');
+            const body = document.getElementById('filasImportadasBody');
+            const resumen = document.getElementById('filasImportadasResumen');
+            if (!card || !body) {
+                return;
+            }
+
+            const filas = Array.isArray(result.filas_importadas) ? result.filas_importadas : [];
+            if (filas.length === 0) {
+                card.style.display = 'none';
+                body.innerHTML = '';
+                if (resumen) {
+                    resumen.textContent = '';
+                }
+                return;
+            }
+
+            card.style.display = 'block';
+            if (resumen) {
+                resumen.textContent = filas.length + ' caso(s) importado(s) correctamente (Case Number o Parcel Number según disponibilidad).';
+            }
+
+            body.innerHTML = '';
+            filas.forEach(function(fila) {
+                const tr = document.createElement('tr');
+                tr.innerHTML =
+                    '<td>' + escapeHtmlCsv(String(fila.fila_csv ?? '—')) + '</td>' +
+                    '<td><strong>' + escapeHtmlCsv(referenciaDesdeFilaImport(fila)) + '</strong></td>' +
+                    '<td>' + escapeHtmlCsv(etiquetaTipoReferencia(fila)) + '</td>';
+                body.appendChild(tr);
+            });
+        }
+
+        function renderFilasRechazadas(result) {
+            const card = document.getElementById('filasRechazadasCard');
+            const body = document.getElementById('filasRechazadasBody');
+            const resumen = document.getElementById('filasRechazadasResumen');
+            if (!card || !body) {
+                return;
+            }
+
+            let filas = Array.isArray(result.filas_rechazadas) ? result.filas_rechazadas : [];
+            if (filas.length === 0 && Array.isArray(result.detalles_errores) && result.detalles_errores.length > 0) {
+                filas = result.detalles_errores.map(function(msg) {
+                    return { fila_csv: '—', identificador: '—', faltantes: [msg] };
+                });
+            }
+
+            if (filas.length === 0) {
+                card.style.display = 'none';
+                body.innerHTML = '';
+                if (resumen) {
+                    resumen.textContent = '';
+                }
+                return;
+            }
+
+            card.style.display = 'block';
+            const proc = result.registros_procesados ?? 0;
+            const rech = result.registros_rechazados ?? filas.length;
+            if (resumen) {
+                resumen.textContent = 'Se importaron ' + proc + ' fila(s) y no se crearon ' + rech + ' por datos incompletos o duplicados. Detalle por fila:';
+            }
+
+            body.innerHTML = '';
+            filas.forEach(function(fila) {
+                const tr = document.createElement('tr');
+                const motivo = textoFaltantesFila(fila) || '—';
+                tr.innerHTML =
+                    '<td>' + escapeHtmlCsv(String(fila.fila_csv ?? '—')) + '</td>' +
+                    '<td>' + escapeHtmlCsv(referenciaDesdeFilaImport(fila)) + '</td>' +
+                    '<td>' + escapeHtmlCsv(motivo) + '</td>';
+                body.appendChild(tr);
+            });
+        }
+
+        function openImportResultModal(result) {
+            const modal = document.getElementById('importResultModal');
+            if (!modal || result.formato !== 'reparto_foreclosure') {
+                return;
+            }
+
+            const importadas = Array.isArray(result.filas_importadas) ? result.filas_importadas : [];
+            let rechazadas = Array.isArray(result.filas_rechazadas) ? result.filas_rechazadas : [];
+            if (rechazadas.length === 0 && importadas.length === 0 && Array.isArray(result.detalles_errores)) {
+                rechazadas = result.detalles_errores.map(function(msg) {
+                    return { fila_csv: '—', faltantes: [msg] };
+                });
+            }
+
+            if (importadas.length === 0 && rechazadas.length === 0) {
+                return;
+            }
+
+            const proc = result.registros_procesados ?? importadas.length;
+            const rech = result.registros_rechazados ?? rechazadas.length;
+            const resumenEl = document.getElementById('importResultResumen');
+            if (resumenEl) {
+                resumenEl.textContent = 'Importados: ' + proc + ' · No creados: ' + rech + '.';
+            }
+
+            const okSection = document.getElementById('importResultOkSection');
+            const okList = document.getElementById('importResultOkList');
+            if (okSection && okList) {
+                if (importadas.length > 0) {
+                    okSection.style.display = 'block';
+                    okList.innerHTML = '';
+                    importadas.forEach(function(fila) {
+                        const li = document.createElement('li');
+                        const ref = referenciaDesdeFilaImport(fila);
+                        const tipo = etiquetaTipoReferencia(fila);
+                        li.innerHTML = '<span class="import-result-fila">Fila ' + escapeHtmlCsv(String(fila.fila_csv)) + '</span> ' +
+                            '<span class="import-result-ref">' + escapeHtmlCsv(ref) + '</span> ' +
+                            '<span class="import-result-tipo">(' + escapeHtmlCsv(tipo) + ')</span>';
+                        okList.appendChild(li);
+                    });
+                } else {
+                    okSection.style.display = 'none';
+                    okList.innerHTML = '';
+                }
+            }
+
+            const failSection = document.getElementById('importResultFailSection');
+            const failList = document.getElementById('importResultFailList');
+            if (failSection && failList) {
+                if (rechazadas.length > 0) {
+                    failSection.style.display = 'block';
+                    failList.innerHTML = '';
+                    rechazadas.forEach(function(fila) {
+                        const li = document.createElement('li');
+                        const ref = referenciaDesdeFilaImport(fila);
+                        const faltantes = textoFaltantesFila(fila) || 'Información insuficiente';
+                        const filaNum = fila.fila_csv != null && fila.fila_csv !== '—' ? 'Fila ' + fila.fila_csv : 'Fila desconocida';
+                        li.innerHTML = '<span class="import-result-fila">' + escapeHtmlCsv(filaNum) + '</span> ' +
+                            (ref !== '—' ? '<span class="import-result-ref">' + escapeHtmlCsv(ref) + '</span> — ' : '') +
+                            '<span class="import-result-faltantes">Falta: ' + escapeHtmlCsv(faltantes) + '</span>';
+                        failList.appendChild(li);
+                    });
+                } else {
+                    failSection.style.display = 'none';
+                    failList.innerHTML = '';
+                }
+            }
+
+            modal.style.display = 'block';
+        }
+
+        function closeImportResultModal() {
+            const modal = document.getElementById('importResultModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        function renderResultadoImportacion(result) {
+            renderFilasImportadas(result);
+            renderFilasRechazadas(result);
+            openImportResultModal(result);
+        }
+
         // Subir archivo
         async function uploadFile() {
             if (!selectedFile) {
@@ -660,10 +914,19 @@ Juan Pérez,juan@email.com,3001234567,Calle 123,Bogotá,Colombia</code></pre>
                 if (result.success) {
                     let msg = result.message;
                     if (result.formato === 'reparto_foreclosure') {
-                        msg += ' (importación reparto → titulares / propiedades / teléfonos / correos / referencias)';
+                        msg += ' — titulares y propiedades (reparto)';
                     }
-                    showMessage(msg, 'success');
+                    const tipo = (result.registros_rechazados || 0) > 0 ? 'info' : 'success';
+                    showMessage(msg, tipo);
+                    if (result.formato === 'reparto_foreclosure') {
+                        renderResultadoImportacion(result);
+                    } else {
+                        renderFilasRechazadas(result);
+                    }
                     resetForm();
+                    if (typeof loadArchivos === 'function') {
+                        loadArchivos();
+                    }
                 } else {
                     showMessage('Error procesando archivo: ' + result.message, 'error');
                 }
@@ -845,6 +1108,10 @@ Juan Pérez,juan@email.com,3001234567,Calle 123,Bogotá,Colombia</code></pre>
 
         // Cerrar modales al hacer clic fuera
         window.onclick = function(event) {
+            const importModal = document.getElementById('importResultModal');
+            if (event.target === importModal) {
+                closeImportResultModal();
+            }
             const clientModal = document.getElementById('createClientModal');
             if (event.target === clientModal) {
                 closeCreateClientModal();

@@ -5,6 +5,9 @@ class TitularModel {
     private $db;
 
     private static $tieneColAsesor = null;
+    /** @var bool|null */
+    private static $tiketeraTienePrimeraGestion = null;
+
 
     /** True si la columna existe en la BD actual (evita 1054 si la migración no se aplicó). */
     private function titularesTieneColumnaAsesorCedula(): bool {
@@ -23,6 +26,24 @@ class TitularModel {
             self::$tieneColAsesor = false;
         }
         return self::$tieneColAsesor;
+    }
+
+    private function tiketeraTieneColumnaPrimeraGestion(): bool {
+        if (self::$tiketeraTienePrimeraGestion !== null) {
+            return self::$tiketeraTienePrimeraGestion;
+        }
+        try {
+            $stmt = $this->db->query("
+                SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'tiketera'
+                  AND COLUMN_NAME = 'primera_gestion_at'
+            ");
+            self::$tiketeraTienePrimeraGestion = ((int) $stmt->fetchColumn()) > 0;
+        } catch (Exception $e) {
+            self::$tiketeraTienePrimeraGestion = false;
+        }
+        return self::$tiketeraTienePrimeraGestion;
     }
 
     public function __construct() {
@@ -75,6 +96,7 @@ class TitularModel {
                 t.asesor_cedula,
                 CONCAT(a.nombre, \' \', a.apellido) AS asesor_nombre,
                 p.numero_caso,
+                p.numero_parcela,
                 p.condado,
                 (SELECT c.email FROM correos c WHERE c.id_cliente = t.id_cliente ORDER BY c.orden ASC LIMIT 1) AS email,
                 (SELECT tel.numero FROM telefonos tel WHERE tel.id_cliente = t.id_cliente ORDER BY tel.orden ASC LIMIT 1) AS telefono
@@ -99,6 +121,7 @@ class TitularModel {
                 NULL AS asesor_cedula,
                 NULL AS asesor_nombre,
                 p.numero_caso,
+                p.numero_parcela,
                 p.condado,
                 (SELECT c.email FROM correos c WHERE c.id_cliente = t.id_cliente ORDER BY c.orden ASC LIMIT 1) AS email,
                 (SELECT tel.numero FROM telefonos tel WHERE tel.id_cliente = t.id_cliente ORDER BY tel.orden ASC LIMIT 1) AS telefono
@@ -112,14 +135,15 @@ class TitularModel {
             $like = '%' . trim($busqueda) . '%';
             $sql .= ' AND (
                 t.primer_nombre LIKE ? OR t.apellido LIKE ?
-                OR p.numero_caso LIKE ? OR p.condado LIKE ?
+                OR CONCAT(COALESCE(t.primer_nombre, \'\'), \' \', COALESCE(t.apellido, \'\')) LIKE ?
+                OR p.numero_caso LIKE ? OR p.numero_parcela LIKE ? OR p.condado LIKE ?
                 OR EXISTS (SELECT 1 FROM telefonos tel2 WHERE tel2.id_cliente = t.id_cliente AND tel2.numero LIKE ?)
                 OR EXISTS (SELECT 1 FROM correos co2 WHERE co2.id_cliente = t.id_cliente AND co2.email LIKE ?)
                 OR COALESCE(t.reg_int, \'\') LIKE ?
                 OR COALESCE(t.base_d, \'\') LIKE ?
                 OR COALESCE(t.f_correo, \'\') LIKE ?
             )';
-            $params = array_merge($params, [$like, $like, $like, $like, $like, $like, $like, $like, $like]);
+            $params = array_merge($params, [$like, $like, $like, $like, $like, $like, $like, $like, $like, $like, $like]);
         }
         $sql .= ' ORDER BY t.id_cliente DESC';
         $stmt = $this->db->prepare($sql);
@@ -172,6 +196,16 @@ class TitularModel {
             )';
             $params = array_merge($params, [$like, $like, $like, $like, $like, $like]);
         }
+        /** Casos CRM ya gestionados (primera vez): desaparecen del dashboard de reparto. */
+        if ($this->tiketeraTieneColumnaPrimeraGestion()) {
+            $sql .= ' AND NOT EXISTS (
+                SELECT 1 FROM tiketera tk
+                WHERE tk.cliente_cedula = CONCAT(\'TIT-\', t.id_cliente)
+                  AND tk.asesor_cedula = ?
+                  AND tk.primera_gestion_at IS NOT NULL
+            )';
+            $params[] = $asesorCedula;
+        }
         $sql .= ' ORDER BY t.id_cliente DESC';
         $stmt = $this->db->prepare($sql);
         $stmt->execute($params);
@@ -197,7 +231,7 @@ class TitularModel {
                 'titulares_mes' => 0,
             ];
         }
-        $stmt = $this->db->prepare('
+        $sql = '
             SELECT
                 COUNT(*) AS total,
                 SUM(CASE WHEN t.prioridad IS NOT NULL AND TRIM(t.prioridad) <> \'\' THEN 1 ELSE 0 END) AS con_prioridad,
@@ -209,8 +243,19 @@ class TitularModel {
                 SUM(CASE WHEN t.actualizado_en >= DATE_FORMAT(NOW(), \'%Y-%m-01\') THEN 1 ELSE 0 END) AS titulares_mes
             FROM titulares t
             WHERE t.asesor_cedula = ?
-        ');
-        $stmt->execute([$asesorCedula]);
+        ';
+        $params = [$asesorCedula];
+        if ($this->tiketeraTieneColumnaPrimeraGestion()) {
+            $sql .= ' AND NOT EXISTS (
+                SELECT 1 FROM tiketera tk
+                WHERE tk.cliente_cedula = CONCAT(\'TIT-\', t.id_cliente)
+                  AND tk.asesor_cedula = ?
+                  AND tk.primera_gestion_at IS NOT NULL
+            )';
+            $params[] = $asesorCedula;
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute($params);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: [];
         return [
             'total_titulares' => (int) ($row['total'] ?? 0),

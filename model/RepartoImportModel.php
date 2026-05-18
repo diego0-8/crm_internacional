@@ -8,6 +8,22 @@ require_once __DIR__ . '/../config.php';
 class RepartoImportModel {
     private $db;
 
+    /** Campos obligatorios CSV (inglés) → etiqueta para el coordinador. Case/Parcel se validan aparte. */
+    public const CAMPOS_REQUERIDOS = [
+        'First Name' => 'Primer nombre',
+        'Last Name' => 'Apellido',
+        'Mailing Street' => 'Mailing calle',
+        'Mailing City' => 'Mailing ciudad',
+        'Mailing State' => 'Mailing estado',
+        'Mailing ZIP Code' => 'Mailing código postal',
+        'Surplus Amount' => 'Excedente',
+        'Monetizacion' => 'Monetización',
+        'Closing Bid' => 'Puja cierre',
+        'Opening Bid' => 'Puja apertura',
+        'Date Sold' => 'Fecha venta',
+        'Dias_Transc' => 'Días transcurridos',
+    ];
+
     public function __construct() {
         $this->db = getDB();
     }
@@ -20,7 +36,8 @@ class RepartoImportModel {
         foreach ($headers as $x) {
             $h[trim((string) $x)] = true;
         }
-        return isset($h['First Name']) && isset($h['Surplus Amount']) && isset($h['Case Number']);
+        $tieneCasoOParcela = isset($h['Case Number']) || isset($h['Parcel Number']);
+        return isset($h['First Name']) && $tieneCasoOParcela;
     }
 
     public function filaAsociativa(array $headers, array $data): array {
@@ -95,16 +112,112 @@ class RepartoImportModel {
     }
 
     /**
+     * Referencia visible del caso: Case Number si existe; si no, Parcel Number.
+     *
+     * @return array{referencia:string,tipo_referencia:string,case_number:?string,parcel_number:?string}
+     */
+    public static function referenciaDesdeFila(array $row): array {
+        $case = isset($row['Case Number']) ? trim((string) $row['Case Number']) : '';
+        $parcel = isset($row['Parcel Number']) ? trim((string) $row['Parcel Number']) : '';
+
+        if ($case !== '') {
+            return [
+                'referencia' => $case,
+                'tipo_referencia' => 'case_number',
+                'case_number' => $case,
+                'parcel_number' => $parcel !== '' ? $parcel : null,
+            ];
+        }
+
+        return [
+            'referencia' => $parcel,
+            'tipo_referencia' => 'parcel_number',
+            'case_number' => null,
+            'parcel_number' => $parcel !== '' ? $parcel : null,
+        ];
+    }
+
+    /**
+     * Valida una fila de reparto antes de importar.
+     *
+     * @return array{valid:bool,fila_vacia:bool,identificador:string,faltantes:string[]}
+     */
+    public function validarFila(array $row, ?string $coordinadorCedula = null): array {
+        if ($this->filaVacia($row)) {
+            return [
+                'valid' => false,
+                'fila_vacia' => true,
+                'identificador' => '',
+                'faltantes' => [],
+            ];
+        }
+
+        $case = $this->val($row, 'Case Number');
+        $parcel = $this->val($row, 'Parcel Number');
+        $faltantes = [];
+
+        if ($case === '' && $parcel === '') {
+            $faltantes[] = 'Falta Case Number o Parcel Number';
+        }
+
+        foreach (self::CAMPOS_REQUERIDOS as $csvKey => $label) {
+            if ($this->val($row, $csvKey) === '') {
+                $faltantes[] = $label . ' (' . $csvKey . ')';
+            }
+        }
+
+        if ($case !== '' && $this->existeNumeroCaso($case, $coordinadorCedula)) {
+            $faltantes[] = 'Caso ya importado (Case Number duplicado)';
+        }
+
+        $ref = self::referenciaDesdeFila($row);
+
+        return [
+            'valid' => $faltantes === [],
+            'fila_vacia' => false,
+            'identificador' => $ref['referencia'],
+            'faltantes' => $faltantes,
+        ];
+    }
+
+    /**
+     * Comprueba si el número de caso ya existe en propiedades.
+     */
+    public function existeNumeroCaso(string $numeroCaso, ?string $coordinadorCedula = null): bool {
+        $numeroCaso = trim($numeroCaso);
+        if ($numeroCaso === '') {
+            return false;
+        }
+
+        if ($coordinadorCedula !== null && $coordinadorCedula !== '') {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM propiedades p
+                INNER JOIN titulares t ON t.id_cliente = p.id_cliente
+                WHERE TRIM(p.numero_caso) = ? AND t.coordinador_cedula = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$numeroCaso, $coordinadorCedula]);
+        } else {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM propiedades
+                WHERE TRIM(numero_caso) = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$numeroCaso]);
+        }
+
+        return (bool) $stmt->fetch();
+    }
+
+    /**
      * Importa una fila de reparto. Transacción interna.
+     * La fila debe haber pasado validarFila() antes de llamar a este método.
      *
      * @return int id_cliente del titular creado
      */
     public function importarFila(array $row, ?int $archivoCsvId, ?string $coordinadorCedula): int {
         $fn = $this->cut($this->val($row, 'First Name'), 128);
         $ln = $this->cut($this->val($row, 'Last Name'), 128);
-        if ($fn === '' && $ln === '') {
-            throw new Exception('Fila sin First Name ni Last Name');
-        }
 
         $this->db->beginTransaction();
         try {

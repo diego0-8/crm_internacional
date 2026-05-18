@@ -153,7 +153,7 @@ $message = getMessage();
                     </div>
                     <div class="card-content">
                         <div class="search-bar">
-                            <input type="text" id="searchClientes" placeholder="Buscar por nombre, caso, condado, teléfono, email, Reg_Int, BaseD o F_Correo…" onkeyup="debounceSearch()">
+                            <input type="text" id="searchClientes" placeholder="Buscar por nombre, Case Number, Parcel Number, teléfono, email…" onkeyup="debounceSearch()">
                             <i class="fas fa-search"></i>
                         </div>
                         <div style="margin-top:10px;display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
@@ -167,7 +167,7 @@ $message = getMessage();
                             </div>
                             <div id="paginationContainer" class="pagination-container" style="display: none;">
                                 <div class="pagination-info">
-                                    <span id="paginationInfo">Mostrando 1-5 de 0 titulares</span>
+                                    <span id="paginationInfo">Mostrando 1-6 de 0 titulares</span>
                                 </div>
                                 <div class="pagination-controls">
                                     <button id="prevPage" class="btn btn-sm btn-secondary" onclick="changePage(currentPage - 1)" disabled>
@@ -292,7 +292,7 @@ $message = getMessage();
         let clienteSeleccionado = null;
         let clientesFiltrados = [];
         let currentPage = 1;
-        let itemsPerPage = 5;
+        let itemsPerPage = 6;
         let searchTimeout = null;
 
         function escHtml(str) {
@@ -405,15 +405,18 @@ $message = getMessage();
             }
         }
 
-        // Renderizar clientes con paginación
-        function renderClientes() {
-            // Aplicar filtros de búsqueda si existe término de búsqueda
-            const searchTerm = document.getElementById('searchClientes').value.trim();
-            if (searchTerm) {
-                filtrarClientes(searchTerm);
-            } else {
+        // Renderizar clientes con paginación (applyFilter=false cuando filtrarClientes ya aplicó el filtro)
+        function renderClientes(applyFilter = true) {
+            if (applyFilter) {
+                const searchTerm = document.getElementById('searchClientes').value.trim();
+                if (searchTerm) {
+                    filtrarClientes(searchTerm);
+                    return;
+                }
                 clientesFiltrados = [...clientes];
             }
+
+            const searchTerm = document.getElementById('searchClientes').value.trim();
 
             // Calcular paginación
             const totalItems = clientesFiltrados.length;
@@ -469,9 +472,18 @@ $message = getMessage();
                     ? escHtml(String(cliente.telefono))
                     : 'Sin teléfono';
                 const locDis = escHtml(String(cliente.empresa || cliente.condado || '').trim()) || '—';
-                const casoExtra = (cliente.numero_caso != null && String(cliente.numero_caso).trim() !== '')
-                    ? (' · Caso: ' + escHtml(String(cliente.numero_caso)))
+                const casoTxt = (cliente.numero_caso != null && String(cliente.numero_caso).trim() !== '')
+                    ? String(cliente.numero_caso).trim()
                     : '';
+                const parcelaTxt = (cliente.numero_parcela != null && String(cliente.numero_parcela).trim() !== '')
+                    ? String(cliente.numero_parcela).trim()
+                    : '';
+                let casoExtra = '';
+                if (casoTxt) {
+                    casoExtra = ' · Caso: ' + escHtml(casoTxt);
+                } else if (parcelaTxt) {
+                    casoExtra = ' · Parcel: ' + escHtml(parcelaTxt);
+                }
                 const estadoTxt = escHtml(String(cliente.estado || 'reparto'));
                 const asesorTxt = cliente.asesor_nombre ? escHtml(String(cliente.asesor_nombre)) : '';
 
@@ -479,19 +491,21 @@ $message = getMessage();
                 clienteCard.className = `cliente-card ${cliente.asesor_nombre ? 'assigned' : ''}`;
                 clienteCard.innerHTML = `
                     <div class="cliente-card-header">
-                        <div class="cliente-card-info">
+                        <div class="cliente-card-header-top">
+                            <div class="cliente-card-info">
                             <h4 class="cliente-card-titulo">${nombreTit}</h4>
                             <p class="cliente-card-linea cliente-card-linea--caso"><i class="fas fa-hashtag" aria-hidden="true"></i><span>ID ${tid}${casoExtra}</span></p>
                             <p class="cliente-card-linea"><i class="fas fa-envelope" aria-hidden="true"></i><span>${emailDis}</span></p>
                             <p class="cliente-card-linea"><i class="fas fa-phone" aria-hidden="true"></i><span>${telDis}</span></p>
                             <p class="cliente-card-linea"><i class="fas fa-map-marker-alt" aria-hidden="true"></i><span>${locDis}</span></p>
-                            <div class="titular-reparto-meta-cols" aria-label="Datos titular reparto">
-                                <div class="trc-item"><span class="trc-lbl">Reg_Int</span><span class="trc-val">${fmtTitCampo(cliente.reg_int)}</span></div>
-                                <div class="trc-item"><span class="trc-lbl">BaseD</span><span class="trc-val">${fmtTitCampo(cliente.base_d)}</span></div>
-                                <div class="trc-item"><span class="trc-lbl">F_Correo</span><span class="trc-val">${fmtTitCampo(cliente.f_correo)}</span></div>
                             </div>
+                            <span class="cliente-status status-reparto">${estadoTxt}</span>
                         </div>
-                        <span class="cliente-status status-reparto">${estadoTxt}</span>
+                        <div class="titular-reparto-meta-cols" aria-label="Datos titular reparto">
+                            <div class="trc-item"><span class="trc-lbl">Reg_Int</span><span class="trc-val">${fmtTitCampo(cliente.reg_int)}</span></div>
+                            <div class="trc-item"><span class="trc-lbl">BaseD</span><span class="trc-val">${fmtTitCampo(cliente.base_d)}</span></div>
+                            <div class="trc-item trc-item--fecha"><span class="trc-lbl">F_Correo</span><span class="trc-val">${fmtTitCampo(cliente.f_correo)}</span></div>
+                        </div>
                     </div>
                     <div class="cliente-card-actions">
                         ${cliente.asesor_nombre ?
@@ -532,40 +546,44 @@ $message = getMessage();
             if (!searchTerm) {
                 clientesFiltrados = [...clientes];
             } else {
-                // Búsqueda insensible a mayúsculas y con coincidencias parciales
                 const termLower = searchTerm.toLowerCase();
+                const termNorm = normalizarTextoBusqueda(searchTerm);
                 clientesFiltrados = clientes.filter(cliente => {
-                    const tid = String(cliente.titular_id || '');
                     const nombre = (cliente.nombre || '').toLowerCase();
                     const apellido = (cliente.apellido || '').toLowerCase();
                     const nombreCompleto = `${nombre} ${apellido}`.trim();
-                    const telefono = (cliente.telefono || '').toLowerCase();
-                    const email = (cliente.email || '').toLowerCase();
-                    const caso = (cliente.numero_caso || '').toLowerCase();
-                    const condado = (cliente.condado || '').toLowerCase();
-                    const regInt = (cliente.reg_int != null ? String(cliente.reg_int) : '').toLowerCase();
-                    const baseD = (cliente.base_d != null ? String(cliente.base_d) : '').toLowerCase();
-                    const fCorreo = (cliente.f_correo != null ? String(cliente.f_correo) : '').toLowerCase();
 
-                    return tid.includes(termLower) ||
+                    return coincideBusqueda(cliente.titular_id, termLower, termNorm) ||
                            nombre.includes(termLower) ||
                            apellido.includes(termLower) ||
                            nombreCompleto.includes(termLower) ||
-                           telefono.includes(termLower) ||
-                           email.includes(termLower) ||
-                           caso.includes(termLower) ||
-                           condado.includes(termLower) ||
-                           regInt.includes(termLower) ||
-                           baseD.includes(termLower) ||
-                           fCorreo.includes(termLower);
+                           coincideBusqueda(cliente.numero_caso, termLower, termNorm) ||
+                           coincideBusqueda(cliente.numero_parcela, termLower, termNorm) ||
+                           coincideBusqueda(cliente.telefono, termLower, termNorm) ||
+                           coincideBusqueda(cliente.email, termLower, termNorm) ||
+                           coincideBusqueda(cliente.condado, termLower, termNorm) ||
+                           coincideBusqueda(cliente.reg_int, termLower, termNorm) ||
+                           coincideBusqueda(cliente.base_d, termLower, termNorm) ||
+                           coincideBusqueda(cliente.f_correo, termLower, termNorm);
                 });
             }
 
             // Resetear a página 1 cuando se busca
             currentPage = 1;
 
-            // Re-renderizar con los resultados filtrados
-            renderClientes();
+            renderClientes(false);
+        }
+
+        function normalizarTextoBusqueda(texto) {
+            return String(texto || '').toLowerCase().replace(/[\s\-_./]/g, '');
+        }
+
+        function coincideBusqueda(valor, termLower, termNorm) {
+            const v = String(valor || '').toLowerCase();
+            if (!v) {
+                return false;
+            }
+            return v.includes(termLower) || normalizarTextoBusqueda(v).includes(termNorm);
         }
 
         // Función de búsqueda con debounce para mejor rendimiento

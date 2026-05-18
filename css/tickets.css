@@ -513,6 +513,168 @@
     font-size: 0.82rem;
 }
 
+/* Selector de teléfonos CRM/CSV en gestionar ticket */
+.detalle-telefonos-toolbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: flex-start;
+    gap: 14px 20px;
+    padding: 10px 0 4px;
+}
+
+.detalle-telefonos-toolbar[hidden] {
+    display: none !important;
+}
+
+.det-tel-col-select {
+    flex: 1 1 200px;
+    min-width: 180px;
+}
+
+.det-tel-col-vista {
+    flex: 1 1 220px;
+    min-width: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.det-tel-mini-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.det-tel-select {
+    font-size: 0.875rem;
+}
+
+.det-tel-numero-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+    width: 100%;
+    max-width: 100%;
+    text-align: left;
+    cursor: pointer;
+    padding: 10px 12px;
+    border-radius: 10px;
+    border: 1px solid #c7d2fe;
+    background: linear-gradient(180deg, #ffffff 0%, #eef2ff 100%);
+    color: #1e293b;
+    font-size: 0.95rem;
+    font-weight: 700;
+    line-height: 1.35;
+    transition: box-shadow 0.15s ease, transform 0.12s ease, border-color 0.15s ease;
+}
+
+.det-tel-numero-btn:hover {
+    border-color: #818cf8;
+    box-shadow: 0 2px 12px rgba(99, 102, 241, 0.2);
+}
+
+.det-tel-numero-btn:active {
+    transform: scale(0.99);
+}
+
+.det-tel-numero-text {
+    flex: 1 1 auto;
+    min-width: 0;
+    word-break: break-word;
+}
+
+.det-tel-accion-icons {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    color: #4338ca;
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.det-tel-hint {
+    margin: 0;
+    font-size: 0.75rem;
+    color: #64748b;
+}
+
+/* Toolbar correos titular / referidos (mismo grid que teléfonos, tono diferente) */
+.det-toolbar-contacto-mail .det-tel-numero-btn.det-mail-copy-btn {
+    border-color: #a7e9d9;
+    background: linear-gradient(180deg, #ffffff 0%, #ecfdf5 100%);
+}
+
+.det-toolbar-contacto-mail .det-mail-copy-btn .det-tel-accion-icons {
+    color: #059669;
+}
+
+.det-toolbar-contacto-mail .det-mail-copy-btn:hover {
+    border-color: #34d399;
+    box-shadow: 0 2px 12px rgba(16, 185, 129, 0.18);
+}
+
+/* Correo seleccionado: una sola línea en el botón (sin salto; elipsis si no cabe) */
+.det-toolbar-contacto-mail .det-mail-copy-btn {
+    flex-wrap: nowrap;
+}
+
+.det-toolbar-contacto-mail .det-mail-copy-btn .det-tel-numero-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+}
+
+.modal-ref-email-block .det-mail-copy-btn {
+    flex-wrap: nowrap;
+}
+
+.modal-ref-email-block .det-mail-copy-btn .det-tel-numero-text {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    word-break: normal;
+}
+
+.modal-ref-section-title {
+    margin: 14px 0 8px 0;
+    font-size: 0.78rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #64748b;
+}
+
+.modal-ref-card .modal-ref-section-title:first-child,
+.modal-ref-card > .modal-ref-section-title:first-of-type {
+    margin-top: 4px;
+}
+
+.modal-ref-toolbar {
+    padding-top: 2px !important;
+    padding-bottom: 2px !important;
+    margin-bottom: 10px;
+}
+
+.modal-ref-toolbar:last-child {
+    margin-bottom: 0;
+}
+
+.modal-ref-tel-block,
+.modal-ref-email-block {
+    margin-bottom: 12px;
+}
+
+.modal-ref-email-block:last-child,
+.modal-ref-tel-block:last-child {
+    margin-bottom: 0;
+}
+
 /* Modal referencias (gestionar ticket) */
 .modal-referencias-content {
     max-width: 720px;
@@ -1542,6 +1704,190 @@
 .ticket-card.estado-recuperacion     { border-left: 4px solid var(--estado-recuperacion-bd); }
 .ticket-card.estado-cierre           { border-left: 4px solid var(--estado-cierre-bd); opacity: 0.92; }
 
+/* Estados nuevos pipeline (aliases visuales) */
+.ticket-estado-badge.estado-contactabilidad_cliente { background: var(--estado-comunicacion-bg); color: var(--estado-comunicacion-fg); border-color: var(--estado-comunicacion-bd); }
+.ticket-card.estado-contactabilidad_cliente { border-left: 4px solid var(--estado-comunicacion-bd); }
+
+.ticket-estado-badge.estado-acuerdo_comercial { background: var(--estado-validacion-bg); color: var(--estado-validacion-fg); border-color: var(--estado-validacion-bd); }
+.ticket-card.estado-acuerdo_comercial { border-left: 4px solid var(--estado-validacion-bd); }
+
+.ticket-estado-badge.estado-documentos_corte { background: var(--estado-proceso_judicial-bg); color: var(--estado-proceso_judicial-fg); border-color: var(--estado-proceso_judicial-bd); }
+.ticket-card.estado-documentos_corte { border-left: 4px solid var(--estado-proceso_judicial-bd); }
+
+.ticket-estado-badge.estado-documentos_adicionales { background: var(--estado-remate-bg); color: var(--estado-remate-fg); border-color: var(--estado-remate-bd); }
+.ticket-card.estado-documentos_adicionales { border-left: 4px solid var(--estado-remate-bd); }
+
+.ticket-estado-badge.estado-corte_giro_saldo { background: var(--estado-recuperacion-bg); color: var(--estado-recuperacion-fg); border-color: var(--estado-recuperacion-bd); }
+.ticket-card.estado-corte_giro_saldo { border-left: 4px solid var(--estado-recuperacion-bd); }
+
+.ticket-estado-badge.estado-cliente_swift { background: #e0f2fe; color: #0369a1; border-color: #0284c7; }
+.ticket-card.estado-cliente_swift { border-left: 4px solid #0284c7; }
+
+.ticket-estado-badge.estado-desembolso { background: var(--estado-cierre-bg); color: var(--estado-cierre-fg); border-color: var(--estado-cierre-bd); }
+.ticket-card.estado-desembolso { border-left: 4px solid var(--estado-cierre-bd); opacity: 0.92; }
+
+.perfilacion-contactabilidad-section {
+    background: #fafbff;
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 16px 18px 18px;
+    margin-bottom: 1rem;
+}
+.perfilacion-niveles {
+    display: flex;
+    flex-direction: column;
+    flex-wrap: nowrap;
+    gap: 14px;
+    align-items: stretch;
+    margin-top: 10px;
+    max-width: 520px;
+}
+.perfilacion-col {
+    flex: 0 0 auto;
+    min-width: 0;
+    max-width: 100%;
+    width: 100%;
+}
+.perfilacion-select:disabled {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+.perfilacion-lbl {
+    display: block;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    margin-bottom: 6px;
+    line-height: 1.3;
+}
+.perfilacion-col-static {
+    flex: 0 0 auto;
+    display: flex;
+    align-items: center;
+    padding: 10px 0 4px;
+}
+.perfilacion-static-tag {
+    display: inline-block;
+    padding: 8px 12px;
+    border-radius: 8px;
+    background: #e2e8f0;
+    color: #334155;
+    font-weight: 700;
+    font-size: 0.85rem;
+}
+.perfilacion-intro { margin-top: 0; }
+
+.perfilacion-actualizacion-section {
+    background: #f8fafc;
+    border: 1px solid #cbd5e1;
+    border-radius: 14px;
+    padding: 16px 18px 18px;
+    margin-bottom: 1rem;
+}
+
+.perfil-actualizacion-leyenda {
+    margin-top: 12px;
+    padding: 12px 14px;
+    border-radius: 10px;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    font-size: 0.88rem;
+    color: #334155;
+    line-height: 1.5;
+}
+
+.perfil-actualizacion-leyenda .leyenda-row {
+    margin: 0 0 8px;
+}
+
+.perfil-actualizacion-leyenda .leyenda-row:last-child {
+    margin-bottom: 0;
+}
+
+.perfil-actualizacion-leyenda strong {
+    color: #0f172a;
+}
+
+.nota-item-tipificacion {
+    border-left: 4px solid #6366f1;
+    background: linear-gradient(180deg, #fafbff 0%, #f8fafc 100%);
+}
+
+.nota-tipo-line {
+    margin: 8px 0 4px;
+}
+
+.nota-tipo-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    padding: 4px 10px;
+    border-radius: 999px;
+    border: 1px solid transparent;
+}
+
+.nota-tipo-badge.tipificacion {
+    background: #eef2ff;
+    border-color: #c7d2fe;
+    color: #4338ca;
+}
+
+.nota-fecha-prox {
+    margin-top: 8px;
+    font-size: 0.875rem;
+    color: #334155;
+    padding-top: 6px;
+    border-top: 1px dashed #e2e8f0;
+}
+
+.nota-tipif-fields {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    margin-top: 4px;
+    margin-bottom: 4px;
+}
+
+.nota-tipif-field .nota-estado-line {
+    margin-bottom: 0;
+}
+
+.nota-tipif-field-label {
+    display: block;
+    font-size: 0.72rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.045em;
+    color: #64748b;
+    margin-bottom: 6px;
+    line-height: 1.2;
+}
+
+.nota-tipif-field .ticket-estado-badge.nota-tipif-valor {
+    align-items: flex-start;
+    text-align: left;
+    white-space: normal;
+    line-height: 1.38;
+    max-width: 100%;
+    border-radius: 10px;
+}
+
+.ticket-estado-badge.nota-tipif-valor-aplica {
+    background: #e0f2fe;
+    color: #075985;
+    border-color: #38bdf8;
+}
+
+.ticket-estado-badge.nota-tipif-valor-accion {
+    background: #f5f3ff;
+    color: #5b21b6;
+    border-color: #a78bfa;
+}
+
 .ticket-card .ticket-asunto {
     color: #4b5563;
     font-size: 0.95rem;
@@ -1764,11 +2110,18 @@
     transform: scale(1.08);
 }
 
+.timeline-step.estado-contactabilidad_cliente .timeline-marker,
 .timeline-step.estado-comunicacion     .timeline-marker { background: var(--estado-comunicacion-bd);     box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35), 0 2px 8px rgba(59, 130, 246, 0.25); }
+.timeline-step.estado-acuerdo_comercial .timeline-marker,
 .timeline-step.estado-validacion       .timeline-marker { background: var(--estado-validacion-bd);       box-shadow: 0 0 0 2px rgba(245, 158, 11, 0.35), 0 2px 8px rgba(245, 158, 11, 0.2); }
+.timeline-step.estado-documentos_corte .timeline-marker,
 .timeline-step.estado-proceso_judicial .timeline-marker { background: var(--estado-proceso_judicial-bd); box-shadow: 0 0 0 2px rgba(168, 85, 247, 0.35), 0 2px 8px rgba(168, 85, 247, 0.22); }
+.timeline-step.estado-documentos_adicionales .timeline-marker,
 .timeline-step.estado-remate           .timeline-marker { background: var(--estado-remate-bd);           box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.35), 0 2px 8px rgba(239, 68, 68, 0.22); }
+.timeline-step.estado-corte_giro_saldo .timeline-marker,
 .timeline-step.estado-recuperacion     .timeline-marker { background: var(--estado-recuperacion-bd);     box-shadow: 0 0 0 2px rgba(16, 185, 129, 0.35), 0 2px 8px rgba(16, 185, 129, 0.2); }
+.timeline-step.estado-cliente_swift    .timeline-marker { background: #0284c7; box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.35), 0 2px 8px rgba(2, 132, 199, 0.22); }
+.timeline-step.estado-desembolso .timeline-marker,
 .timeline-step.estado-cierre           .timeline-marker { background: var(--estado-cierre-bd);           box-shadow: 0 0 0 2px rgba(107, 114, 128, 0.4), 0 2px 6px rgba(0, 0, 0, 0.08); }
 
 .timeline-step.active .timeline-marker {
@@ -1779,11 +2132,18 @@
     border-width: 3px;
 }
 
+.timeline-step.estado-contactabilidad_cliente.active .timeline-marker,
 .timeline-step.estado-comunicacion.active     .timeline-marker { box-shadow: 0 0 0 5px rgba(59, 130, 246, 0.28), 0 4px 14px rgba(59, 130, 246, 0.35); }
+.timeline-step.estado-acuerdo_comercial.active .timeline-marker,
 .timeline-step.estado-validacion.active       .timeline-marker { box-shadow: 0 0 0 5px rgba(245, 158, 11, 0.28), 0 4px 14px rgba(245, 158, 11, 0.3); }
+.timeline-step.estado-documentos_corte.active .timeline-marker,
 .timeline-step.estado-proceso_judicial.active .timeline-marker { box-shadow: 0 0 0 5px rgba(168, 85, 247, 0.28), 0 4px 14px rgba(168, 85, 247, 0.32); }
+.timeline-step.estado-documentos_adicionales.active .timeline-marker,
 .timeline-step.estado-remate.active           .timeline-marker { box-shadow: 0 0 0 5px rgba(239, 68, 68, 0.28), 0 4px 14px rgba(239, 68, 68, 0.3); }
+.timeline-step.estado-corte_giro_saldo.active .timeline-marker,
 .timeline-step.estado-recuperacion.active     .timeline-marker { box-shadow: 0 0 0 5px rgba(16, 185, 129, 0.28), 0 4px 14px rgba(16, 185, 129, 0.28); }
+.timeline-step.estado-cliente_swift.active    .timeline-marker { box-shadow: 0 0 0 5px rgba(2, 132, 199, 0.28), 0 4px 14px rgba(2, 132, 199, 0.35); }
+.timeline-step.estado-desembolso.active .timeline-marker,
 .timeline-step.estado-cierre.active           .timeline-marker { box-shadow: 0 0 0 5px rgba(107, 114, 128, 0.22), 0 4px 12px rgba(0, 0, 0, 0.12); }
 
 .timeline-body {
@@ -1807,11 +2167,18 @@
     transform: translateY(-1px);
 }
 
+.timeline-step.estado-contactabilidad_cliente .timeline-body,
 .timeline-step.estado-comunicacion     .timeline-body { border-left-color: var(--estado-comunicacion-bd); }
+.timeline-step.estado-acuerdo_comercial .timeline-body,
 .timeline-step.estado-validacion       .timeline-body { border-left-color: var(--estado-validacion-bd); }
+.timeline-step.estado-documentos_corte .timeline-body,
 .timeline-step.estado-proceso_judicial .timeline-body { border-left-color: var(--estado-proceso_judicial-bd); }
+.timeline-step.estado-documentos_adicionales .timeline-body,
 .timeline-step.estado-remate           .timeline-body { border-left-color: var(--estado-remate-bd); }
+.timeline-step.estado-corte_giro_saldo .timeline-body,
 .timeline-step.estado-recuperacion     .timeline-body { border-left-color: var(--estado-recuperacion-bd); }
+.timeline-step.estado-cliente_swift    .timeline-body { border-left-color: #0284c7; }
+.timeline-step.estado-desembolso       .timeline-body,
 .timeline-step.estado-cierre           .timeline-body { border-left-color: var(--estado-cierre-bd); }
 
 .timeline-step.active .timeline-body {
@@ -1821,11 +2188,18 @@
     box-shadow: 0 4px 20px rgba(99, 102, 241, 0.12), 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
+.timeline-step.estado-contactabilidad_cliente.active .timeline-body,
 .timeline-step.estado-comunicacion.active     .timeline-body { border-left-color: var(--estado-comunicacion-bd); border-color: rgba(59, 130, 246, 0.22); }
+.timeline-step.estado-acuerdo_comercial.active .timeline-body,
 .timeline-step.estado-validacion.active       .timeline-body { border-left-color: var(--estado-validacion-bd); border-color: rgba(245, 158, 11, 0.22); }
+.timeline-step.estado-documentos_corte.active .timeline-body,
 .timeline-step.estado-proceso_judicial.active .timeline-body { border-left-color: var(--estado-proceso_judicial-bd); border-color: rgba(168, 85, 247, 0.22); }
+.timeline-step.estado-documentos_adicionales.active .timeline-body,
 .timeline-step.estado-remate.active           .timeline-body { border-left-color: var(--estado-remate-bd); border-color: rgba(239, 68, 68, 0.2); }
+.timeline-step.estado-corte_giro_saldo.active .timeline-body,
 .timeline-step.estado-recuperacion.active     .timeline-body { border-left-color: var(--estado-recuperacion-bd); border-color: rgba(16, 185, 129, 0.22); }
+.timeline-step.estado-cliente_swift.active    .timeline-body { border-left-color: #0284c7; border-color: rgba(2, 132, 199, 0.22); }
+.timeline-step.estado-desembolso.active .timeline-body,
 .timeline-step.estado-cierre.active           .timeline-body { border-left-color: var(--estado-cierre-bd); border-color: rgba(107, 114, 128, 0.25); }
 
 .timeline-step.active .timeline-body::after {

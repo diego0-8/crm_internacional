@@ -85,10 +85,7 @@ $message = getMessage();
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="Buscar por nombre, caso, teléfono…" id="searchInput">
                     </div>
-                    <div class="header-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationCount">0</span>
-                    </div>
+                    <?php require __DIR__ . '/partials/asesor_navbar_bell.php'; ?>
                 </div>
             </div>
 
@@ -155,6 +152,7 @@ $message = getMessage();
         </div>
     </div>
 
+    <script src="assets/js/asesor-llamadas-hoy.js"></script>
     <script>
         let titulares = [];
 

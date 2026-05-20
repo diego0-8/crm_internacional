@@ -84,10 +84,7 @@ $message = getMessage();
                         <i class="fas fa-search"></i>
                         <input type="text" placeholder="Buscar tickets..." id="searchInput">
                     </div>
-                    <div class="header-icon">
-                        <i class="fas fa-bell"></i>
-                        <span class="notification-badge" id="notificationCount">0</span>
-                    </div>
+                    <?php require __DIR__ . '/partials/asesor_navbar_bell.php'; ?>
                 </div>
             </div>
 
@@ -216,20 +213,28 @@ $message = getMessage();
         </div>
     </div>
 
-    <!-- Modal para ver detalles del ticket -->
-    <div id="ticketDetalleModal" class="modal-cliente">
-        <div class="modal-cliente-content">
-            <div class="modal-cliente-header">
-                <h3 class="modal-cliente-title" id="ticketDetalleTitle">Detalles del Ticket</h3>
-                <span class="close-modal" onclick="cerrarModalDetalleTicket()">&times;</span>
+    <!-- Modal detalle ticket (tema CRM / reparto) -->
+    <div id="ticketDetalleModal" class="modal ticket-detalle-modal" role="dialog" aria-modal="true" aria-labelledby="ticketDetalleTitle" aria-hidden="true">
+        <div class="ticket-detalle-modal-dialog" role="document">
+            <div class="modal-header">
+                <h3 class="modal-title" id="ticketDetalleTitle"><i class="fas fa-hashtag"></i> Detalle del ticket</h3>
+                <span class="close" onclick="cerrarModalDetalleTicket()" aria-label="Cerrar">&times;</span>
             </div>
-            
-            <div id="ticketDetalleContent">
-                <!-- El contenido del ticket se cargará aquí -->
+            <div id="ticketDetalleContent" class="modal-body ticket-detalle-modal-body">
+                <p class="ticket-detalle-loading"><i class="fas fa-spinner fa-spin"></i> Cargando detalle…</p>
+            </div>
+            <div class="modal-footer ticket-detalle-modal-footer" id="ticketDetalleFooter" style="display: none;">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalDetalleTicket()">Cerrar</button>
+                <a id="ticketDetalleBtnGestionar" href="#" class="btn btn-warning">
+                    <i class="fas fa-edit"></i> Gestionar ticket
+                </a>
             </div>
         </div>
     </div>
 
+    <script src="assets/js/asesor-llamadas-hoy.js"></script>
+    <script src="assets/js/ticket-detalle-modal.js"></script>
+    <script src="assets/js/ticket-notas-render.js"></script>
     <script>
         let tickets = [];
         let ticketsFiltrados = [];
@@ -423,7 +428,7 @@ $message = getMessage();
                         ${ticket.pdf_archivo ? `
                             <div class="ticket-pdf">
                                 <i class="fas fa-file-pdf"></i>
-                                <a href="../${ticket.pdf_archivo}" target="_blank" class="pdf-link">Ver PDF adjunto</a>
+                                <a href="${archivoTicketUrl(ticket.pdf_archivo)}" target="_blank" rel="noopener" class="pdf-link">Ver PDF adjunto</a>
                             </div>
                         ` : ''}
                     </div>
@@ -432,7 +437,7 @@ $message = getMessage();
                             <i class="fas fa-eye"></i> Ver detalle
                         </button>
                         ${(ticket.estado !== 'desembolso' && ticket.estado !== 'cierre') ? `
-                            <a href="' + appNav('asesor_gestionar_ticket', {id: ticket.id}) + '" class="btn btn-sm btn-warning">
+                            <a href="${appNav('asesor_gestionar_ticket', {id: ticket.id})}" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i> Gestionar
                             </a>
                         ` : `
@@ -563,25 +568,118 @@ $message = getMessage();
             }
         }
 
+        function hasDetalleValor(value) {
+            return value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== '—';
+        }
+
+        function archivoTicketUrl(ruta) {
+            if (!ruta) return '#';
+            return String(ruta).replace(/^\.\.\//, '').replace(/^\//, '');
+        }
+
+        function puedeGestionarTicket(estado) {
+            return estado !== 'desembolso' && estado !== 'cierre';
+        }
+
+        function labelEstadoTicket(estado) {
+            return ESTADO_LABELS[estado] || estado || '—';
+        }
+
+        function badgeEstadoHtml(estado, labelOverride) {
+            const est = String(estado || '');
+            const cls = 'estado-' + est.replace(/[^a-z0-9_]/gi, '_');
+            const icon = ESTADO_ICONS[est] || 'fas fa-circle';
+            const lbl = escapeHtml(labelOverride || labelEstadoTicket(est));
+            return '<span class="ticket-estado-badge ' + cls + '"><i class="' + icon + '"></i> ' + lbl + '</span>';
+        }
+
+        function renderInfoGrid(items) {
+            const rows = items.filter(function(it) { return it && (it.html || hasDetalleValor(it.value)); });
+            if (!rows.length) return '';
+            return '<div class="info-grid">' + rows.map(function(it) {
+                const val = it.html != null ? it.html : escapeHtml(String(it.value));
+                return '<div class="info-item"><span class="info-label">' + escapeHtml(it.label) + '</span><span class="info-value">' + val + '</span></div>';
+            }).join('') + '</div>';
+        }
+
+        function renderListaContacto(items, campo) {
+            if (!items || !items.length) return '<p class="ticket-detalle-empty">Sin registros</p>';
+            return '<ul class="ticket-detalle-lista">' + items.map(function(it) {
+                const txt = escapeHtml(String(it[campo] || '').trim());
+                const extra = it.tipo ? ' <span class="ticket-detalle-meta">(' + escapeHtml(String(it.tipo)) + ')</span>' : '';
+                return '<li>' + txt + extra + '</li>';
+            }).join('') + '</ul>';
+        }
+
+        function renderHistorialEstadoHtml(historial) {
+            if (!historial || !historial.length) {
+                return '<p class="ticket-detalle-empty">Sin cambios de estado registrados</p>';
+            }
+            return '<div class="ticket-detalle-timeline">' + historial.map(function(h) {
+                const est = h.estado_nuevo || h.estado || '';
+                const asesor = [h.asesor_nombre, h.asesor_apellido].filter(Boolean).join(' ').trim();
+                const obs = hasDetalleValor(h.observacion) ? '<p class="ticket-detalle-obs">' + escapeHtml(h.observacion) + '</p>' : '';
+                const ant = hasDetalleValor(h.estado_anterior)
+                    ? '<span class="ticket-detalle-meta">Desde ' + escapeHtml(labelEstadoTicket(h.estado_anterior)) + '</span>' : '';
+                return '<div class="ticket-detalle-timeline-item">' +
+                    '<div class="ticket-detalle-timeline-head">' +
+                    '<span class="ticket-detalle-timeline-fecha">' + escapeHtml(new Date(h.fecha_cambio).toLocaleString()) + '</span>' +
+                    badgeEstadoHtml(est) +
+                    '</div>' + ant +
+                    (asesor ? '<span class="ticket-detalle-meta">Por ' + escapeHtml(asesor) + '</span>' : '') +
+                    obs +
+                    '</div>';
+            }).join('') + '</div>';
+        }
+
+        function actualizarFooterDetalleModal(ticket) {
+            const footer = document.getElementById('ticketDetalleFooter');
+            const btnG = document.getElementById('ticketDetalleBtnGestionar');
+            if (!footer || !btnG) return;
+            footer.style.display = 'flex';
+            if (puedeGestionarTicket(ticket.estado)) {
+                btnG.href = appNav('asesor_gestionar_ticket', { id: ticket.id });
+                btnG.style.display = 'inline-flex';
+            } else {
+                btnG.style.display = 'none';
+            }
+        }
+
         // Ver detalle del ticket
         async function verDetalleTicket(ticketId) {
-            const ticket = tickets.find(t => t.id === ticketId);
+            const ticket = tickets.find(function(t) { return Number(t.id) === Number(ticketId); });
             if (!ticket) return;
 
             const modal = document.getElementById('ticketDetalleModal');
             const title = document.getElementById('ticketDetalleTitle');
             const content = document.getElementById('ticketDetalleContent');
+            const footer = document.getElementById('ticketDetalleFooter');
 
-            title.textContent = `Ticket #${ticket.id} - ${ticket.titulo}`;
-            
-            // Cargar información adicional del ticket
+            if (footer) footer.style.display = 'none';
+            content.innerHTML = '<p class="ticket-detalle-loading"><i class="fas fa-spinner fa-spin"></i> Cargando detalle…</p>';
+            if (window.TicketDetalleModal) {
+                TicketDetalleModal.setTitulo(ticket, escapeHtml);
+                TicketDetalleModal.open();
+            } else {
+                title.innerHTML = '<i class="fas fa-hashtag"></i> ' + escapeHtml(ticket.numero_ticket || ('Ticket #' + ticket.id));
+                modal.classList.add('is-open');
+            }
+
             try {
-                const response = await fetch(`api/ticket_detalle_completo.php?ticket_id=${ticketId}`);
+                const response = await fetch('api/ticket_detalle_completo.php?ticket_id=' + encodeURIComponent(ticketId), {
+                    credentials: 'same-origin'
+                });
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.appGoLogin();
+                        return;
+                    }
+                    throw new Error('HTTP ' + response.status);
+                }
                 const result = await response.json();
-                
-                if (result.success) {
-                    const ticketCompleto = result.data;
-                    mostrarDetalleCompleto(ticketCompleto);
+
+                if (result.success && result.data) {
+                    mostrarDetalleCompleto(result.data);
                 } else {
                     mostrarDetalleBasico(ticket);
                 }
@@ -589,295 +687,243 @@ $message = getMessage();
                 console.error('Error cargando detalle completo:', error);
                 mostrarDetalleBasico(ticket);
             }
-
-            modal.style.display = 'block';
         }
 
         function mostrarDetalleCompleto(ticket) {
             const content = document.getElementById('ticketDetalleContent');
+            const pr = ticket.propiedad_reparto || null;
+            const tit = ticket.titular_reparto || null;
+            const pred = ticket.predio || null;
+            const tels = ticket.cliente_telefonos && ticket.cliente_telefonos.length
+                ? ticket.cliente_telefonos
+                : (hasDetalleValor(ticket.cliente_telefono) ? [{ numero: ticket.cliente_telefono, tipo: 'principal' }] : []);
+            const emails = ticket.cliente_emails_list && ticket.cliente_emails_list.length
+                ? ticket.cliente_emails_list
+                : (hasDetalleValor(ticket.cliente_email) ? [{ email: ticket.cliente_email }] : []);
 
-            const hasData = (value) => value && value !== null && value !== '' && value !== 'No disponible';
+            let html = '<div class="ticket-detalle-completo" data-ticket-id="' + escapeHtml(String(ticket.id)) + '">';
 
-            content.innerHTML = `
-                <div class="ticket-detalle-completo" data-ticket-id="${ticket.id}">
-                    <!-- Información del Ticket -->
-                    <div class="info-section">
-                        <h4><i class="fas fa-ticket-alt"></i> Información del Ticket</h4>
-                        <div class="info-grid">
-                            <div class="info-item">
-                                <span class="info-label">ID:</span>
-                                <span class="info-value">#${ticket.id}</span>
-                            </div>
-                            ${hasData(ticket.titulo) ? `
-                            <div class="info-item">
-                                <span class="info-label">Título:</span>
-                                <span class="info-value">${ticket.titulo}</span>
-                            </div>
-                            ` : ''}
-                            <div class="info-item">
-                                <span class="info-label">Estado:</span>
-                                <span class="info-value">
-                                    <span class="ticket-estado-badge estado-${String(ticket.estado || '').replace(/[^a-z0-9_]/gi, '_')}">
-                                        ${escapeHtml(ticket.estado_label || ESTADO_LABELS[ticket.estado] || ticket.estado || '')}
-                                    </span>
-                                </span>
-                            </div>
-                            <div class="info-item">
-                                <span class="info-label">Fecha Creación:</span>
-                                <span class="info-value">${new Date(ticket.fecha_creacion).toLocaleString()}</span>
-                            </div>
-                            ${hasData(ticket.fecha_cierre) ? `
-                            <div class="info-item">
-                                <span class="info-label">Fecha Cierre:</span>
-                                <span class="info-value">${new Date(ticket.fecha_cierre).toLocaleString()}</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
+            html += '<div class="info-section ticket-detalle-resumen">';
+            html += '<h4><i class="fas fa-ticket-alt"></i> Ticket CRM</h4>';
+            html += renderInfoGrid([
+                { label: 'Referencia', value: ticket.numero_ticket || ('#' + ticket.id) },
+                { label: 'ID interno', value: '#' + ticket.id },
+                { label: 'Estado', html: badgeEstadoHtml(ticket.estado, ticket.estado_label) },
+                { label: 'Categoría', value: ticket.categoria_nombre },
+                { label: 'Creado', value: ticket.fecha_creacion ? new Date(ticket.fecha_creacion).toLocaleString() : '' },
+                { label: 'Estado desde', value: ticket.estado_actual_desde ? new Date(ticket.estado_actual_desde).toLocaleString() : '' },
+                { label: 'Tiempo en gestión', value: ticket.tiempo_total_legible },
+                { label: 'Cierre', value: ticket.fecha_cierre ? new Date(ticket.fecha_cierre).toLocaleString() : '' }
+            ]);
+            html += '</div>';
 
-                    <div class="info-section">
-                        <h4><i class="fas fa-user"></i> Información del Cliente</h4>
-                        <div class="info-grid">
-                            ${hasData(ticket.cliente_cedula) ? `
-                            <div class="info-item">
-                                <span class="info-label">Cédula:</span>
-                                <span class="info-value">${ticket.cliente_cedula}</span>
-                            </div>
-                            ` : ''}
-                            ${hasData(ticket.cliente_nombre) ? `
-                            <div class="info-item">
-                                <span class="info-label">Nombre Completo:</span>
-                                <span class="info-value">${ticket.cliente_nombre}</span>
-                            </div>
-                            ` : ''}
-                            ${hasData(ticket.cliente_telefono) ? `
-                            <div class="info-item">
-                                <span class="info-label">Teléfono:</span>
-                                <span class="info-value">${ticket.cliente_telefono}</span>
-                            </div>
-                            ` : ''}
-                            ${hasData(ticket.cliente_email) ? `
-                            <div class="info-item">
-                                <span class="info-label">Email:</span>
-                                <span class="info-value">${ticket.cliente_email}</span>
-                            </div>
-                            ` : ''}
-                            ${hasData(ticket.cliente_direccion) ? `
-                            <div class="info-item">
-                                <span class="info-label">Dirección:</span>
-                                <span class="info-value">${ticket.cliente_direccion}</span>
-                            </div>
-                            ` : ''}
-                            ${hasData(ticket.cliente_ciudad) ? `
-                            <div class="info-item">
-                                <span class="info-label">Ciudad:</span>
-                                <span class="info-value">${ticket.cliente_ciudad}</span>
-                            </div>
-                            ` : ''}
-                        </div>
-                    </div>
-                    
-                    <!-- Descripción del Problema -->
-                    ${hasData(ticket.descripcion) ? `
-                    <div class="info-section">
-                        <h4><i class="fas fa-file-alt"></i> Descripción del Problema</h4>
-                        <div class="ticket-description">
-                            ${ticket.descripcion}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    <!-- Observaciones -->
-                    ${hasData(ticket.observaciones) ? `
-                    <div class="info-section">
-                        <h4><i class="fas fa-sticky-note"></i> Observaciones</h4>
-                        <div class="ticket-observations">
-                            ${ticket.observaciones}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    <!-- Archivos Adjuntos -->
-                    ${ticket.archivos_pdf && ticket.archivos_pdf.length > 0 ? `
-                    <div class="info-section">
-                        <h4><i class="fas fa-paperclip"></i> Archivos Adjuntos (${ticket.archivos_pdf.length})</h4>
-                        <div class="ticket-archivos">
-                            ${ticket.archivos_pdf.map(archivo => `
-                                <div class="archivo-item">
-                                    <div class="archivo-info">
-                                        <i class="fas fa-file-pdf"></i>
-                                        <div class="archivo-details">
-                                            <span class="archivo-nombre">${archivo.nombre_archivo}</span>
-                                            <span class="archivo-fecha">${new Date(archivo.fecha_subida).toLocaleString()}</span>
-                                        </div>
-                                    </div>
-                                    <div class="archivo-actions">
-                                        <a href="../${archivo.ruta_archivo}" target="_blank" class="btn btn-sm btn-primary">
-                                            <i class="fas fa-eye"></i> Ver
-                                        </a>
-                                        <button class="btn btn-sm btn-danger" onclick="eliminarArchivo(${archivo.id})">
-                                            <i class="fas fa-trash"></i> Eliminar
-                                        </button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    <!-- Historial de Notas -->
-                    <div class="info-section">
-                        <h4><i class="fas fa-history"></i> Historial de Notas y Acciones</h4>
-                        <div id="historialDetalle" class="historial-detalle">
-                            <!-- Se cargará dinámicamente -->
-                        </div>
-                    </div>
-                    
-                    <!-- Historial de Interacciones del Cliente -->
-                    ${ticket.historial_cliente && ticket.historial_cliente.length > 0 ? `
-                    <div class="info-section">
-                        <h4><i class="fas fa-phone"></i> Historial de Interacciones del Cliente</h4>
-                        <div class="historial-interacciones">
-                            ${ticket.historial_cliente.map(interaccion => `
-                                <div class="interaccion-item">
-                                    <div class="interaccion-header">
-                                        <span class="interaccion-fecha">${new Date(interaccion.fecha_llamada).toLocaleString()}</span>
-                                        ${hasData(interaccion.tipificacion_categoria) ? `
-                                        <span class="interaccion-tipo">${interaccion.tipificacion_categoria}</span>
-                                        ` : ''}
-                                    </div>
-                                    ${hasData(interaccion.observacion) ? `
-                                    <div class="interaccion-observacion">${interaccion.observacion}</div>
-                                    ` : ''}
-                                    <div class="interaccion-details">
-                                        ${hasData(interaccion.duracion_minutos) ? `
-                                        <span>Duración: ${interaccion.duracion_minutos} min</span>
-                                        ` : ''}
-                                        ${hasData(interaccion.tipificacion_codigo) ? `
-                                        <span>Tipo: ${interaccion.tipificacion_codigo}</span>
-                                        ` : ''}
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            `;
+            if (pr || tit) {
+                html += '<div class="info-section">';
+                html += '<h4><i class="fas fa-home"></i> Caso reparto (CSV)</h4>';
+                if (tit) {
+                    const nomTit = [tit.primer_nombre, tit.apellido].filter(Boolean).join(' ').trim();
+                    html += renderInfoGrid([
+                        { label: 'Titular', value: nomTit },
+                        { label: 'Prioridad', value: tit.prioridad },
+                        { label: 'Mailing', value: [tit.mailing_calle, tit.mailing_ciudad, tit.mailing_estado, tit.mailing_codigo_postal].filter(Boolean).join(', ') }
+                    ]);
+                }
+                if (pr) {
+                    html += renderInfoGrid([
+                        { label: 'Case Number', value: pr.numero_caso },
+                        { label: 'Parcel Number', value: pr.numero_parcela },
+                        { label: 'Tipo foreclosure', value: pr.tipo_foreclosure },
+                        { label: 'Propiedad', value: [pr.propiedad_calle, pr.propiedad_ciudad, pr.propiedad_estado].filter(Boolean).join(', ') },
+                        { label: 'Condado', value: pr.condado },
+                        { label: 'Fuente', value: pr.fuente },
+                        { label: 'Días mora (activos)', value: pr.dias_mora_activos != null ? String(pr.dias_mora_activos) : '' }
+                    ]);
+                }
+                html += '</div>';
+            }
 
-            // Cargar historial de notas
+            if (pred) {
+                html += '<div class="info-section">';
+                html += '<h4><i class="fas fa-building"></i> Predio (ticket)</h4>';
+                html += renderInfoGrid([
+                    { label: 'Case Number', value: pred.case_number },
+                    { label: 'Parcel Number', value: pred.parcel_number },
+                    { label: 'Foreclosure', value: pred.type_of_foreclosure },
+                    { label: 'Dirección', value: [pred.property_street, pred.property_city, pred.property_state, pred.property_zip].filter(Boolean).join(', ') },
+                    { label: 'Condado', value: pred.county },
+                    { label: 'Valor a devolver', value: pred.valor_a_devolver },
+                    { label: 'Fecha venta', value: pred.date_sold }
+                ]);
+                html += '</div>';
+            }
+
+            html += '<div class="info-section">';
+            html += '<h4><i class="fas fa-user"></i> Cliente / contacto</h4>';
+            html += renderInfoGrid([
+                { label: 'Identificador', value: ticket.cliente_cedula },
+                { label: 'Nombre', value: ticket.cliente_nombre },
+                { label: 'Dirección', value: ticket.cliente_direccion },
+                { label: 'Ciudad', value: ticket.cliente_ciudad }
+            ]);
+            html += '<p class="ticket-detalle-sub"><strong>Teléfonos</strong></p>';
+            html += renderListaContacto(tels, 'numero');
+            html += '<p class="ticket-detalle-sub"><strong>Correos</strong></p>';
+            html += renderListaContacto(emails, 'email');
+            html += '</div>';
+
+            if (hasDetalleValor(ticket.descripcion)) {
+                html += '<div class="info-section"><h4><i class="fas fa-align-left"></i> Descripción</h4>';
+                html += '<div class="ticket-description">' + escapeHtml(ticket.descripcion) + '</div></div>';
+            }
+            if (hasDetalleValor(ticket.observaciones)) {
+                html += '<div class="info-section"><h4><i class="fas fa-sticky-note"></i> Observaciones</h4>';
+                html += '<div class="ticket-observations">' + escapeHtml(ticket.observaciones) + '</div></div>';
+            }
+
+            html += '<div class="info-section"><h4><i class="fas fa-route"></i> Historial de estados</h4>';
+            html += renderHistorialEstadoHtml(ticket.historial_estado);
+            html += '</div>';
+
+            html += '<div class="info-section"><h4><i class="fas fa-comments"></i> Notas del ticket</h4>';
+            html += '<div id="historialDetalle" class="historial-detalle"><p class="ticket-detalle-loading"><i class="fas fa-spinner fa-spin"></i> Cargando notas…</p></div></div>';
+
+            const archivos = ticket.archivos_pdf && ticket.archivos_pdf.length ? ticket.archivos_pdf : [];
+            if (hasDetalleValor(ticket.pdf_archivo)) {
+                archivos.unshift({ nombre_archivo: 'PDF principal', ruta_archivo: ticket.pdf_archivo, fecha_subida: ticket.fecha_creacion });
+            }
+            if (archivos.length) {
+                html += '<div class="info-section"><h4><i class="fas fa-paperclip"></i> Archivos (' + archivos.length + ')</h4><div class="ticket-archivos">';
+                archivos.forEach(function(archivo) {
+                    const url = archivoTicketUrl(archivo.ruta_archivo);
+                    html += '<div class="archivo-item"><div class="archivo-info"><i class="fas fa-file-pdf"></i><div class="archivo-details">';
+                    html += '<span class="archivo-nombre">' + escapeHtml(archivo.nombre_archivo || 'Documento') + '</span>';
+                    if (archivo.fecha_subida) {
+                        html += '<span class="archivo-fecha">' + escapeHtml(new Date(archivo.fecha_subida).toLocaleString()) + '</span>';
+                    }
+                    html += '</div></div><div class="archivo-actions">';
+                    html += '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i> Ver</a>';
+                    if (archivo.id) {
+                        html += '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarArchivo(' + parseInt(archivo.id, 10) + ')"><i class="fas fa-trash"></i></button>';
+                    }
+                    html += '</div></div>';
+                });
+                html += '</div></div>';
+            }
+
+            if (ticket.historial_cliente && ticket.historial_cliente.length) {
+                html += '<div class="info-section"><h4><i class="fas fa-phone-volume"></i> Llamadas del cliente (CRM)</h4><div class="historial-interacciones">';
+                ticket.historial_cliente.forEach(function(inter) {
+                    html += '<div class="interaccion-item"><div class="interaccion-header">';
+                    html += '<span class="interaccion-fecha">' + escapeHtml(new Date(inter.fecha_llamada).toLocaleString()) + '</span>';
+                    if (hasDetalleValor(inter.tipificacion_categoria)) {
+                        html += '<span class="interaccion-tipo">' + escapeHtml(inter.tipificacion_categoria) + '</span>';
+                    }
+                    html += '</div>';
+                    if (hasDetalleValor(inter.observacion)) {
+                        html += '<div class="interaccion-observacion">' + escapeHtml(inter.observacion) + '</div>';
+                    }
+                    html += '<div class="interaccion-details">';
+                    if (inter.duracion_minutos != null && inter.duracion_minutos !== '') {
+                        html += '<span>Duración: ' + escapeHtml(String(inter.duracion_minutos)) + ' min</span>';
+                    }
+                    if (hasDetalleValor(inter.tipificacion_codigo)) {
+                        html += '<span>Código: ' + escapeHtml(inter.tipificacion_codigo) + '</span>';
+                    }
+                    html += '</div></div>';
+                });
+                html += '</div></div>';
+            }
+
+            if (ticket.referencias_personales && ticket.referencias_personales.length) {
+                html += '<div class="info-section"><h4><i class="fas fa-users"></i> Referencias (' + ticket.referencias_personales.length + ')</h4>';
+                html += '<p class="ticket-detalle-hint">Gestione el detalle completo en <strong>Gestionar ticket</strong>.</p></div>';
+            }
+
+            html += '</div>';
+            content.innerHTML = html;
+            actualizarFooterDetalleModal(ticket);
+            if (window.TicketDetalleModal) {
+                TicketDetalleModal.setTitulo(ticket, escapeHtml);
+                TicketDetalleModal.ajustarLayout();
+            }
             cargarHistorialDetalle(ticket.id);
         }
 
         function mostrarDetalleBasico(ticket) {
             const content = document.getElementById('ticketDetalleContent');
-
-            content.innerHTML = `
-                <div class="ticket-detalle-info">
-                    <div class="info-section">
-                        <h4>Información del Ticket</h4>
-                        <div class="info-item">
-                            <span class="info-label">ID:</span>
-                            <span class="info-value">#${ticket.id}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Título:</span>
-                            <span class="info-value">${ticket.titulo}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Estado:</span>
-                            <span class="info-value">
-                                <span class="ticket-estado-badge estado-${String(ticket.estado || '').replace(/[^a-z0-9_]/gi, '_')}">
-                                    ${escapeHtml(ESTADO_LABELS[ticket.estado] || ticket.estado || '')}
-                                </span>
-                            </span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Fecha Creación:</span>
-                            <span class="info-value">${new Date(ticket.fecha_creacion).toLocaleString()}</span>
-                        </div>
-                        ${ticket.fecha_cierre ? `
-                        <div class="info-item">
-                            <span class="info-label">Fecha Cierre:</span>
-                            <span class="info-value">${new Date(ticket.fecha_cierre).toLocaleString()}</span>
-                        </div>
-                        ` : ''}
-                    </div>
-                    
-                    <div class="info-section">
-                        <h4>Información del Cliente</h4>
-                        <div class="info-item">
-                            <span class="info-label">Cliente:</span>
-                            <span class="info-value">${escapeHtml(ticket.cliente_nombre || '')}</span>
-                        </div>
-                        <div class="info-item">
-                            <span class="info-label">Teléfono:</span>
-                            <span class="info-value">${escapeHtml(ticket.cliente_telefono || 'No disponible')}</span>
-                        </div>
-                    </div>
-                    
-                    <div class="info-section">
-                        <h4>Descripción del Problema</h4>
-                        <div class="ticket-description">
-                            ${ticket.descripcion || 'Sin descripción'}
-                        </div>
-                    </div>
-                    
-                    ${ticket.observaciones ? `
-                    <div class="info-section">
-                        <h4>Observaciones</h4>
-                        <div class="ticket-observations">
-                            ${ticket.observaciones}
-                        </div>
-                    </div>
-                    ` : ''}
-                    
-                    ${ticket.pdf_archivo ? `
-                    <div class="info-section">
-                        <h4>Archivo Adjunto</h4>
-                        <div class="ticket-pdf">
-                            <i class="fas fa-file-pdf"></i>
-                            <a href="../${ticket.pdf_archivo}" target="_blank" class="pdf-link">
-                                Ver PDF Adjunto
-                            </a>
-                        </div>
-                    </div>
-                    ` : ''}
-                </div>
-            `;
+            content.innerHTML =
+                '<div class="ticket-detalle-completo" data-ticket-id="' + escapeHtml(String(ticket.id)) + '">' +
+                '<div class="info-section ticket-detalle-resumen">' +
+                '<h4><i class="fas fa-ticket-alt"></i> Ticket CRM</h4>' +
+                renderInfoGrid([
+                    { label: 'Referencia', value: ticket.numero_ticket || ('#' + ticket.id) },
+                    { label: 'Título', value: ticket.titulo },
+                    { label: 'Estado', html: badgeEstadoHtml(ticket.estado) },
+                    { label: 'Cliente', value: ticket.cliente_nombre },
+                    { label: 'Teléfono', value: ticket.cliente_telefono },
+                    { label: 'Creado', value: ticket.fecha_creacion ? new Date(ticket.fecha_creacion).toLocaleString() : '' }
+                ]) +
+                (hasDetalleValor(ticket.descripcion)
+                    ? '<div class="info-section"><h4><i class="fas fa-align-left"></i> Descripción</h4><div class="ticket-description">' + escapeHtml(ticket.descripcion) + '</div></div>'
+                    : '') +
+                (hasDetalleValor(ticket.pdf_archivo)
+                    ? '<div class="info-section"><h4><i class="fas fa-paperclip"></i> Archivo</h4><a href="' + escapeHtml(archivoTicketUrl(ticket.pdf_archivo)) + '" target="_blank" rel="noopener" class="pdf-link"><i class="fas fa-file-pdf"></i> Ver PDF</a></div>'
+                    : '') +
+                '<p class="ticket-detalle-hint">No se pudo cargar el detalle completo. Use <strong>Gestionar ticket</strong> para la ficha ampliada.</p>' +
+                '</div>';
+            actualizarFooterDetalleModal(ticket);
+            if (window.TicketDetalleModal) {
+                TicketDetalleModal.setTitulo(ticket, escapeHtml);
+                TicketDetalleModal.ajustarLayout();
+            }
         }
 
         // Cargar historial de detalle
         async function cargarHistorialDetalle(ticketId) {
+            const historialContainer = document.getElementById('historialDetalle');
+            if (!historialContainer) return;
             try {
-                const response = await fetch(`api/ticket_notas.php?ticket_id=${ticketId}`);
+                const response = await fetch('api/ticket_notas.php?ticket_id=' + encodeURIComponent(ticketId), {
+                    credentials: 'same-origin'
+                });
                 const result = await response.json();
-                
-                const historialContainer = document.getElementById('historialDetalle');
-                
-                if (result.success && result.data.length > 0) {
-                    historialContainer.innerHTML = result.data.map(nota => `
-                        <div class="nota-item">
-                            <div class="nota-header">
-                                <span class="nota-fecha">${new Date(nota.fecha_creacion).toLocaleString()}</span>
-                                <span class="nota-asesor">${nota.asesor_nombre}</span>
-                            </div>
-                            <div class="nota-contenido">${nota.contenido}</div>
-                            ${nota.proxima_accion ? `<div class="nota-accion"><strong>Próxima acción:</strong> ${nota.proxima_accion}</div>` : ''}
-                        </div>
-                    `).join('');
+
+                if (result.success && result.data && result.data.length > 0) {
+                    historialContainer.innerHTML = result.data.map(function(nota) {
+                        if (window.TicketNotasRender && typeof TicketNotasRender.renderTicketNotaItem === 'function') {
+                            return TicketNotasRender.renderTicketNotaItem(nota, escapeHtml);
+                        }
+                        const prox = hasDetalleValor(nota.proxima_accion)
+                            ? '<div class="nota-accion"><strong>Próxima acción:</strong> ' + escapeHtml(nota.proxima_accion) + '</div>'
+                            : '';
+                        return '<div class="nota-item">' +
+                            '<div class="nota-header">' +
+                            '<span class="nota-fecha">' + escapeHtml(new Date(nota.fecha_creacion).toLocaleString()) + '</span>' +
+                            '<span class="nota-asesor">' + escapeHtml(nota.asesor_nombre || '') + '</span>' +
+                            '</div>' +
+                            '<div class="nota-contenido">' + escapeHtml(nota.contenido || '') + '</div>' +
+                            prox +
+                            '</div>';
+                    }).join('');
                 } else {
-                    historialContainer.innerHTML = '<p style="color: #a0aec0; text-align: center; padding: 20px;">No hay notas registradas</p>';
+                    historialContainer.innerHTML = '<p class="ticket-detalle-empty">No hay notas registradas</p>';
                 }
             } catch (error) {
                 console.error('Error cargando historial de detalle:', error);
-                document.getElementById('historialDetalle').innerHTML = '<p style="color: #ef4444; text-align: center; padding: 20px;">Error cargando historial</p>';
+                historialContainer.innerHTML = '<p class="ticket-detalle-empty ticket-detalle-empty--error">Error cargando notas</p>';
+            }
+            if (window.TicketDetalleModal) {
+                TicketDetalleModal.ajustarLayout();
             }
         }
 
-        // Cerrar modal de detalle
         function cerrarModalDetalleTicket() {
-            document.getElementById('ticketDetalleModal').style.display = 'none';
+            if (window.TicketDetalleModal) {
+                TicketDetalleModal.close();
+                return;
+            }
+            const modal = document.getElementById('ticketDetalleModal');
+            if (modal) modal.classList.remove('is-open');
         }
 
         // Eliminar archivo PDF

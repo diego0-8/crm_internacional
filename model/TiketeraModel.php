@@ -270,12 +270,20 @@ class TiketeraModel {
             if (!$this->tablaExiste('tiketera')) {
                 return [];
             }
+            $extrasPredio = '';
+            if ($this->tablaExiste('predios')) {
+                $extrasPredio = ",
+                       (SELECT pd.case_number FROM predios pd WHERE pd.ticket_id = t.id ORDER BY pd.id DESC LIMIT 1) AS predio_case_number,
+                       (SELECT pd.parcel_number FROM predios pd WHERE pd.ticket_id = t.id ORDER BY pd.id DESC LIMIT 1) AS predio_parcel_number";
+            }
+
             $sql = "
                 SELECT t.*,
                        tc.codigo AS categoria_codigo,
                        tc.nombre AS categoria_nombre,
                        c.nombre_completo as cliente_nombre,
                        c.telefono as cliente_telefono
+                       {$extrasPredio}
                 FROM tiketera t
                 JOIN clientes c ON t.cliente_cedula = c.cedula
                 LEFT JOIN ticket_categorias tc ON t.categoria_id = tc.id

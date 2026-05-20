@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 require_once '../config.php';
 require_once '../model/TitularModel.php';
+require_once '../model/TiketeraModel.php';
 
 if (!isLoggedIn() || !hasRole('asesor')) {
     http_response_code(401);
@@ -51,19 +52,44 @@ try {
     $stmt->execute([$titularId]);
     $propiedad = $stmt->fetch(PDO::FETCH_ASSOC);
 
-    $caseNumber = $propiedad ? $propiedad['numero_caso'] : ('TIT-' . $titularId);
+    $caseNumber = trim((string) ($propiedad['numero_caso'] ?? ''));
+    if ($caseNumber === '') {
+        $caseNumber = 'TIT-' . $titularId;
+    }
     $cedulaCliente = 'TIT-' . $titularId;
 
-    // 3. Verificar si el ticket ya existe (por si hace clic dos veces)
+    // 3. Ticket existente: por titular (TIT-id) o por case number del mismo asesor
     $stmt = $db->prepare("SELECT id FROM tiketera WHERE cliente_cedula = ? LIMIT 1");
     $stmt->execute([$cedulaCliente]);
     $existingTicket = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($existingTicket) {
-        // Si ya existe, simplemente devolvemos el ID
-        $db->rollBack();
-        echo json_encode(['success' => true, 'ticket_id' => $existingTicket['id']]);
+        $db->commit();
+        echo json_encode(['success' => true, 'ticket_id' => (int) $existingTicket['id']]);
         exit;
+    }
+
+    $stmt = $db->prepare("
+        SELECT id FROM tiketera
+        WHERE numero_ticket = ? AND asesor_cedula = ?
+        LIMIT 1
+    ");
+    $stmt->execute([$caseNumber, $asesorCedula]);
+    $existingByCase = $stmt->fetch(PDO::FETCH_ASSOC);
+    if ($existingByCase) {
+        $db->commit();
+        echo json_encode(['success' => true, 'ticket_id' => (int) $existingByCase['id']]);
+        exit;
+    }
+
+    // numero_ticket único (uk_tiketera_numero_ticket): sufijo o TK- autogenerado
+    $numeroTicketInsert = $caseNumber;
+    $stmtDup = $db->prepare("SELECT id FROM tiketera WHERE numero_ticket = ? LIMIT 1");
+    $stmtDup->execute([$numeroTicketInsert]);
+    if ($stmtDup->fetch()) {
+        $candidato = $numeroTicketInsert . '-T' . $titularId;
+        $stmtDup->execute([$candidato]);
+        $numeroTicketInsert = $stmtDup->fetch() ? null : $candidato;
     }
 
     // 4. Crear el cliente en la tabla `clientes`
@@ -172,10 +198,15 @@ try {
         $asesorCedula,
         $tituloTicket,
         'Ticket generado automáticamente desde el Titular asignado',
-        $caseNumber
+        $numeroTicketInsert,
     ]);
-    
-    $ticketId = $db->lastInsertId();
+
+    $ticketId = (int) $db->lastInsertId();
+
+    if ($numeroTicketInsert === null) {
+        $tiketeraModel = new TiketeraModel();
+        $tiketeraModel->assignNumeroTicket($ticketId);
+    }
 
     // 6. Crear el Predio
     if ($propiedad) {

@@ -1,10 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-if (!isLoggedIn() || !hasRole('cliente')) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('cliente');
 
 $user = getCurrentUser();
 $message = getMessage();
@@ -14,12 +11,13 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Mis Tickets - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/tickets.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/tickets.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -34,11 +32,11 @@ $message = getMessage();
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Cliente</div>
-                    <a href="cliente_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('cliente_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-home"></i>
                         Dashboard
                     </a>
-                    <a href="cliente_mis_tickets.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('cliente_mis_tickets'); ?>" class="nav-item active">
                         <i class="fas fa-ticket-alt"></i>
                         Mis Tickets
                     </a>
@@ -132,7 +130,7 @@ $message = getMessage();
             const tbody = document.getElementById('tbodyTickets');
             tbody.innerHTML = '<tr><td colspan="6" style="text-align:center">Cargando...</td></tr>';
             try {
-                const response = await fetch('../api/cliente_tickets.php', { credentials: 'same-origin' });
+                const response = await fetch('api/cliente_tickets.php', { credentials: 'same-origin' });
                 const result = await response.json();
                 if (!result.success) {
                     tbody.innerHTML = '<tr><td colspan="6">Error: ' + escapeHtml(result.message || '') + '</td></tr>';
@@ -162,13 +160,13 @@ $message = getMessage();
         async function cerrarSesion() {
             if (!confirm('¿Cerrar sesión?')) return;
             try {
-                await fetch('../api/logout.php', {
+                await fetch('api/logout.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'same-origin'
                 });
             } catch (e) {}
-            window.location.href = 'login.php';
+            window.appGoLogin();
         }
 
         function toggleSidebar() {

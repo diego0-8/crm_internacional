@@ -7,6 +7,9 @@ class TiketeraModel {
     /** @var array<string, bool> */
     private static $tablaExisteCache = [];
 
+    /** @var bool|null */
+    private static $puedeFiltrarArchivoInhabilitado = null;
+
     /** True si la tabla existe en la BD actual (dump sin módulo tiketera). */
     private function tablaExiste(string $nombreTabla): bool {
         if (array_key_exists($nombreTabla, self::$tablaExisteCache)) {
@@ -24,6 +27,55 @@ class TiketeraModel {
             self::$tablaExisteCache[$nombreTabla] = false;
         }
         return self::$tablaExisteCache[$nombreTabla];
+    }
+
+    private function columnaExiste(string $tableName, string $columnName): bool {
+        try {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND COLUMN_NAME = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$tableName, $columnName]);
+            return (bool) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            return false;
+        }
+    }
+
+    private function puedeFiltrarTicketsPorArchivoInhabilitado(): bool {
+        if (self::$puedeFiltrarArchivoInhabilitado !== null) {
+            return self::$puedeFiltrarArchivoInhabilitado;
+        }
+        return self::$puedeFiltrarArchivoInhabilitado =
+            $this->columnaExiste('titulares', 'archivo_csv_id')
+            && $this->columnaExiste('archivos_csv', 'activo');
+    }
+
+    /**
+     * Excluye tickets ligados a un cargue CSV inhabilitado (titular TIT-* o cliente con archivo_csv_id).
+     */
+    private function sqlSoloTicketsArchivoCsvActivo(string $ticketAlias = 't'): string {
+        if (!$this->puedeFiltrarTicketsPorArchivoInhabilitado()) {
+            return '';
+        }
+        return "
+            AND NOT EXISTS (
+                SELECT 1 FROM titulares tit_csv_blk
+                INNER JOIN archivos_csv ac_csv_blk ON ac_csv_blk.id = tit_csv_blk.archivo_csv_id AND ac_csv_blk.activo = 0
+                WHERE {$ticketAlias}.cliente_cedula = CONCAT('TIT-', tit_csv_blk.id_cliente)
+            )
+            AND NOT EXISTS (
+                SELECT 1 FROM clientes cli_csv_blk
+                INNER JOIN archivos_csv ac_cli_blk ON ac_cli_blk.id = cli_csv_blk.archivo_csv_id AND ac_cli_blk.activo = 0
+                WHERE cli_csv_blk.cedula = {$ticketAlias}.cliente_cedula
+            )
+        ";
+    }
+
+    /** Filtro reutilizable en consultas de tickets (p. ej. dashboard coordinador). */
+    public function filtroSqlTicketsSinCsvInhabilitado(string $ticketAlias = 't'): string {
+        return $this->sqlSoloTicketsArchivoCsvActivo($ticketAlias);
     }
 
     /**
@@ -242,6 +294,7 @@ class TiketeraModel {
                 $params[] = $clienteCedula;
             }
 
+            $sql .= $this->sqlSoloTicketsArchivoCsvActivo('t');
             $sql .= " ORDER BY t.fecha_creacion DESC";
 
             $stmt = $this->db->prepare($sql);
@@ -488,8 +541,9 @@ class TiketeraModel {
                     SUM(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 ELSE 0 END) as tickets_recuperacion,
                     SUM(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as tickets_cierre,
                     SUM(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) as tickets_abiertos
-                FROM tiketera
-                WHERE asesor_cedula = ?
+                FROM tiketera t
+                WHERE t.asesor_cedula = ?
+                " . $this->sqlSoloTicketsArchivoCsvActivo('t') . "
             ");
             $stmt->execute([$asesorCedula]);
             return $stmt->fetch();
@@ -522,7 +576,7 @@ class TiketeraModel {
             if (!$this->tablaExiste('tiketera')) {
                 return [];
             }
-            $stmt = $this->db->prepare("
+            $sqlBuscar = "
                 SELECT t.*,
                        tc.codigo AS categoria_codigo,
                        tc.nombre AS categoria_nombre,
@@ -533,8 +587,10 @@ class TiketeraModel {
                 WHERE t.asesor_cedula = ?
                 AND (t.titulo LIKE ? OR t.descripcion LIKE ? OR t.numero_ticket LIKE ?
                      OR c.nombre_completo LIKE ?)
+                " . $this->sqlSoloTicketsArchivoCsvActivo('t') . "
                 ORDER BY t.fecha_creacion DESC
-            ");
+            ";
+            $stmt = $this->db->prepare($sqlBuscar);
 
             $terminoLike = "%$termino%";
             $stmt->execute([

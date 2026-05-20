@@ -1,6 +1,7 @@
 <?php
 header('Content-Type: application/json');
 require_once '../config.php';
+require_once '../model/TitularModel.php';
 
 if (!isLoggedIn() || !hasRole('asesor')) {
     http_response_code(401);
@@ -38,6 +39,11 @@ try {
 
     if (!$titular) {
         throw new Exception('Titular no encontrado o no asignado a usted.');
+    }
+
+    $titularModel = new TitularModel();
+    if (!$titularModel->titularTieneArchivoCsvActivo($titularId)) {
+        throw new Exception('Este caso pertenece a un cargue CSV inhabilitado y no puede gestionarse.');
     }
 
     // 2. Obtener propiedad asociada para el caso

@@ -13,7 +13,8 @@ class CoordinadorViewController {
     public function showDashboard() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('coordinador')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();
@@ -29,7 +30,8 @@ class CoordinadorViewController {
     public function showTareas() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('coordinador')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();
@@ -45,7 +47,8 @@ class CoordinadorViewController {
     public function showGestion() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('coordinador')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();
@@ -61,7 +64,8 @@ class CoordinadorViewController {
     public function showExporte() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('coordinador')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();
@@ -77,7 +81,8 @@ class CoordinadorViewController {
     public function showArchivos() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('coordinador')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();

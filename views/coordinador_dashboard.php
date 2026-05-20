@@ -1,11 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('coordinador');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -16,13 +12,14 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Dashboard Coordinador - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/coordinador.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/coordinador.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -30,26 +27,26 @@ $message = getMessage();
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-asesor">
-                    <img src="../img/logo2.png" alt="Logo CRM">
+                    <img src="img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Coordinador</div>
-                    <a href="coordinador_dashboard.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('coordinador_dashboard'); ?>" class="nav-item active">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
-                    <a href="coordinador_tareas.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_tareas'); ?>" class="nav-item">
                         <i class="fas fa-tasks"></i>
                         Tareas
                     </a>
-                    <a href="coordinador_gestion.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_gestion'); ?>" class="nav-item">
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_exporte.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_exporte'); ?>" class="nav-item">
                         <i class="fas fa-download"></i>
                         Exporte
                     </a>
@@ -104,7 +101,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -386,7 +383,7 @@ $message = getMessage();
         // Cargar roles para creación de usuario
         async function loadRolesForUserCreation() {
             try {
-                const response = await fetch('../api/roles.php', {
+                const response = await fetch('api/roles.php', {
                     credentials: 'include'
                 });
 
@@ -416,7 +413,7 @@ $message = getMessage();
         // Cargar asesores para asignación
         async function loadAsesoresForAssignment() {
             try {
-                const response = await fetch('../api/coordinador_asesores.php', {
+                const response = await fetch('api/coordinador_asesores.php', {
                     credentials: 'include'
                 });
 
@@ -485,7 +482,7 @@ $message = getMessage();
             try {
                 const formData = new FormData(this);
 
-                const response = await fetch('../api/create_user_manual.php', {
+                const response = await fetch('api/create_user_manual.php', {
                     method: 'POST',
                     body: formData,
                     credentials: 'include'
@@ -519,7 +516,7 @@ $message = getMessage();
                 if (e.key === 'crm_force_logout' && e.newValue === 'true') {
                     // Otra pestaña cerró sesión, cerrar esta también
                     clearInterval(sessionCheckInterval);
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 }
             });
 
@@ -530,7 +527,7 @@ $message = getMessage();
         // Verificar estado de la sesión
         async function checkSessionStatus() {
             try {
-                const response = await fetch('../api/session_heartbeat.php', {
+                const response = await fetch('api/session_heartbeat.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' }
                 });
@@ -540,7 +537,7 @@ $message = getMessage();
                     clearInterval(sessionCheckInterval);
                     showMessage('Tu sesión ha expirado. Redirigiendo al login...', 'warning');
                     setTimeout(() => {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                     }, 3000);
                     return;
                 }
@@ -555,7 +552,7 @@ $message = getMessage();
                     clearInterval(sessionCheckInterval);
                     showMessage('Sesión inválida. Redirigiendo al login...', 'error');
                     setTimeout(() => {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                     }, 3000);
                 }
             } catch (error) {
@@ -567,13 +564,13 @@ $message = getMessage();
         // Cargar datos del dashboard
         async function loadDashboardData() {
             try {
-                const response = await fetch('../api/coordinador_dashboard.php', {
+                const response = await fetch('api/coordinador_dashboard.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -792,13 +789,13 @@ $message = getMessage();
         // Cargar asesores para gestión
         async function loadAsesores() {
             try {
-                const response = await fetch('../api/coordinador_asesores.php', {
+                const response = await fetch('api/coordinador_asesores.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -905,7 +902,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cambiar el estado de este asesor?')) return;
 
             try {
-                const response = await fetch('../api/toggle_user.php', {
+                const response = await fetch('api/toggle_user.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -972,7 +969,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
 
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -986,7 +983,7 @@ $message = getMessage();
                     // Notificar a otras pestañas que se cerró sesión
                     localStorage.setItem('crm_force_logout', 'true');
                     clearInterval(sessionCheckInterval);
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

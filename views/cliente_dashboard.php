@@ -1,17 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
-
-// Verificar que sea cliente
-if (!hasRole('cliente')) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('cliente');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -22,11 +12,12 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Dashboard Cliente - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -42,11 +33,11 @@ $message = getMessage();
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Cliente</div>
-                    <a href="cliente_dashboard.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('cliente_dashboard'); ?>" class="nav-item active">
                         <i class="fas fa-home"></i>
                         Dashboard
                     </a>
-                    <a href="cliente_mis_tickets.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('cliente_mis_tickets'); ?>" class="nav-item">
                         <i class="fas fa-ticket-alt"></i>
                         Mis Tickets
                     </a>
@@ -97,7 +88,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -176,11 +167,11 @@ $message = getMessage();
         // Cargar tickets del cliente
         async function loadTickets() {
             try {
-                const response = await fetch('/crm_internacional/api/cliente_tickets.php');
+                const response = await fetch('api/cliente_tickets.php');
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = 'login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -245,11 +236,11 @@ $message = getMessage();
         // Cargar estadísticas
         async function loadEstadisticas() {
             try {
-                const response = await fetch('/crm_internacional/api/cliente_estadisticas.php');
+                const response = await fetch('api/cliente_estadisticas.php');
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = 'login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -326,7 +317,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
 
             try {
-                const response = await fetch('/crm_internacional/api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -336,7 +327,7 @@ $message = getMessage();
                 const result = await response.json();
 
                 if (result.success) {
-                    window.location.href = 'login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

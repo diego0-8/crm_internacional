@@ -6,6 +6,7 @@ require_once __DIR__ . '/../model/ArchivoCsvModel.php';
 require_once __DIR__ . '/../model/TareaModel.php';
 require_once __DIR__ . '/../model/MetricaModel.php';
 require_once __DIR__ . '/../model/UserModel.php';
+require_once __DIR__ . '/../model/TiketeraModel.php';
 
 class CoordinadorController {
     private $clienteModel;
@@ -188,6 +189,8 @@ class CoordinadorController {
             }
 
             $placeholders = str_repeat('?,', count($asesores) - 1) . '?';
+            $tiketeraModel = new TiketeraModel();
+            $filtroArchivo = $tiketeraModel->filtroSqlTicketsSinCsvInhabilitado('t');
 
             $stmt = $db->prepare("
                 SELECT
@@ -199,8 +202,9 @@ class CoordinadorController {
                     COUNT(CASE WHEN estado IN ('corte_giro_saldo', 'cliente_swift', 'recuperacion') THEN 1 END) as tickets_recuperacion,
                     COUNT(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 END) as tickets_cierre,
                     COUNT(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 END) as tickets_abiertos
-                FROM tiketera
-                WHERE asesor_cedula IN ($placeholders)
+                FROM tiketera t
+                WHERE t.asesor_cedula IN ($placeholders)
+                $filtroArchivo
             ");
             $stmt->execute($asesores);
             $stats = $stmt->fetch();
@@ -909,20 +913,29 @@ class CoordinadorController {
     }
     
     /**
-     * Eliminar archivo CSV
+     * Habilitar o inhabilitar un cargue CSV del coordinador (sin borrar datos).
      */
-    public function eliminarArchivoCsv($archivoId) {
+    public function setArchivoCsvActivo($archivoId, $coordinadorCedula, $activo) {
         try {
-            $this->archivoCsvModel->deleteArchivo($archivoId);
-            
+            $archivo = $this->archivoCsvModel->getArchivoById($archivoId);
+            if (!$archivo || ($archivo['coordinador_cedula'] ?? '') !== $coordinadorCedula) {
+                throw new Exception('Archivo no encontrado o sin permisos');
+            }
+
+            $this->archivoCsvModel->setActivo($archivoId, $activo ? 1 : 0);
+            $mensaje = $activo
+                ? 'Archivo habilitado correctamente'
+                : 'Archivo inhabilitado. El historial y los tickets asociados se conservan.';
+
             return [
                 'success' => true,
-                'message' => 'Archivo eliminado exitosamente'
+                'message' => $mensaje,
+                'activo' => $activo ? 1 : 0,
             ];
         } catch (Exception $e) {
             return [
                 'success' => false,
-                'message' => $e->getMessage()
+                'message' => $e->getMessage(),
             ];
         }
     }

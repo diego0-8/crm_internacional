@@ -3,9 +3,55 @@ require_once __DIR__ . '/../config.php';
 
 class ArchivoCsvModel {
     private $db;
+
+    /** @var array<string, bool> */
+    private static $columnaExisteCache = [];
     
     public function __construct() {
         $this->db = getDB();
+    }
+
+    private function columnaExiste(string $columnName): bool {
+        if (array_key_exists($columnName, self::$columnaExisteCache)) {
+            return self::$columnaExisteCache[$columnName];
+        }
+        try {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = "archivos_csv"
+                  AND COLUMN_NAME = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$columnName]);
+            self::$columnaExisteCache[$columnName] = (bool) $stmt->fetchColumn();
+        } catch (Exception $e) {
+            self::$columnaExisteCache[$columnName] = false;
+        }
+        return self::$columnaExisteCache[$columnName];
+    }
+
+    /** Crea la columna activo si aún no existe (migración automática en entornos locales). */
+    private function ensureActivoColumn(): void {
+        if ($this->columnaExiste('activo')) {
+            return;
+        }
+        $this->db->exec("
+            ALTER TABLE archivos_csv
+            ADD COLUMN activo tinyint(1) NOT NULL DEFAULT 1
+            COMMENT '1=habilitado, 0=inhabilitado'
+            AFTER estado
+        ");
+        self::$columnaExisteCache['activo'] = true;
+    }
+
+    private function normalizarActivo(array $row): array {
+        if (!array_key_exists('activo', $row)) {
+            $row['activo'] = 1;
+        } else {
+            $row['activo'] = (int) $row['activo'];
+        }
+        return $row;
     }
     
     /**
@@ -86,15 +132,48 @@ class ArchivoCsvModel {
      */
     public function getArchivosByCoordinador($coordinadorId) {
         try {
+            $this->ensureActivoColumn();
             $stmt = $this->db->prepare("
                 SELECT * FROM archivos_csv 
                 WHERE coordinador_cedula = ? 
-                ORDER BY created_at DESC
+                ORDER BY activo DESC, created_at DESC
             ");
             $stmt->execute([$coordinadorId]);
-            return $stmt->fetchAll();
+            $rows = $stmt->fetchAll();
+            return array_map([$this, 'normalizarActivo'], $rows);
         } catch (Exception $e) {
             throw new Exception("Error al obtener archivos: " . $e->getMessage());
+        }
+    }
+
+    /**
+     * Habilitar o inhabilitar un cargue CSV (no elimina datos ni tickets).
+     */
+    public function setActivo($id, int $activo): bool {
+        try {
+            $this->ensureActivoColumn();
+            $activo = $activo ? 1 : 0;
+
+            $archivo = $this->getArchivoById($id);
+            if (!$archivo) {
+                throw new Exception('Archivo no encontrado');
+            }
+
+            $stmt = $this->db->prepare("
+                UPDATE archivos_csv
+                SET activo = ?, updated_at = CURRENT_TIMESTAMP
+                WHERE id = ?
+            ");
+            $result = $stmt->execute([$activo, $id]);
+
+            if ($result) {
+                $accion = $activo ? 'csv_habilitado' : 'csv_inhabilitado';
+                logActivity($accion, "Archivo CSV ID $id — {$archivo['nombre_archivo']}");
+                return true;
+            }
+            throw new Exception('Error al actualizar estado del archivo');
+        } catch (Exception $e) {
+            throw $e;
         }
     }
     
@@ -105,14 +184,15 @@ class ArchivoCsvModel {
         try {
             $stmt = $this->db->prepare("SELECT * FROM archivos_csv WHERE id = ?");
             $stmt->execute([$id]);
-            return $stmt->fetch();
+            $row = $stmt->fetch();
+            return $row ? $this->normalizarActivo($row) : false;
         } catch (Exception $e) {
             throw new Exception("Error al obtener archivo: " . $e->getMessage());
         }
     }
     
     /**
-     * Eliminar archivo
+     * @deprecated No usar: borra titulares/clientes y rompe el historial de tickets.
      */
     public function deleteArchivo($id) {
         try {

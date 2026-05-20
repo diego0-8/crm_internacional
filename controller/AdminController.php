@@ -13,7 +13,8 @@ class AdminController {
     public function showDashboard() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('admin')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();

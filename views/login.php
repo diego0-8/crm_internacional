@@ -1,34 +1,6 @@
 <?php
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../controller/LoginController.php';
-
-// Sesión: nombre único en config.php (APP_SESSION_NAME). Respaldo si config no pudo iniciarla (p. ej. headers ya enviados).
-if (session_status() === PHP_SESSION_NONE) {
-    session_name(APP_SESSION_NAME);
-    session_start();
-}
-
-// Verificar si hay cookie "Remember Me" válida
-if (!isLoggedIn() && checkRememberMeCookie()) {
-    // Usuario recordado, redirigir al dashboard
-    $loginController = new LoginController();
-    $loginController->redirectToDashboard();
-    exit;
-}
-
-// Crear instancia del controlador
-$loginController = new LoginController();
-
-// Procesar la petición
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $loginController->processLogin();
-}
-
-// Obtener variables de la sesión para mostrar en la vista
-$error = $_SESSION['login_error'] ?? '';
-$usuario = $_SESSION['login_usuario'] ?? '';
-
-// Limpiar variables de sesión después de usarlas
+$error = $error ?? ($_SESSION['login_error'] ?? '');
+$usuario = $usuario ?? ($_SESSION['login_usuario'] ?? '');
 unset($_SESSION['login_error'], $_SESSION['login_usuario']);
 ?>
 <!DOCTYPE html>
@@ -36,20 +8,20 @@ unset($_SESSION['login_error'], $_SESSION['login_usuario']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Login - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/login.css" rel="stylesheet">
+    <link href="css/login.css" rel="stylesheet">
 </head>
 <body>
     <div class="login-container">
         <div class="login-header">
-            <img src="../img/logo2.png" alt="Logo CRM">
+            <img src="img/logo2.png" alt="Logo CRM">
             <p>Iniciar Sesión</p>
         </div>
 
         <?php if (isset($error) && !empty($error)): ?>
             <?php
-            // Determinar el tipo de error y el icono correspondiente
             $errorType = 'error';
             $icon = 'fas fa-exclamation-triangle';
             
@@ -69,7 +41,7 @@ unset($_SESSION['login_error'], $_SESSION['login_usuario']);
             </div>
         <?php endif; ?>
 
-        <form method="POST" action="">
+        <form method="POST" action="<?php echo htmlspecialchars(app_home_url()); ?>">
             <div class="form-group">
                 <label for="usuario">Usuario</label>
                 <div class="input-group">
@@ -108,7 +80,6 @@ unset($_SESSION['login_error'], $_SESSION['login_usuario']);
     </div>
 
     <script>
-        // Animación de entrada
         document.addEventListener('DOMContentLoaded', function() {
             const container = document.querySelector('.login-container');
             container.style.opacity = '0';
@@ -121,7 +92,6 @@ unset($_SESSION['login_error'], $_SESSION['login_usuario']);
             }, 100);
         });
 
-        // Mostrar/ocultar contraseña
         document.addEventListener('DOMContentLoaded', function() {
             const passwordInput = document.getElementById('password');
             const toggleBtn = document.getElementById('passwordToggle');

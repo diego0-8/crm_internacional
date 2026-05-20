@@ -13,7 +13,8 @@ class AsesorViewController {
     public function showDashboard() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('asesor')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();
@@ -29,7 +30,8 @@ class AsesorViewController {
     public function showTickets() {
         // Verificar autenticación y permisos
         if (!isLoggedIn() || !hasRole('asesor')) {
-            redirect('../views/login.php');
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $user = getCurrentUser();

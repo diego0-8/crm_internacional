@@ -1,20 +1,11 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('asesor');
 
-if (!hasRole('asesor')) {
-    header('Location: login.php');
-    exit;
-}
-
-$ticketId = isset($_GET['id']) ? (int) $_GET['id'] : 0;
+$ticketId = (int) app_route_param('id', 0);
 if ($ticketId <= 0) {
-    header('Location: asesor_tickets.php');
-    exit;
+    app_redirect_route('asesor_tickets');
 }
 
 $user = getCurrentUser();
@@ -25,36 +16,37 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Gestionar ticket #<?php echo $ticketId; ?> - <?php echo htmlspecialchars(APP_NAME); ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/tickets.css" rel="stylesheet">
-    <link href="../css/softphone-web.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/tickets.css" rel="stylesheet">
+    <link href="css/softphone-web.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../img/logo2.png" alt="CRM Logo">
+                    <img src="img/logo2.png" alt="CRM Logo">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Asesor</div>
-                    <a href="asesor_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('asesor_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-folder-open"></i>
                         Mis casos (reparto)
                     </a>
-                    <a href="asesor_tickets.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('asesor_tickets'); ?>" class="nav-item active">
                         <i class="fas fa-ticket-alt"></i>
                         Mis tickets CRM
                     </a>
-                    <a href="asesor_estadisticas.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('asesor_estadisticas'); ?>" class="nav-item">
                         <i class="fas fa-chart-bar"></i>
                         Estadísticas
                     </a>
@@ -91,7 +83,7 @@ $message = getMessage();
                     </div>
                 </div>
                 <div class="header-actions">
-                    <a href="asesor_tickets.php" class="btn btn-secondary">
+                    <a href="<?php echo app_nav_url('asesor_tickets'); ?>" class="btn btn-secondary">
                         <i class="fas fa-arrow-left"></i> Volver a Mis Tickets
                     </a>
                 </div>
@@ -414,7 +406,7 @@ $message = getMessage();
                         </div>
 
                         <div class="ticket-form-actions">
-                            <a href="asesor_tickets.php" class="btn btn-secondary btn-compact">
+                            <a href="<?php echo app_nav_url('asesor_tickets'); ?>" class="btn btn-secondary btn-compact">
                                 <i class="fas fa-times"></i> Cancelar
                             </a>
                             <button type="submit" class="btn btn-primary btn-compact">
@@ -649,7 +641,7 @@ $message = getMessage();
             line.textContent = tel ? (nombre + ' · Tel. ' + tel) : (nombre ? nombre + ' · Sin teléfono en ficha' : 'Cliente sin datos');
 
             try {
-                var res = await fetch('../api/softphone_config.php', { credentials: 'same-origin' }).then(function(r) {
+                var res = await fetch('api/softphone_config.php', { credentials: 'same-origin' }).then(function(r) {
                     return r.json();
                 });
                 if (!res.success || !res.enabled) {
@@ -717,7 +709,7 @@ $message = getMessage();
 
         document.addEventListener('DOMContentLoaded', async function() {
             try {
-                const response = await fetch('../api/ticket_detalle_completo.php?ticket_id=' + TICKET_ID, {
+                const response = await fetch('api/ticket_detalle_completo.php?ticket_id=' + TICKET_ID, {
                     credentials: 'same-origin'
                 });
                 const result = await response.json();
@@ -726,7 +718,7 @@ $message = getMessage();
                     showMessage(result.message || 'No se pudo cargar el ticket', 'error');
                     document.getElementById('ticketSubtitle').textContent = 'Error al cargar el ticket';
                     setTimeout(function() {
-                        window.location.href = 'asesor_tickets.php';
+                        window.appGo('asesor_tickets');
                     }, 2000);
                     return;
                 }
@@ -790,7 +782,7 @@ $message = getMessage();
                 console.error(e);
                 showMessage('Error de red al cargar el ticket', 'error');
                 setTimeout(function() {
-                    window.location.href = 'asesor_tickets.php';
+                    window.appGo('asesor_tickets');
                 }, 2000);
             }
         });
@@ -831,7 +823,7 @@ $message = getMessage();
 
         async function cargarHistorialNotas(ticketId) {
             try {
-                const response = await fetch('../api/ticket_notas.php?ticket_id=' + ticketId, {
+                const response = await fetch('api/ticket_notas.php?ticket_id=' + ticketId, {
                     credentials: 'same-origin'
                 });
                 const result = await response.json();
@@ -898,7 +890,7 @@ $message = getMessage();
 
         async function cargarArchivosExistentes(ticketId) {
             try {
-                const response = await fetch('../api/ticket_archivos.php?ticket_id=' + ticketId, {
+                const response = await fetch('api/ticket_archivos.php?ticket_id=' + ticketId, {
                     credentials: 'same-origin'
                 });
                 const result = await response.json();
@@ -950,7 +942,7 @@ $message = getMessage();
                 const formData = new FormData();
                 formData.append('archivo_id', archivoId);
 
-                const response = await fetch('../api/eliminar_archivo_ticket.php', {
+                const response = await fetch('api/eliminar_archivo_ticket.php', {
                     method: 'POST',
                     body: formData,
                     credentials: 'same-origin'
@@ -2253,7 +2245,7 @@ $message = getMessage();
             }
 
             try {
-                const response = await fetch('../api/gestionar_ticket.php', {
+                const response = await fetch('api/gestionar_ticket.php', {
                     method: 'POST',
                     body: formData,
                     credentials: 'same-origin'
@@ -2268,7 +2260,7 @@ $message = getMessage();
                     if (tid && !localStorage.getItem(key)) {
                         localStorage.setItem(key, '1');
                         setTimeout(function() {
-                            window.location.href = 'asesor_tickets.php';
+                            window.appGo('asesor_tickets');
                         }, 600);
                     } else {
                         setTimeout(function() {
@@ -2334,7 +2326,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
 
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -2345,7 +2337,7 @@ $message = getMessage();
                 const result = await response.json();
 
                 if (result.success) {
-                    window.location.href = 'login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

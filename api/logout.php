@@ -14,6 +14,9 @@ $loginController = new LoginController();
 
 try {
     $result = $loginController->logout();
+    app_clear_route();
+    app_set_route('login');
+    $result['redirect'] = app_home_url();
     echo json_encode($result);
 } catch (Exception $e) {
     http_response_code(500);

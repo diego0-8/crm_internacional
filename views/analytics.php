@@ -1,11 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('admin');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -16,10 +12,11 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Analytics - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <link href="../css/dashboard.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
 </head>
 <body>
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
@@ -31,22 +28,22 @@ $message = getMessage();
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../img/logo2.png" alt="Logo CRM">
+                    <img src="img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Analytics</div>
-                    <a href="admin_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('admin_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
-                    <a href="analytics.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('analytics'); ?>" class="nav-item active">
                         <i class="fas fa-chart-bar"></i>
                         Analytics
                     </a>
-                    <a href="settings.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('settings'); ?>" class="nav-item">
                         <i class="fas fa-cog"></i>
                         Settings
                     </a>
@@ -100,7 +97,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -260,13 +257,13 @@ $message = getMessage();
             try {
                 showMessage('Cargando datos analíticos...', 'info');
 
-                const response = await fetch('../api/analytics.php', {
+                const response = await fetch('api/analytics.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -619,7 +616,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
 
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -630,7 +627,7 @@ $message = getMessage();
                 const result = await response.json();
 
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

@@ -1,11 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('admin');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -16,11 +12,12 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Dashboard Administrador - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
 </head>
 <body>
     <a href="#main-content" class="skip-link">Saltar al contenido principal</a>
@@ -32,22 +29,22 @@ $message = getMessage();
         <div class="sidebar" id="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-coordinador">
-                    <img src="../img/logo2.png" alt="logocrm">
+                    <img src="img/logo2.png" alt="logocrm">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Administration</div>
-                    <a href="admin_dashboard.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('admin_dashboard'); ?>" class="nav-item active">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
-                    <a href="analytics.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('analytics'); ?>" class="nav-item">
                         <i class="fas fa-chart-bar"></i>
                         Analytics
                     </a>
-                    <a href="settings.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('settings'); ?>" class="nav-item">
                         <i class="fas fa-cog"></i>
                         Settings
                     </a>
@@ -100,7 +97,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -436,7 +433,7 @@ $message = getMessage();
         // Cargar roles
         async function loadRoles() {
             try {
-                const response = await fetch('../api/roles.php');
+                const response = await fetch('api/roles.php');
                 const data = await response.json();
                 
                 if (data.success === false) {
@@ -462,7 +459,7 @@ $message = getMessage();
         // Cargar usuarios
         async function loadUsers() {
             try {
-                const response = await fetch('../api/users.php');
+                const response = await fetch('api/users.php');
                 const data = await response.json();
                 
                 if (data.success === false) {
@@ -482,7 +479,7 @@ $message = getMessage();
         // Cargar coordinadores
         async function loadCoordinators() {
             try {
-                const response = await fetch('../api/coordinators.php');
+                const response = await fetch('api/coordinators.php');
                 const data = await response.json();
                 
                 if (data.success === false) {
@@ -639,13 +636,13 @@ $message = getMessage();
         // Cargar cambios porcentuales de estadísticas
         async function loadUserStatsChanges() {
             try {
-                const response = await fetch('../api/user_stats.php', {
+                const response = await fetch('api/user_stats.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -870,7 +867,7 @@ $message = getMessage();
         // Cargar asesores para asignación
         async function loadAdvisors() {
             try {
-                const response = await fetch('../api/advisors.php');
+                const response = await fetch('api/advisors.php');
                 const data = await response.json();
                 
                 if (data.success === false) {
@@ -951,7 +948,7 @@ $message = getMessage();
             }
             
             const formData = new FormData(this);
-            const url = userId ? '../api/update_user.php' : '../api/create_user.php';
+            const url = userId ? 'api/update_user.php' : 'api/create_user.php';
             
             try {
                 showMessage('Procesando usuario...', 'info');
@@ -990,7 +987,7 @@ $message = getMessage();
             }
             
             try {
-                const response = await fetch('../api/assign_advisors.php', {
+                const response = await fetch('api/assign_advisors.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1020,7 +1017,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cambiar el estado de este usuario?')) return;
             
             try {
-                const response = await fetch('../api/toggle_user.php', {
+                const response = await fetch('api/toggle_user.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1046,7 +1043,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de eliminar este usuario? Esta acción no se puede deshacer.')) return;
             
             try {
-                const response = await fetch('../api/delete_user.php', {
+                const response = await fetch('api/delete_user.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1102,7 +1099,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
             
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1112,7 +1109,7 @@ $message = getMessage();
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

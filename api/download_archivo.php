@@ -9,8 +9,7 @@ if (!isLoggedIn()) {
 
 $user = getCurrentUser();
 
-// Verificar que sea coordinador
-if ($user['rol_nombre'] !== 'coordinador') {
+if (!hasRole('coordinador')) {
     http_response_code(403);
     exit('Acceso denegado');
 }

@@ -1135,7 +1135,7 @@ class WebRTCSoftphone {
             this.callContext = { cliente_id: Number(ctx.cliente_id), telefono_contacto: tel };
             // Mantener sincronizado el contexto global para búsquedas/gestión.
             try { window.__callLogContext = { cliente_id: ctx.cliente_id, telefono_contacto: tel }; } catch (e) {}
-            this._postJson('index.php?action=registrar_inicio_llamada', {
+            this._postJson('api/call_log.php?action=registrar_inicio_llamada', {
                 call_id: this.activeCallId,
                 cliente_id: ctx.cliente_id,
                 telefono_contacto: tel,
@@ -2216,7 +2216,7 @@ class WebRTCSoftphone {
                 Number(this.callDurationSeconds || 0),
                 this.callStart ? Math.floor((Date.now() - this.callStart) / 1000) : 0
             );
-            this._postJson('index.php?action=registrar_fin_llamada', {
+            this._postJson('api/call_log.php?action=registrar_fin_llamada', {
                 call_id: this.activeCallId,
                 hangup_by: this._hangupMeta?.hangup_by || 'sistema',
                 duracion_segundos: finalDurationSeconds,

@@ -76,6 +76,17 @@ class RepartoImportModel {
         return isset($row[$key]) ? trim((string) $row[$key]) : '';
     }
 
+    /** Normaliza teléfono a solo dígitos para comparar duplicados. */
+    private function normalizarTelefono(string $numero): string {
+        $digits = preg_replace('/\D+/', '', $numero);
+        return $digits === null ? '' : $digits;
+    }
+
+    /** Normaliza correo para comparar duplicados (minúsculas, sin espacios). */
+    private function normalizarCorreo(string $email): string {
+        return strtolower(trim($email));
+    }
+
     private function dnc(?string $raw): ?string {
         if ($raw === null || $raw === '') {
             return null;
@@ -140,9 +151,12 @@ class RepartoImportModel {
     /**
      * Valida una fila de reparto antes de importar.
      *
+     * @param array{casos_en_archivo?:array<string,int>,parcelas_en_archivo?:array<string,int>} $contextoArchivo
+     *   Claves ya importadas en el mismo CSV (Case/Parcel → número de fila CSV).
+     *
      * @return array{valid:bool,fila_vacia:bool,identificador:string,faltantes:string[]}
      */
-    public function validarFila(array $row, ?string $coordinadorCedula = null): array {
+    public function validarFila(array $row, ?string $coordinadorCedula = null, array $contextoArchivo = []): array {
         if ($this->filaVacia($row)) {
             return [
                 'valid' => false,
@@ -166,8 +180,23 @@ class RepartoImportModel {
             }
         }
 
-        if ($case !== '' && $this->existeNumeroCaso($case, $coordinadorCedula)) {
-            $faltantes[] = 'Caso ya importado (Case Number duplicado)';
+        $casosEnArchivo = $contextoArchivo['casos_en_archivo'] ?? [];
+        $parcelasEnArchivo = $contextoArchivo['parcelas_en_archivo'] ?? [];
+
+        if ($case !== '') {
+            if ($this->existeNumeroCaso($case, $coordinadorCedula)) {
+                $faltantes[] = 'Case Number ya existe en la base de datos: ' . $case;
+            } elseif (isset($casosEnArchivo[$case])) {
+                $faltantes[] = 'Case Number repetido en este archivo (fila ' . $casosEnArchivo[$case] . '): ' . $case;
+            }
+        }
+
+        if ($parcel !== '') {
+            if ($this->existeNumeroParcela($parcel, $coordinadorCedula)) {
+                $faltantes[] = 'Parcel Number ya existe en la base de datos: ' . $parcel;
+            } elseif (isset($parcelasEnArchivo[$parcel])) {
+                $faltantes[] = 'Parcel Number repetido en este archivo (fila ' . $parcelasEnArchivo[$parcel] . '): ' . $parcel;
+            }
         }
 
         $ref = self::referenciaDesdeFila($row);
@@ -204,6 +233,35 @@ class RepartoImportModel {
                 LIMIT 1
             ');
             $stmt->execute([$numeroCaso]);
+        }
+
+        return (bool) $stmt->fetch();
+    }
+
+    /**
+     * Comprueba si el número de parcela ya existe en propiedades.
+     */
+    public function existeNumeroParcela(string $numeroParcela, ?string $coordinadorCedula = null): bool {
+        $numeroParcela = trim($numeroParcela);
+        if ($numeroParcela === '') {
+            return false;
+        }
+
+        if ($coordinadorCedula !== null && $coordinadorCedula !== '') {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM propiedades p
+                INNER JOIN titulares t ON t.id_cliente = p.id_cliente
+                WHERE TRIM(p.numero_parcela) = ? AND t.coordinador_cedula = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$numeroParcela, $coordinadorCedula]);
+        } else {
+            $stmt = $this->db->prepare('
+                SELECT 1 FROM propiedades
+                WHERE TRIM(numero_parcela) = ?
+                LIMIT 1
+            ');
+            $stmt->execute([$numeroParcela]);
         }
 
         return (bool) $stmt->fetch();
@@ -277,25 +335,39 @@ class RepartoImportModel {
             $stmtTel = $this->db->prepare('
                 INSERT INTO telefonos (id_cliente, orden, numero, tipo, dnc_litigator) VALUES (?,?,?,?,?)
             ');
+            $ordenTel = 1;
+            $telefonosVistos = [];
             for ($i = 1; $i <= 5; $i++) {
                 $num = $this->cut($this->val($row, "Phone $i"), 80);
                 if ($num === '') {
                     continue;
                 }
+                $norm = $this->normalizarTelefono($num);
+                if ($norm === '' || isset($telefonosVistos[$norm])) {
+                    continue;
+                }
+                $telefonosVistos[$norm] = true;
                 $tipo = $this->cut($this->val($row, "Phone $i: Type"), 40) ?: null;
                 $dnc = $this->dnc($this->val($row, "Phone $i: DNC/Litigator"));
-                $stmtTel->execute([$idCliente, $i, $num, $tipo, $dnc]);
+                $stmtTel->execute([$idCliente, $ordenTel++, $num, $tipo, $dnc]);
             }
 
             $stmtEm = $this->db->prepare('
                 INSERT INTO correos (id_cliente, orden, email) VALUES (?,?,?)
             ');
+            $ordenEm = 1;
+            $correosVistos = [];
             for ($i = 1; $i <= 5; $i++) {
                 $em = $this->cut($this->val($row, "Email $i"), 255);
                 if ($em === '') {
                     continue;
                 }
-                $stmtEm->execute([$idCliente, $i, $em]);
+                $normEm = $this->normalizarCorreo($em);
+                if ($normEm === '' || isset($correosVistos[$normEm])) {
+                    continue;
+                }
+                $correosVistos[$normEm] = true;
+                $stmtEm->execute([$idCliente, $ordenEm++, $em]);
             }
 
             $stmtRef = $this->db->prepare('
@@ -348,21 +420,35 @@ class RepartoImportModel {
                 ]);
                 $idRef = (int) $this->db->lastInsertId();
 
+                $ordenTelRef = 1;
+                $telRefVistos = [];
                 for ($t = 1; $t <= 5; $t++) {
                     $num = $this->cut($this->val($row, $pfx . "Phone $t"), 80);
                     if ($num === '') {
                         continue;
                     }
+                    $normTelRef = $this->normalizarTelefono($num);
+                    if ($normTelRef === '' || isset($telRefVistos[$normTelRef])) {
+                        continue;
+                    }
+                    $telRefVistos[$normTelRef] = true;
                     $tipo = $this->cut($this->val($row, $pfx . "Phone $t: Type"), 40) ?: null;
                     $dnc = $this->dnc($this->val($row, $pfx . "Phone $t: DNC/Litigator"));
-                    $stmtRefTel->execute([$idRef, $t, $num, $tipo, $dnc]);
+                    $stmtRefTel->execute([$idRef, $ordenTelRef++, $num, $tipo, $dnc]);
                 }
+                $ordenEmRef = 1;
+                $emRefVistos = [];
                 for ($e = 1; $e <= 5; $e++) {
                     $em = $this->cut($this->val($row, $pfx . "Email $e"), 255);
                     if ($em === '') {
                         continue;
                     }
-                    $stmtRefEm->execute([$idRef, $e, $em]);
+                    $normEmRef = $this->normalizarCorreo($em);
+                    if ($normEmRef === '' || isset($emRefVistos[$normEmRef])) {
+                        continue;
+                    }
+                    $emRefVistos[$normEmRef] = true;
+                    $stmtRefEm->execute([$idRef, $ordenEmRef++, $em]);
                 }
                 $ordenRef++;
             }

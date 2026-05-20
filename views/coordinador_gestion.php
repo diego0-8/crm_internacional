@@ -1,28 +1,41 @@
 <?php
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../model/RepartoImportModel.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('coordinador');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
 $message = getMessage();
+
+/** Cabeceras CSV obligatorias (inglés) — alineado con RepartoImportModel::CAMPOS_REQUERIDOS */
+$columnasCsvRequeridas = array_merge(
+    [
+        'Case Number' => 'Número de caso (requiere Case Number o Parcel Number)',
+        'Parcel Number' => 'Número de parcela',
+    ],
+    RepartoImportModel::CAMPOS_REQUERIDOS
+);
+
+// Repartir encabezados en 2–3 filas para que quepan en pantalla sin scroll horizontal
+$totalColumnasCsv = count($columnasCsvRequeridas);
+$filasColumnasObjetivo = 3;
+$columnasPorFila = (int) max(1, (int) ceil($totalColumnasCsv / $filasColumnasObjetivo));
+$filasColumnasRequeridas = array_chunk($columnasCsvRequeridas, $columnasPorFila, true);
 ?>
 <!DOCTYPE html>
 <html lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Gestión CSV - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/coordinador.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/coordinador.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -30,26 +43,26 @@ $message = getMessage();
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-asesor">
-                    <img src="../img/logo2.png" alt="Logo CRM">
+                    <img src="img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Coordinador</div>
-                    <a href="coordinador_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
-                    <a href="coordinador_tareas.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_tareas'); ?>" class="nav-item">
                         <i class="fas fa-tasks"></i>
                         Tareas
                     </a>
-                    <a href="coordinador_gestion.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('coordinador_gestion'); ?>" class="nav-item active">
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_exporte.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_exporte'); ?>" class="nav-item">
                         <i class="fas fa-download"></i>
                         Exporte
                     </a>
@@ -90,11 +103,11 @@ $message = getMessage();
             </div>
 
             <!-- Content Area -->
-            <div class="content-area">
+            <div class="content-area coordinador-dashboard coordinador-gestion">
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -106,12 +119,12 @@ $message = getMessage();
                     <div class="card-content">
                         <form id="uploadForm" enctype="multipart/form-data">
                             <div class="upload-area" id="uploadArea">
-                                <div class="upload-content">
+                                <div class="upload-content" id="uploadContent">
                                     <i class="fas fa-cloud-upload-alt"></i>
                                     <h4>Arrastra y suelta tu archivo CSV aquí</h4>
-                                    <p>o haz clic para seleccionar un archivo</p>
-                                    <input type="file" id="csvFile" name="csv_file" accept=".csv" style="display: none;">
-                                    <button type="button" class="btn btn-primary" onclick="document.getElementById('csvFile').click()">
+                                    <p class="upload-hint">o haz clic en esta zona (fuera del botón) para seleccionar</p>
+                                    <input type="file" id="csvFile" name="csv_file" accept=".csv" class="upload-file-input" tabindex="-1" aria-hidden="true">
+                                    <button type="button" class="btn btn-primary" id="btnSelectCsv">
                                         <i class="fas fa-folder-open"></i> Seleccionar Archivo
                                     </button>
                                 </div>
@@ -152,34 +165,41 @@ $message = getMessage();
                     </div>
                     <div class="card-content">
                         <p class="csv-requeridos-intro">
-                            Se importan filas con <strong>todos</strong> los campos llenos y con <strong>Case Number</strong> o <strong>Parcel Number</strong>.
-                            Las demás aparecen en «Filas no importadas» con el motivo. Teléfonos, correos y referencias son opcionales.
+                            La primera fila del CSV debe incluir exactamente estos encabezados. Cada fila de datos debe tener
+                            <strong>Case Number</strong> o <strong>Parcel Number</strong> (al menos uno) y el resto de columnas con valor.
                         </p>
-                        <div class="csv-format-table">
-                            <table class="format-table rechazos-table">
+                        <div class="csv-columnas-requeridas-wrap">
+                            <table class="format-table columnas-requeridas-table">
                                 <thead>
-                                    <tr>
-                                        <th>Campo (BD)</th>
-                                        <th>Columna CSV</th>
-                                    </tr>
+                                    <?php foreach ($filasColumnasRequeridas as $filaColumnas): ?>
+                                        <tr>
+                                            <?php foreach ($filaColumnas as $csvKey => $etiquetaEs): ?>
+                                                <th title="<?php echo htmlspecialchars($etiquetaEs, ENT_QUOTES, 'UTF-8'); ?>">
+                                                    <?php echo htmlspecialchars($csvKey, ENT_QUOTES, 'UTF-8'); ?>
+                                                </th>
+                                            <?php endforeach; ?>
+                                        </tr>
+                                    <?php endforeach; ?>
                                 </thead>
-                                <tbody>
-                                    <tr><td>primer_nombre</td><td>First Name</td></tr>
-                                    <tr><td>apellido</td><td>Last Name</td></tr>
-                                    <tr><td>mailing_calle</td><td>Mailing Street</td></tr>
-                                    <tr><td>mailing_ciudad</td><td>Mailing City</td></tr>
-                                    <tr><td>mailing_estado</td><td>Mailing State</td></tr>
-                                    <tr><td>mailing_codigo_postal</td><td>Mailing ZIP Code</td></tr>
-                                    <tr><td>excedente</td><td>Surplus Amount</td></tr>
-                                    <tr><td>monetizacion</td><td>Monetizacion</td></tr>
-                                    <tr><td>puja_cierre</td><td>Closing Bid</td></tr>
-                                    <tr><td>puja_apertura</td><td>Opening Bid</td></tr>
-                                    <tr><td>fecha_venta</td><td>Date Sold</td></tr>
-                                    <tr><td>dias_transcurridos</td><td>Dias_Transc</td></tr>
-                                    <tr><td>numero_caso <em>o</em> numero_parcela</td><td>Case Number <em>o</em> Parcel Number</td></tr>
-                                </tbody>
                             </table>
                         </div>
+                        <p class="csv-requeridos-nota">
+                            <i class="fas fa-info-circle"></i>
+                            Pase el cursor sobre cada encabezado para ver la descripción en español.
+                            Columnas adicionales del archivo (teléfonos, correos, referencias, etc.) son opcionales si el modelo de reparto las trae.
+                        </p>
+                        <p class="csv-requeridos-nota csv-requeridos-contacto">
+                            <i class="fas fa-address-book"></i>
+                            <strong>Teléfonos y correos por fila (caso):</strong> si un número o correo se repite en varias columnas de la misma fila,
+                            el caso <strong>sí se importa</strong> y solo se guardan los valores distintos (se omite el duplicado).
+                            Aplica a <em>Phone 1–5</em>, <em>Email 1–5</em> y los de cada <em>RELATIVE n</em>.
+                        </p>
+                        <p class="csv-requeridos-nota csv-requeridos-duplicados">
+                            <i class="fas fa-clone"></i>
+                            <strong>Case Number y Parcel Number:</strong> el resto del archivo <strong>sí se importa</strong>.
+                            Solo se omiten las filas cuyo Case o Parcel ya existan en la base de datos o se repitan dentro del mismo CSV.
+                            Esas filas aparecen en el modal de resultado como casos no creados.
+                        </p>
                     </div>
                 </div>
 
@@ -240,6 +260,14 @@ $message = getMessage();
                         <!-- Filters -->
                         <div class="filters-row">
                             <div class="filter-group">
+                                <label for="activoFilter">Disponibilidad</label>
+                                <select id="activoFilter" class="form-control" onchange="applyFilters()">
+                                    <option value="">Todos</option>
+                                    <option value="1">Habilitados</option>
+                                    <option value="0">Inhabilitados</option>
+                                </select>
+                            </div>
+                            <div class="filter-group">
                                 <label for="estadoFilter">Estado</label>
                                 <select id="estadoFilter" class="form-control" onchange="applyFilters()">
                                     <option value="">Todos los estados</option>
@@ -275,7 +303,7 @@ $message = getMessage();
     </div>
 
     <!-- Modal resultado importación CSV -->
-    <div id="importResultModal" class="modal import-result-modal">
+    <div id="importResultModal" class="modal import-result-modal coordinador-modal">
         <div class="modal-content modal-scroll import-result-modal-content">
             <div class="modal-header">
                 <h3 class="modal-title"><i class="fas fa-file-csv"></i> Resultado de la importación</h3>
@@ -290,6 +318,7 @@ $message = getMessage();
                 </section>
                 <section id="importResultFailSection" class="import-result-section import-result-section--fail" style="display: none;">
                     <h4><i class="fas fa-exclamation-triangle"></i> Casos no creados</h4>
+                    <p class="import-result-hint">Incluye Case Number o Parcel Number duplicados (en BD o en el mismo archivo) y filas con datos incompletos.</p>
                     <ul id="importResultFailList" class="import-result-list import-result-list--fail"></ul>
                 </section>
             </div>
@@ -299,8 +328,22 @@ $message = getMessage();
         </div>
     </div>
 
+    <!-- Modal detalles archivo CSV -->
+    <div id="archivoDetalleModal" class="modal coordinador-modal">
+        <div class="modal-content archivo-detalle-modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title"><i class="fas fa-file-csv"></i> Detalles del archivo</h3>
+                <span class="close" onclick="closeArchivoDetalleModal()" aria-label="Cerrar">&times;</span>
+            </div>
+            <div class="modal-body" id="archivoDetalleBody"></div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeArchivoDetalleModal()">Cerrar</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Modal para crear cliente manualmente -->
-    <div id="createClientModal" class="modal">
+    <div id="createClientModal" class="modal coordinador-modal">
         <div class="modal-content modal-scroll">
             <div class="modal-header">
                 <h3 class="modal-title">Crear Cliente Manualmente</h3>
@@ -398,6 +441,7 @@ $message = getMessage();
         let selectedFile = null;
         let archivos = [];
         let filteredArchivos = [];
+        let uploadInitialized = false;
 
         // Inicializar
         document.addEventListener('DOMContentLoaded', function() {
@@ -411,13 +455,13 @@ $message = getMessage();
             try {
                 showMessage('Cargando archivos...', 'info');
 
-                const response = await fetch('../api/coordinador_archivos.php', {
+                const response = await fetch('api/coordinador_archivos.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -438,6 +482,10 @@ $message = getMessage();
             }
         }
 
+        function archivoEstaHabilitado(archivo) {
+            return archivo.activo === undefined || archivo.activo === null || Number(archivo.activo) === 1;
+        }
+
         // Renderizar archivos
         function renderArchivos() {
             const container = document.getElementById('archivosList');
@@ -449,20 +497,30 @@ $message = getMessage();
             }
 
             filteredArchivos.forEach(archivo => {
+                const habilitado = archivoEstaHabilitado(archivo);
                 const archivoItem = document.createElement('div');
-                archivoItem.className = 'archivo-item';
+                archivoItem.className = 'archivo-item' + (habilitado ? '' : ' archivo-item-inactivo');
+                const toggleBtn = habilitado
+                    ? `<button class="btn btn-sm btn-warning" onclick="cambiarEstadoArchivo(${archivo.id}, 0)" title="Oculta el cargue para nuevas operaciones; conserva historial y tickets">
+                            <i class="fas fa-ban"></i> Inhabilitar
+                       </button>`
+                    : `<button class="btn btn-sm btn-success" onclick="cambiarEstadoArchivo(${archivo.id}, 1)" title="Vuelve a habilitar el cargue">
+                            <i class="fas fa-check-circle"></i> Habilitar
+                       </button>`;
+
                 archivoItem.innerHTML = `
                     <div class="archivo-info">
                         <div class="archivo-icon">
                             <i class="fas fa-file-csv"></i>
                         </div>
                         <div class="archivo-details">
-                            <h4>${archivo.nombre_archivo}</h4>
+                            <h4>${escapeHtmlCsv(archivo.nombre_archivo)}</h4>
                             <p>Subido: ${formatDate(archivo.created_at)}</p>
                             <p>Registros: ${archivo.registros_procesados || 0} de ${archivo.total_registros || 0}</p>
                         </div>
                         <div class="archivo-status">
-                            <span class="status-badge status-${archivo.estado}">${archivo.estado}</span>
+                            <span class="status-badge status-${habilitado ? 'habilitado' : 'inhabilitado'}">${habilitado ? 'Habilitado' : 'Inhabilitado'}</span>
+                            <span class="status-badge status-${archivo.estado}">${escapeHtmlCsv(archivo.estado)}</span>
                         </div>
                     </div>
                     <div class="archivo-actions">
@@ -472,9 +530,7 @@ $message = getMessage();
                         <button class="btn btn-sm btn-primary" onclick="descargarArchivo(${archivo.id})">
                             <i class="fas fa-download"></i> Descargar
                         </button>
-                        <button class="btn btn-sm btn-danger" onclick="eliminarArchivo(${archivo.id})">
-                            <i class="fas fa-trash"></i> Eliminar
-                        </button>
+                        ${toggleBtn}
                     </div>
                 `;
                 container.appendChild(archivoItem);
@@ -483,12 +539,19 @@ $message = getMessage();
 
         // Aplicar filtros
         function applyFilters() {
+            const activoFilter = document.getElementById('activoFilter').value;
             const estadoFilter = document.getElementById('estadoFilter').value;
             const fechaFilter = document.getElementById('fechaFilter').value;
 
             filteredArchivos = archivos.filter(archivo => {
+                let matchesActivo = true;
                 let matchesEstado = true;
                 let matchesFecha = true;
+
+                if (activoFilter !== '') {
+                    const habilitado = archivoEstaHabilitado(archivo);
+                    matchesActivo = activoFilter === '1' ? habilitado : !habilitado;
+                }
 
                 // Filtro por estado
                 if (estadoFilter) {
@@ -516,7 +579,7 @@ $message = getMessage();
                     matchesFecha = archivoFecha >= fechaInicio;
                 }
 
-                return matchesEstado && matchesFecha;
+                return matchesActivo && matchesEstado && matchesFecha;
             });
 
             renderArchivos();
@@ -524,52 +587,85 @@ $message = getMessage();
 
         // Limpiar filtros
         function clearFilters() {
+            document.getElementById('activoFilter').value = '';
             document.getElementById('estadoFilter').value = '';
             document.getElementById('fechaFilter').value = '';
             filteredArchivos = [...archivos];
             renderArchivos();
         }
 
-        // Ver detalles del archivo
+        function closeArchivoDetalleModal() {
+            const modal = document.getElementById('archivoDetalleModal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
+        }
+
+        // Ver detalles del archivo (modal)
         function verDetalles(archivoId) {
             const archivo = archivos.find(a => a.id == archivoId);
             if (!archivo) return;
 
-            const detalles = `
-                <strong>Nombre:</strong> ${archivo.nombre_archivo}<br>
-                <strong>Fecha de subida:</strong> ${formatDate(archivo.created_at)}<br>
-                <strong>Estado:</strong> ${archivo.estado}<br>
-                <strong>Total de registros:</strong> ${archivo.total_registros || 0}<br>
-                <strong>Registros procesados:</strong> ${archivo.registros_procesados || 0}
+            const habilitado = archivoEstaHabilitado(archivo);
+            const pct = archivo.total_registros > 0
+                ? Math.round((Number(archivo.registros_procesados || 0) / Number(archivo.total_registros)) * 100)
+                : 0;
+            const body = document.getElementById('archivoDetalleBody');
+            if (!body) return;
+
+            body.innerHTML = `
+                <dl class="archivo-detalle-dl">
+                    <dt>Nombre del archivo</dt>
+                    <dd>${escapeHtmlCsv(archivo.nombre_archivo)}</dd>
+                    <dt>Fecha de subida</dt>
+                    <dd>${escapeHtmlCsv(formatDate(archivo.created_at))}</dd>
+                    <dt>Última actualización</dt>
+                    <dd>${archivo.updated_at ? escapeHtmlCsv(formatDate(archivo.updated_at)) : '—'}</dd>
+                    <dt>Disponibilidad</dt>
+                    <dd><span class="status-badge status-${habilitado ? 'habilitado' : 'inhabilitado'}">${habilitado ? 'Habilitado' : 'Inhabilitado'}</span></dd>
+                    <dt>Estado de procesamiento</dt>
+                    <dd><span class="status-badge status-${escapeHtmlCsv(archivo.estado || '')}">${escapeHtmlCsv(archivo.estado || '—')}</span></dd>
+                    <dt>Total de registros</dt>
+                    <dd>${Number(archivo.total_registros || 0)}</dd>
+                    <dt>Registros procesados</dt>
+                    <dd>${Number(archivo.registros_procesados || 0)} (${pct}%)</dd>
+                    <dt>ID en sistema</dt>
+                    <dd>#${escapeHtmlCsv(String(archivo.id))}</dd>
+                </dl>
             `;
 
-            alert('Detalles del Archivo\n\n' + detalles.replace(/<br>/g, '\n').replace(/<strong>/g, '').replace(/<\/strong>/g, ''));
+            document.getElementById('archivoDetalleModal').style.display = 'block';
         }
 
         // Descargar archivo
         function descargarArchivo(archivoId) {
-            window.open(`../api/download_archivo.php?id=${archivoId}`, '_blank');
+            window.open(`api/download_archivo.php?id=${archivoId}`, '_blank');
         }
 
-        // Eliminar archivo
-        async function eliminarArchivo(archivoId) {
-            if (!confirm('¿Está seguro de eliminar este archivo? Esta acción no se puede deshacer.')) {
+        // Inhabilitar o habilitar cargue CSV (no elimina datos ni tickets)
+        async function cambiarEstadoArchivo(archivoId, activo) {
+            const habilitar = Number(activo) === 1;
+            const mensaje = habilitar
+                ? '¿Habilitar este cargue nuevamente?'
+                : '¿Inhabilitar este cargue?\n\nNo se borrará nada: el historial en la aplicación y los tickets asociados se conservan. Solo dejará de estar activo para nuevas operaciones.';
+
+            if (!confirm(mensaje)) {
                 return;
             }
 
             try {
-                const response = await fetch('../api/eliminar_archivo.php', {
+                const response = await fetch('api/toggle_archivo_csv.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
                     credentials: 'include',
-                    body: JSON.stringify({ archivo_id: archivoId })
+                    body: JSON.stringify({ archivo_id: archivoId, activo: habilitar ? 1 : 0 })
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -578,14 +674,14 @@ $message = getMessage();
                 const result = await response.json();
 
                 if (result.success) {
-                    showMessage('Archivo eliminado exitosamente', 'success');
+                    showMessage(result.message, 'success');
                     loadArchivos();
                 } else {
-                    showMessage('Error eliminando archivo: ' + result.message, 'error');
+                    showMessage('Error: ' + result.message, 'error');
                 }
             } catch (error) {
-                console.error('Error eliminando archivo:', error);
-                showMessage('Error eliminando archivo', 'error');
+                console.error('Error cambiando estado del archivo:', error);
+                showMessage('Error al cambiar el estado del archivo', 'error');
             }
         }
 
@@ -601,12 +697,25 @@ $message = getMessage();
             });
         }
 
-        // Inicializar funcionalidad de upload
-        function initializeUpload() {
-            const uploadArea = document.getElementById('uploadArea');
+        function abrirSelectorCsv() {
             const fileInput = document.getElementById('csvFile');
+            fileInput.value = '';
+            fileInput.click();
+        }
 
-            // Drag and drop
+        // Inicializar funcionalidad de upload (una sola vez; evita doble diálogo de archivo)
+        function initializeUpload() {
+            if (uploadInitialized) {
+                return;
+            }
+            uploadInitialized = true;
+
+            const uploadArea = document.getElementById('uploadArea');
+            const uploadContent = document.getElementById('uploadContent');
+            const fileInput = document.getElementById('csvFile');
+            const btnSelectCsv = document.getElementById('btnSelectCsv');
+            const uploadForm = document.getElementById('uploadForm');
+
             uploadArea.addEventListener('dragover', function(e) {
                 e.preventDefault();
                 uploadArea.classList.add('dragover');
@@ -620,27 +729,36 @@ $message = getMessage();
             uploadArea.addEventListener('drop', function(e) {
                 e.preventDefault();
                 uploadArea.classList.remove('dragover');
-                
                 const files = e.dataTransfer.files;
                 if (files.length > 0) {
                     handleFileSelect(files[0]);
                 }
             });
 
-            // Click to select
-            uploadArea.addEventListener('click', function() {
-                fileInput.click();
+            btnSelectCsv.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
+                abrirSelectorCsv();
             });
 
-            // File input change
+            uploadContent.addEventListener('click', function(e) {
+                if (e.target.closest('button')) {
+                    return;
+                }
+                abrirSelectorCsv();
+            });
+
             fileInput.addEventListener('change', function(e) {
-                if (e.target.files.length > 0) {
+                if (e.target.files && e.target.files.length > 0) {
                     handleFileSelect(e.target.files[0]);
                 }
             });
 
-            // Form submit
-            document.getElementById('uploadForm').addEventListener('submit', function(e) {
+            fileInput.addEventListener('click', function(e) {
+                e.stopPropagation();
+            });
+
+            uploadForm.addEventListener('submit', function(e) {
                 e.preventDefault();
                 uploadFile();
             });
@@ -728,6 +846,21 @@ $message = getMessage();
             return String(fila.motivo || fila.error || '');
         }
 
+        function etiquetasCasoParcela(fila) {
+            const partes = [];
+            if (fila.case_number) {
+                partes.push('Case: ' + fila.case_number);
+            }
+            if (fila.parcel_number) {
+                partes.push('Parcel: ' + fila.parcel_number);
+            }
+            if (partes.length > 0) {
+                return partes.join(' · ');
+            }
+            const ref = referenciaDesdeFilaImport(fila);
+            return ref !== '—' ? ref : '';
+        }
+
         function renderFilasImportadas(result) {
             const card = document.getElementById('filasImportadasCard');
             const body = document.getElementById('filasImportadasBody');
@@ -790,16 +923,18 @@ $message = getMessage();
             const proc = result.registros_procesados ?? 0;
             const rech = result.registros_rechazados ?? filas.length;
             if (resumen) {
-                resumen.textContent = 'Se importaron ' + proc + ' fila(s) y no se crearon ' + rech + ' por datos incompletos o duplicados. Detalle por fila:';
+                resumen.textContent = 'Se importaron ' + proc + ' fila(s) y no se crearon ' + rech
+                    + ' (duplicados Case/Parcel en BD o en el archivo, u otros errores). Detalle por fila:';
             }
 
             body.innerHTML = '';
             filas.forEach(function(fila) {
                 const tr = document.createElement('tr');
+                const refs = etiquetasCasoParcela(fila) || referenciaDesdeFilaImport(fila);
                 const motivo = textoFaltantesFila(fila) || '—';
                 tr.innerHTML =
                     '<td>' + escapeHtmlCsv(String(fila.fila_csv ?? '—')) + '</td>' +
-                    '<td>' + escapeHtmlCsv(referenciaDesdeFilaImport(fila)) + '</td>' +
+                    '<td>' + escapeHtmlCsv(refs) + '</td>' +
                     '<td>' + escapeHtmlCsv(motivo) + '</td>';
                 body.appendChild(tr);
             });
@@ -819,12 +954,12 @@ $message = getMessage();
                 });
             }
 
+            const proc = result.registros_procesados ?? importadas.length;
+            const rech = result.registros_rechazados ?? rechazadas.length;
+
             if (importadas.length === 0 && rechazadas.length === 0) {
                 return;
             }
-
-            const proc = result.registros_procesados ?? importadas.length;
-            const rech = result.registros_rechazados ?? rechazadas.length;
             const resumenEl = document.getElementById('importResultResumen');
             if (resumenEl) {
                 resumenEl.textContent = 'Importados: ' + proc + ' · No creados: ' + rech + '.';
@@ -859,12 +994,12 @@ $message = getMessage();
                     failList.innerHTML = '';
                     rechazadas.forEach(function(fila) {
                         const li = document.createElement('li');
-                        const ref = referenciaDesdeFilaImport(fila);
+                        const refs = etiquetasCasoParcela(fila);
                         const faltantes = textoFaltantesFila(fila) || 'Información insuficiente';
                         const filaNum = fila.fila_csv != null && fila.fila_csv !== '—' ? 'Fila ' + fila.fila_csv : 'Fila desconocida';
                         li.innerHTML = '<span class="import-result-fila">' + escapeHtmlCsv(filaNum) + '</span> ' +
-                            (ref !== '—' ? '<span class="import-result-ref">' + escapeHtmlCsv(ref) + '</span> — ' : '') +
-                            '<span class="import-result-faltantes">Falta: ' + escapeHtmlCsv(faltantes) + '</span>';
+                            (refs ? '<span class="import-result-ref">' + escapeHtmlCsv(refs) + '</span> — ' : '') +
+                            '<span class="import-result-faltantes">' + escapeHtmlCsv(faltantes) + '</span>';
                         failList.appendChild(li);
                     });
                 } else {
@@ -903,7 +1038,7 @@ $message = getMessage();
                 showMessage('Procesando archivo...', 'info');
                 document.getElementById('uploadBtn').disabled = true;
 
-                const response = await fetch('../api/mass_upload_init.php', {
+                const response = await fetch('api/mass_upload_init.php', {
                     method: 'POST',
                     credentials: 'include',
                     body: formData
@@ -953,7 +1088,7 @@ $message = getMessage();
         // Cargar asesores para creación de cliente
         async function loadAsesoresForClientCreation() {
             try {
-                const response = await fetch('../api/coordinador_asesores.php', {
+                const response = await fetch('api/coordinador_asesores.php', {
                     credentials: 'include'
                 });
 
@@ -1020,7 +1155,7 @@ $message = getMessage();
             try {
                 const formData = new FormData(this);
 
-                const response = await fetch('../api/crear_cliente.php', {
+                const response = await fetch('api/crear_cliente.php', {
                     method: 'POST',
                     body: formData,
                     credentials: 'include'
@@ -1079,7 +1214,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
             
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1090,7 +1225,7 @@ $message = getMessage();
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }
@@ -1116,36 +1251,194 @@ $message = getMessage();
             if (event.target === clientModal) {
                 closeCreateClientModal();
             }
+            const archivoModal = document.getElementById('archivoDetalleModal');
+            if (event.target === archivoModal) {
+                closeArchivoDetalleModal();
+            }
         }
     </script>
 
     <style>
-        .upload-area {
-            border: 2px dashed #d1d5db;
-            border-radius: 8px;
-            padding: 40px;
+        .upload-file-input {
+            position: absolute;
+            width: 0;
+            height: 0;
+            opacity: 0;
+            overflow: hidden;
+            pointer-events: none;
+        }
+
+        /* Tema claro: anula .upload-area oscuro de dashboard.css */
+        .coordinador-gestion .upload-area {
+            border: 2px dashed #94a3b8;
+            border-radius: 12px;
+            padding: 2.5rem 1.5rem;
             text-align: center;
-            transition: all 0.3s ease;
+            transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+            cursor: pointer;
+            background: #ffffff;
+            color: #1e293b;
+            box-shadow: inset 0 0 0 1px rgba(148, 163, 184, 0.15);
+        }
+
+        .coordinador-gestion .upload-area:hover,
+        .coordinador-gestion .upload-area.dragover {
+            border-color: var(--secondary-blue, #1e88e5);
+            background: #f0f9ff;
+            transform: none;
+        }
+
+        .coordinador-gestion .upload-content h4 {
+            margin: 0 0 0.5rem;
+            font-size: 1.125rem;
+            font-weight: 700;
+            color: #0f172a;
+        }
+
+        .coordinador-gestion .upload-content p,
+        .coordinador-gestion .upload-hint {
+            margin: 0 0 1rem;
+            font-size: 0.9375rem;
+            color: #475569;
             cursor: pointer;
         }
 
-        .upload-area:hover {
-            border-color: #3b82f6;
-            background-color: #f8fafc;
-        }
-
-        .upload-area.dragover {
-            border-color: #3b82f6;
-            background-color: #eff6ff;
-        }
-
-        .upload-content i {
+        .coordinador-gestion .upload-content i.fa-cloud-upload-alt {
             font-size: 3rem;
-            color: #9ca3af;
+            color: var(--secondary-blue, #1e88e5);
             margin-bottom: 1rem;
         }
 
-        .file-info {
+        .coordinador-gestion .filters-row {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 10px;
+            padding: 1rem 1.25rem;
+        }
+
+        .coordinador-gestion .filter-group label {
+            margin-bottom: 0.5rem;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #0f172a;
+        }
+
+        .coordinador-gestion .filter-group .form-control {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+            font-size: 0.9375rem;
+        }
+
+        .coordinador-gestion .filter-group .form-control:focus {
+            border-color: var(--secondary-blue, #1e88e5);
+            box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.15);
+            background: #ffffff;
+            color: #1e293b;
+        }
+
+        .coordinador-gestion .filter-group select.form-control option {
+            background: #ffffff;
+            color: #1e293b;
+        }
+
+        .archivo-detalle-modal-content {
+            max-width: 520px;
+        }
+
+        .archivo-detalle-dl {
+            display: grid;
+            grid-template-columns: minmax(8.5rem, 38%) 1fr;
+            gap: 0.65rem 1rem;
+            margin: 0;
+        }
+
+        .archivo-detalle-dl dt {
+            margin: 0;
+            font-weight: 600;
+            font-size: 0.875rem;
+            color: #64748b;
+        }
+
+        .archivo-detalle-dl dd {
+            margin: 0;
+            font-size: 0.9375rem;
+            color: #0f172a;
+            word-break: break-word;
+        }
+
+        .coordinador-gestion .coordinador-modal .form-control {
+            background: #ffffff;
+            border: 1px solid #cbd5e1;
+            color: #1e293b;
+        }
+
+        .coordinador-gestion .coordinador-modal .form-group label {
+            color: #0f172a;
+            font-weight: 600;
+        }
+
+        .upload-hint {
+            cursor: pointer;
+        }
+
+        .csv-requeridos-intro {
+            color: #4b5563;
+            font-size: 0.9rem;
+            margin: 0 0 1rem;
+            line-height: 1.5;
+        }
+
+        .csv-requeridos-nota {
+            color: #6b7280;
+            font-size: 0.8125rem;
+            margin: 0.75rem 0 0;
+        }
+
+        .csv-requeridos-contacto {
+            background: #f0f9ff;
+            border: 1px solid #bae6fd;
+            border-radius: 8px;
+            padding: 0.65rem 0.85rem;
+        }
+
+        .csv-columnas-requeridas-wrap {
+            margin: 0;
+            width: 100%;
+            max-width: 100%;
+            overflow: hidden;
+        }
+
+        .columnas-requeridas-table {
+            width: 100%;
+            max-width: 100%;
+            table-layout: fixed;
+            margin-bottom: 0;
+        }
+
+        .columnas-requeridas-table thead tr th {
+            white-space: normal;
+            word-break: break-word;
+            hyphens: auto;
+            font-size: clamp(0.65rem, 1.1vw, 0.8rem);
+            vertical-align: middle;
+            text-align: center;
+            padding: 0.45rem 0.35rem;
+            line-height: 1.25;
+        }
+
+        .columnas-requeridas-table thead tr + tr th {
+            border-top: 1px dashed #e5e7eb;
+        }
+
+        @media (max-width: 768px) {
+            .columnas-requeridas-table thead tr th {
+                font-size: 0.65rem;
+                padding: 0.35rem 0.2rem;
+            }
+        }
+
+        .coordinador-gestion .file-info {
             margin-top: 1rem;
             padding: 1rem;
             background-color: #f8fafc;
@@ -1199,7 +1492,7 @@ $message = getMessage();
             margin: 0.25rem 0;
         }
 
-        .filters-row {
+        .coordinador-gestion .filters-row {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
             gap: 1rem;
@@ -1207,15 +1500,9 @@ $message = getMessage();
             margin-bottom: 1.5rem;
         }
 
-        .filter-group {
+        .coordinador-gestion .filter-group {
             display: flex;
             flex-direction: column;
-        }
-
-        .filter-group label {
-            margin-bottom: 0.5rem;
-            font-weight: 500;
-            color: #374151;
         }
 
         .archivo-item {
@@ -1227,6 +1514,16 @@ $message = getMessage();
             border-radius: 8px;
             margin-bottom: 0.5rem;
             background-color: #ffffff;
+        }
+
+        .archivo-item-inactivo {
+            background-color: #f9fafb;
+            border-color: #d1d5db;
+            opacity: 0.92;
+        }
+
+        .archivo-item-inactivo .archivo-icon i {
+            color: #9ca3af;
         }
 
         .archivo-info {
@@ -1254,6 +1551,10 @@ $message = getMessage();
 
         .archivo-status {
             margin-left: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+            align-items: flex-end;
         }
 
         .archivo-actions {
@@ -1282,6 +1583,16 @@ $message = getMessage();
         .status-error {
             background-color: #fee2e2;
             color: #991b1b;
+        }
+
+        .status-habilitado {
+            background-color: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-inhabilitado {
+            background-color: #f3f4f6;
+            color: #4b5563;
         }
 
         /* Modal scroll styles */

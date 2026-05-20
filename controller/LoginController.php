@@ -13,13 +13,9 @@ class LoginController {
      * Mostrar formulario de login
      */
     public function showLogin() {
-        // Si ya está logueado, redirigir al dashboard
         if ($this->authController->checkAuth()) {
             $this->redirectToDashboard();
         }
-        
-        // No hacer nada más, la vista se mostrará automáticamente
-        // ya que este método se llama desde login.php
     }
     
     /**
@@ -35,39 +31,31 @@ class LoginController {
         $password = $_POST['password'] ?? '';
         $rememberMe = isset($_POST['remember_me']) && $_POST['remember_me'] == '1';
 
-        // Validar datos de entrada
         if (empty($usuario) || empty($password)) {
             $this->renderLoginView("Por favor, complete todos los campos", $usuario);
             return;
         }
 
-        // Procesar login a través del AuthController
         $result = $this->authController->login($usuario, $password, $rememberMe);
 
         if ($result['success']) {
-            // Configurar "Remember Me" si fue solicitado
             if ($rememberMe) {
                 setRememberMeCookie($result['user']['cedula']);
             }
-
-            // Redirigir según el rol
             $this->redirectToDashboard();
         } else {
-            // Mostrar error específico
             $this->renderLoginView($result['message'], $usuario);
         }
     }
     
     /**
-     * Renderizar vista de login
+     * Guardar error de login y volver a la pantalla de acceso (URL raíz).
      */
     private function renderLoginView($error = '', $usuario = '') {
-        // Guardar variables en la sesión para que estén disponibles en la vista
         $_SESSION['login_error'] = $error;
         $_SESSION['login_usuario'] = $usuario;
-        
-        // Redirigir a la vista de login
-        redirect('../views/login.php');
+        app_set_route('login');
+        app_redirect_home();
     }
     
     /**
@@ -75,30 +63,13 @@ class LoginController {
      */
     public function redirectToDashboard() {
         if (!isset($_SESSION['user_role_name'])) {
-            redirect('../views/login.php');
-            return;
+            app_set_route('login');
+            app_redirect_home();
         }
         
         $rol = $_SESSION['user_role_name'];
-        
-        switch ($rol) {
-            case 'admin':
-                redirect('../views/admin_dashboard.php');
-                break;
-            case 'coordinador':
-                redirect('../views/coordinador_dashboard.php');
-                break;
-            case 'asesor':
-                redirect('../views/asesor_dashboard.php');
-                break;
-            case 'cliente':
-                redirect('../views/cliente_dashboard.php');
-                break;
-            default:
-                // Rol no reconocido, redirigir al login
-                redirect('../views/login.php');
-                break;
-        }
+        app_set_route(app_default_route_for_role($rol));
+        app_redirect_home();
     }
     
     /**
@@ -106,8 +77,7 @@ class LoginController {
      */
     public function logout() {
         $result = $this->authController->logout();
-        
         return $result;
     }
 }
-?>
+

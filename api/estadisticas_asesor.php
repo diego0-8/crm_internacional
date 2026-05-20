@@ -2,6 +2,7 @@
 header('Content-Type: application/json');
 require_once '../config.php';
 require_once '../model/TitularModel.php';
+require_once '../model/TiketeraModel.php';
 
 if (!isLoggedIn() || !hasRole('asesor')) {
     http_response_code(401);
@@ -95,44 +96,51 @@ try {
     $ticketsCreadosMes = 0;
     $tiempoPromedioResolucion = 0;
     if ($tbTiketera) {
+        $tiketeraModel = new TiketeraModel();
+        $filtroCsv = $tiketeraModel->filtroSqlTicketsSinCsvInhabilitado('t');
+
         $stmt = $db->prepare("
             SELECT
                 COUNT(*) AS total_tickets,
                 SUM(CASE WHEN estado NOT IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) AS tickets_abiertos,
                 SUM(CASE WHEN estado IN ('desembolso', 'cierre') THEN 1 ELSE 0 END) AS tickets_cerrados
-            FROM tiketera
-            WHERE asesor_cedula = ?
+            FROM tiketera t
+            WHERE t.asesor_cedula = ?
+            $filtroCsv
         ");
         $stmt->execute([$asesorCedula]);
         $ticketStats = $stmt->fetch(PDO::FETCH_ASSOC) ?: $ticketStats;
 
         $stmt = $db->prepare("
             SELECT COUNT(*) AS tickets_resueltos_mes
-            FROM tiketera
-            WHERE asesor_cedula = ?
+            FROM tiketera t
+            WHERE t.asesor_cedula = ?
               AND estado IN ('desembolso', 'cierre')
               AND fecha_cierre IS NOT NULL
               AND fecha_cierre >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            $filtroCsv
         ");
         $stmt->execute([$asesorCedula]);
         $ticketsResueltosMes = (int) ($stmt->fetchColumn() ?: 0);
 
         $stmt = $db->prepare("
             SELECT COUNT(*) AS tickets_creados_mes
-            FROM tiketera
-            WHERE asesor_cedula = ?
+            FROM tiketera t
+            WHERE t.asesor_cedula = ?
               AND fecha_creacion >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            $filtroCsv
         ");
         $stmt->execute([$asesorCedula]);
         $ticketsCreadosMes = (int) ($stmt->fetchColumn() ?: 0);
 
         $stmt = $db->prepare("
             SELECT AVG(TIMESTAMPDIFF(HOUR, fecha_creacion, fecha_cierre)) AS tiempo_promedio_horas
-            FROM tiketera
-            WHERE asesor_cedula = ?
+            FROM tiketera t
+            WHERE t.asesor_cedula = ?
               AND estado IN ('desembolso', 'cierre')
               AND fecha_cierre IS NOT NULL
               AND fecha_cierre >= DATE_FORMAT(NOW(), '%Y-%m-01')
+            $filtroCsv
         ");
         $stmt->execute([$asesorCedula]);
         $tiempoRow = $stmt->fetch(PDO::FETCH_ASSOC);

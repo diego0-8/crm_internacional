@@ -74,9 +74,11 @@ class AuthController {
                 logActivity('logout', "Cierre de sesión");
             }
             
-            // Destruir sesión
+            // Destruir sesión y abrir una nueva vacía (permite guardar ruta de login, etc.)
             session_destroy();
-            
+            setcookie('crm_remember', '', time() - 3600, '/');
+            app_restart_session();
+
             return [
                 'success' => true,
                 'message' => 'Sesión cerrada correctamente'
@@ -123,4 +125,4 @@ class AuthController {
         return $user['rol_nombre'] . '_dashboard.php';
     }
 }
-?>
+

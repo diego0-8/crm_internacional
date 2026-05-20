@@ -1,11 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('coordinador');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -16,13 +12,14 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Gestión de Tareas - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/coordinador.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/coordinador.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -30,26 +27,26 @@ $message = getMessage();
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-asesor">
-                    <img src="../img/logo2.png" alt="Logo CRM">
+                    <img src="img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Coordinador</div>
-                    <a href="coordinador_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
-                    <a href="coordinador_tareas.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('coordinador_tareas'); ?>" class="nav-item active">
                         <i class="fas fa-tasks"></i>
                         Tareas
                     </a>
-                    <a href="coordinador_gestion.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_gestion'); ?>" class="nav-item">
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_exporte.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_exporte'); ?>" class="nav-item">
                         <i class="fas fa-download"></i>
                         Exporte
                     </a>
@@ -100,7 +97,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
                 <!-- Estadísticas de Tareas -->
@@ -229,13 +226,13 @@ $message = getMessage();
     </div>
 
     <!-- Modal de Asignación Individual -->
-    <div id="assignModal" class="modal coordinador-modal">
-        <div class="modal-content">
+    <div id="assignModal" class="modal coordinador-modal modal-assign-titular" role="dialog" aria-modal="true" aria-labelledby="assignModalTitle">
+        <div class="modal-content modal-assign-titular-dialog">
             <div class="modal-header">
-                <h3>Asignar titular</h3>
-                <span class="close" onclick="closeAssignModal()">&times;</span>
+                <h3 id="assignModalTitle">Asignar titular</h3>
+                <span class="close" onclick="closeAssignModal()" aria-label="Cerrar">&times;</span>
             </div>
-            <div class="modal-body">
+            <div class="modal-body modal-assign-titular-body">
                 <div id="clienteInfo"></div>
                 <div class="form-group">
                     <label for="asesorSelect">Asesor</label>
@@ -243,26 +240,26 @@ $message = getMessage();
                         <option value="">Cargando asesores...</option>
                     </select>
                 </div>
-                <div class="form-group">
+                <div class="form-group form-group--last">
                     <label for="notasAsignacion">Notas (opcional)</label>
                     <textarea id="notasAsignacion" class="form-control" rows="3" placeholder="Notas sobre la asignación..."></textarea>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeAssignModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="confirmarAsignacion()">Asignar</button>
+            <div class="modal-footer modal-assign-titular-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAssignModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarAsignacion()">Asignar</button>
             </div>
         </div>
     </div>
 
     <!-- Modal de Asignación Masiva -->
-    <div id="assignMasivoModal" class="modal coordinador-modal">
-        <div class="modal-content">
+    <div id="assignMasivoModal" class="modal coordinador-modal modal-assign-titular" role="dialog" aria-modal="true" aria-labelledby="assignMasivoModalTitle">
+        <div class="modal-content modal-assign-titular-dialog">
             <div class="modal-header">
-                <h3>Asignación Masiva</h3>
-                <span class="close" onclick="closeAssignMasivoModal()">&times;</span>
+                <h3 id="assignMasivoModalTitle">Asignación masiva</h3>
+                <span class="close" onclick="closeAssignMasivoModal()" aria-label="Cerrar">&times;</span>
             </div>
-            <div class="modal-body">
+            <div class="modal-body modal-assign-titular-body">
                 <div class="form-group">
                     <label for="asesorSelectMasivo">Asesor</label>
                     <select id="asesorSelectMasivo" class="form-control">
@@ -277,9 +274,9 @@ $message = getMessage();
                     <p><strong>Titulares seleccionados:</strong> <span id="cantidadAsignar">0</span></p>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button class="btn btn-secondary" onclick="closeAssignMasivoModal()">Cancelar</button>
-                <button class="btn btn-primary" onclick="confirmarAsignacionMasiva()">Asignar Todos</button>
+            <div class="modal-footer modal-assign-titular-footer">
+                <button type="button" class="btn btn-secondary" onclick="closeAssignMasivoModal()">Cancelar</button>
+                <button type="button" class="btn btn-primary" onclick="confirmarAsignacionMasiva()">Asignar todos</button>
             </div>
         </div>
     </div>
@@ -319,13 +316,13 @@ $message = getMessage();
         // Cargar datos del dashboard
         async function loadDashboardData() {
             try {
-                const response = await fetch('../api/coordinador_dashboard.php', {
+                const response = await fetch('api/coordinador_dashboard.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -365,13 +362,13 @@ $message = getMessage();
             container.appendChild(loadingOverlay);
 
             try {
-                const response = await fetch('../api/coordinador_clientes.php', {
+                const response = await fetch('api/coordinador_clientes.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error(`Error HTTP: ${response.status} - ${response.statusText}`);
@@ -697,13 +694,13 @@ $message = getMessage();
         // Cargar asesores
         async function loadAsesores() {
             try {
-                const response = await fetch('../api/coordinador_asesores.php', {
+                const response = await fetch('api/coordinador_asesores.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -770,7 +767,26 @@ $message = getMessage();
             clienteSeleccionado = cliente;
             mostrarInformacionCliente(cliente);
             cargarAsesores();
-            document.getElementById('assignModal').style.display = 'block';
+            openModalAsignacion('assignModal');
+        }
+
+        function openModalAsignacion(modalId) {
+            const modal = document.getElementById(modalId);
+            if (!modal) {
+                return;
+            }
+            modal.classList.add('modal-open');
+            document.body.classList.add('modal-assign-titular-open');
+        }
+
+        function closeModalAsignacion(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal) {
+                modal.classList.remove('modal-open');
+            }
+            if (!document.querySelector('.modal-assign-titular.modal-open')) {
+                document.body.classList.remove('modal-assign-titular-open');
+            }
         }
 
         // Mostrar información del cliente en el modal
@@ -802,13 +818,13 @@ $message = getMessage();
         // Cargar asesores para el modal
         async function cargarAsesores() {
             try {
-                const response = await fetch('../api/coordinador_asesores.php', {
+                const response = await fetch('api/coordinador_asesores.php', {
                     credentials: 'include'
                 });
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -847,10 +863,10 @@ $message = getMessage();
 
         async function cargarAsesoresParaMasivo() {
             try {
-                const response = await fetch('../api/coordinador_asesores.php', { credentials: 'include' });
+                const response = await fetch('api/coordinador_asesores.php', { credentials: 'include' });
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -874,11 +890,11 @@ $message = getMessage();
             }
             document.getElementById('cantidadAsignar').textContent = clientesSeleccionados.length;
             await cargarAsesoresParaMasivo();
-            document.getElementById('assignMasivoModal').style.display = 'block';
+            openModalAsignacion('assignMasivoModal');
         }
 
         function closeAssignMasivoModal() {
-            document.getElementById('assignMasivoModal').style.display = 'none';
+            closeModalAsignacion('assignMasivoModal');
             document.getElementById('notasAsignacionMasiva').value = '';
         }
 
@@ -893,7 +909,7 @@ $message = getMessage();
             const notas = document.getElementById('notasAsignacionMasiva').value;
             try {
                 for (const tid of ids) {
-                    const response = await fetch('../api/assign_cliente.php', {
+                    const response = await fetch('api/assign_cliente.php', {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         credentials: 'include',
@@ -933,7 +949,7 @@ $message = getMessage();
             }
             
             try {
-                const response = await fetch('../api/assign_cliente.php', {
+                const response = await fetch('api/assign_cliente.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -948,7 +964,7 @@ $message = getMessage();
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -972,7 +988,7 @@ $message = getMessage();
 
         // Cerrar modal de asignación individual
         function closeAssignModal() {
-            document.getElementById('assignModal').style.display = 'none';
+            closeModalAsignacion('assignModal');
             clienteSeleccionado = null;
             document.getElementById('asesorSelect').innerHTML = '<option value="">Cargando asesores...</option>';
             document.getElementById('notasAsignacion').value = '';
@@ -1037,7 +1053,7 @@ $message = getMessage();
             try {
                 showMessage('Repartiendo titulares…', 'info');
 
-                const response = await fetch('../api/assign_clientes_automatico.php', {
+                const response = await fetch('api/assign_clientes_automatico.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1051,7 +1067,7 @@ $message = getMessage();
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -1121,7 +1137,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
 
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1131,7 +1147,7 @@ $message = getMessage();
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -1140,7 +1156,7 @@ $message = getMessage();
                 const result = await response.json();
 
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }
@@ -1174,6 +1190,31 @@ $message = getMessage();
             const sidebar = document.querySelector('.sidebar');
             if (window.innerWidth > 768) {
                 sidebar.classList.remove('open');
+            }
+        });
+
+        document.querySelectorAll('.modal-assign-titular').forEach(function(modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target !== modal) {
+                    return;
+                }
+                if (modal.id === 'assignModal') {
+                    closeAssignModal();
+                } else if (modal.id === 'assignMasivoModal') {
+                    closeAssignMasivoModal();
+                }
+            });
+        });
+
+        document.addEventListener('keydown', function(e) {
+            if (e.key !== 'Escape') {
+                return;
+            }
+            if (document.getElementById('assignModal').classList.contains('modal-open')) {
+                closeAssignModal();
+            }
+            if (document.getElementById('assignMasivoModal').classList.contains('modal-open')) {
+                closeAssignMasivoModal();
             }
         });
     </script>

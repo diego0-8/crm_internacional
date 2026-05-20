@@ -1,11 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('asesor');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -16,13 +12,14 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Mis tickets CRM - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/tickets.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/tickets.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -30,22 +27,22 @@ $message = getMessage();
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo">
-                    <img src="../img/logo2.png" alt="CRM Logo">
+                    <img src="img/logo2.png" alt="CRM Logo">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Asesor</div>
-                    <a href="asesor_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('asesor_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-folder-open"></i>
                         Mis casos (reparto)
                     </a>
-                    <a href="asesor_tickets.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('asesor_tickets'); ?>" class="nav-item active">
                         <i class="fas fa-ticket-alt"></i>
                         Mis tickets CRM
                     </a>
-                    <a href="asesor_estadisticas.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('asesor_estadisticas'); ?>" class="nav-item">
                         <i class="fas fa-chart-bar"></i>
                         Estadísticas
                     </a>
@@ -99,7 +96,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -276,10 +273,11 @@ $message = getMessage();
             return d.innerHTML;
         }
 
+        const INITIAL_CLIENTE_FILTER = <?php echo json_encode(app_route_param('cliente', ''), JSON_UNESCAPED_UNICODE); ?>;
+
         // Inicializar página
         document.addEventListener('DOMContentLoaded', async function() {
-            const urlParams = new URLSearchParams(window.location.search);
-            const clienteCedula = urlParams.get('cliente');
+            const clienteCedula = INITIAL_CLIENTE_FILTER || null;
             await loadClientes();
             if (clienteCedula) {
                 mostrarFiltroCliente(clienteCedula);
@@ -292,7 +290,7 @@ $message = getMessage();
         // Cargar tickets
         async function loadTickets(clienteCedula = null) {
             try {
-                let url = '../api/tickets_asesor.php';
+                let url = 'api/tickets_asesor.php';
                 if (clienteCedula) {
                     url += `?cliente=${clienteCedula}`;
                 }
@@ -301,7 +299,7 @@ $message = getMessage();
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -326,11 +324,11 @@ $message = getMessage();
         // Cargar clientes
         async function loadClientes() {
             try {
-                const response = await fetch('../api/asesor_clientes.php');
+                const response = await fetch('api/asesor_clientes.php');
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = '../views/login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -381,10 +379,7 @@ $message = getMessage();
 
         // Limpiar filtro de cliente
         function limpiarFiltroCliente() {
-            // Remover parámetro de URL y recargar
-            const url = new URL(window.location);
-            url.searchParams.delete('cliente');
-            window.location.href = url.toString();
+            window.appGo('asesor_tickets');
         }
 
         // Renderizar tickets
@@ -437,7 +432,7 @@ $message = getMessage();
                             <i class="fas fa-eye"></i> Ver detalle
                         </button>
                         ${(ticket.estado !== 'desembolso' && ticket.estado !== 'cierre') ? `
-                            <a href="asesor_gestionar_ticket.php?id=${ticket.id}" class="btn btn-sm btn-warning">
+                            <a href="' + appNav('asesor_gestionar_ticket', {id: ticket.id}) + '" class="btn btn-sm btn-warning">
                                 <i class="fas fa-edit"></i> Gestionar
                             </a>
                         ` : `
@@ -542,7 +537,7 @@ $message = getMessage();
             const observaciones = prompt('Observaciones (opcional):');
             
             try {
-                const response = await fetch('../api/actualizar_ticket.php', {
+                const response = await fetch('api/actualizar_ticket.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -581,7 +576,7 @@ $message = getMessage();
             
             // Cargar información adicional del ticket
             try {
-                const response = await fetch(`../api/ticket_detalle_completo.php?ticket_id=${ticketId}`);
+                const response = await fetch(`api/ticket_detalle_completo.php?ticket_id=${ticketId}`);
                 const result = await response.json();
                 
                 if (result.success) {
@@ -855,7 +850,7 @@ $message = getMessage();
         // Cargar historial de detalle
         async function cargarHistorialDetalle(ticketId) {
             try {
-                const response = await fetch(`../api/ticket_notas.php?ticket_id=${ticketId}`);
+                const response = await fetch(`api/ticket_notas.php?ticket_id=${ticketId}`);
                 const result = await response.json();
                 
                 const historialContainer = document.getElementById('historialDetalle');
@@ -895,7 +890,7 @@ $message = getMessage();
                 const formData = new FormData();
                 formData.append('archivo_id', archivoId);
 
-                const response = await fetch('../api/eliminar_archivo_ticket.php', {
+                const response = await fetch('api/eliminar_archivo_ticket.php', {
                     method: 'POST',
                     body: formData
                 });
@@ -940,7 +935,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
             
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -950,7 +945,7 @@ $message = getMessage();
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

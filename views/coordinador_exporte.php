@@ -1,10 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('coordinador');
 
 $user = getCurrentUser();
 $message = getMessage();
@@ -14,39 +11,40 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Exporte de reportes - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/coordinador.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/coordinador.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-asesor">
-                    <img src="../img/logo2.png" alt="Logo CRM">
+                    <img src="img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Coordinador</div>
-                    <a href="coordinador_dashboard.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_dashboard'); ?>" class="nav-item">
                         <i class="fas fa-tachometer-alt"></i>
                         Dashboard
                     </a>
-                    <a href="coordinador_tareas.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_tareas'); ?>" class="nav-item">
                         <i class="fas fa-tasks"></i>
                         Tareas
                     </a>
-                    <a href="coordinador_gestion.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('coordinador_gestion'); ?>" class="nav-item">
                         <i class="fas fa-upload"></i>
                         Gestión CSV
                     </a>
-                    <a href="coordinador_exporte.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('coordinador_exporte'); ?>" class="nav-item active">
                         <i class="fas fa-download"></i>
                         Exporte
                     </a>
@@ -280,7 +278,7 @@ $message = getMessage();
                 text.textContent = 'Calculando vista previa…';
             }
             try {
-                var response = await fetch('../api/coordinador_exporte_preview.php?' + params.toString(), {
+                var response = await fetch('api/coordinador_exporte_preview.php?' + params.toString(), {
                     credentials: 'include'
                 });
                 var result = await response.json();
@@ -331,7 +329,7 @@ $message = getMessage();
             showMessage('Generando reporte…', 'info');
 
             try {
-                var response = await fetch('../api/export_metricas.php?' + buildExportParams().toString(), {
+                var response = await fetch('api/export_metricas.php?' + buildExportParams().toString(), {
                     credentials: 'include'
                 });
 
@@ -419,14 +417,14 @@ $message = getMessage();
         async function cerrarSesion() {
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
             try {
-                var response = await fetch('../api/logout.php', {
+                var response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     credentials: 'include'
                 });
                 var result = await response.json();
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message || 'Error al cerrar sesión', 'error');
                 }

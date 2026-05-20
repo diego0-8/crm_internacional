@@ -8,10 +8,43 @@ define('DB_CHARSET', 'utf8mb4');
 
 // Configuración de la aplicación
 define('APP_NAME', 'CRM Internacional');
-define('APP_URL', 'http://localhost/crm_internacional');
+
+/**
+ * URL base pública del proyecto (sin barra final).
+ * Prioridad: variable de entorno APP_URL > detección automática desde la petición HTTP.
+ */
+function app_resolve_app_url() {
+    $fromEnv = $_ENV['APP_URL'] ?? getenv('APP_URL');
+    if (is_string($fromEnv) && trim($fromEnv) !== '') {
+        return rtrim(trim($fromEnv), '/');
+    }
+    if (PHP_SAPI === 'cli') {
+        return 'http://localhost/internacional';
+    }
+    $https = !empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off';
+    $scheme = $https ? 'https' : 'http';
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $docRoot = isset($_SERVER['DOCUMENT_ROOT']) ? realpath($_SERVER['DOCUMENT_ROOT']) : false;
+    $appRoot = realpath(__DIR__);
+    if ($docRoot && $appRoot && strpos($appRoot, $docRoot) === 0) {
+        $path = str_replace('\\', '/', substr($appRoot, strlen($docRoot)));
+        return $scheme . '://' . $host . rtrim($path, '/');
+    }
+    $script = $_SERVER['SCRIPT_NAME'] ?? '/index.php';
+    $dir = str_replace('\\', '/', dirname($script));
+    if (preg_match('#/(api|views|controller|model|includes)(/|$)#', $dir)) {
+        $dir = preg_replace('#/(api|views|controller|model|includes).*$#', '', $dir);
+    }
+    return $scheme . '://' . $host . ($dir === '/' ? '' : rtrim($dir, '/'));
+}
+
+define('APP_URL', app_resolve_app_url());
 define('APP_VERSION', '1.0.0');
 /** Zona horaria para cómputos de negocio (p. ej. días de mora hasta «hoy»). Ajuste en servidor si aplica otro huso. */
 define('APP_TIMEZONE', 'America/Bogota');
+date_default_timezone_set(APP_TIMEZONE);
+
+require_once __DIR__ . '/includes/router.php';
 
 // Configuración de seguridad
 // Preferir variable de entorno para evitar secretos hardcodeados.
@@ -28,7 +61,7 @@ if (!defined('JWT_SECRET')) {
 define('SESSION_LIFETIME', 3600); // 1 hora en segundos
 define('SESSION_REGENERATION_TIME', 300); // 5 minutos para regenerar ID
 /** Nombre de cookie de sesión PHP exclusivo de este proyecto (evita colisión con otros sitios en el mismo dominio/host). */
-define('APP_SESSION_NAME', 'internacional2_SID');
+define('APP_SESSION_NAME', 'crmvol2_SID');
 define('REMEMBER_ME_LIFETIME', 2592000); // 30 días en segundos
 
 // Configuración de archivos
@@ -117,9 +150,25 @@ function hasRole($requiredRole) {
         return in_array($user['rol_nombre'], ['coordinador', 'admin']);
     } elseif ($requiredRole === 'admin') {
         return $user['rol_nombre'] === 'admin';
+    } elseif ($requiredRole === 'cliente') {
+        return $user['rol_nombre'] === 'cliente';
     }
 
     return false;
+}
+
+/**
+ * Exige sesión y rol en vistas; redirige al login si no cumple.
+ */
+function requireAuthRole($requiredRole) {
+    if (!isLoggedIn() || !hasRole($requiredRole)) {
+        if (function_exists('app_set_route')) {
+            app_set_route('login');
+            app_redirect_home();
+        }
+        header('Location: ' . rtrim(APP_URL, '/') . '/');
+        exit;
+    }
 }
 
 // Función para configurar cookie "Remember Me"
@@ -217,6 +266,17 @@ function redirect($url) {
     exit();
 }
 
+/** Reinicia la sesión PHP tras session_destroy() (p. ej. logout). */
+function app_restart_session() {
+    if (PHP_SAPI === 'cli' || headers_sent()) {
+        return;
+    }
+    session_name(APP_SESSION_NAME);
+    session_start();
+    session_regenerate_id(true);
+    $_SESSION['last_regeneration'] = time();
+}
+
 // Función para mostrar mensajes de error/éxito
 function setMessage($message, $type = 'info') {
     $_SESSION['message'] = $message;
@@ -262,8 +322,12 @@ if (PHP_SAPI !== 'cli' && session_status() === PHP_SESSION_NONE && !headers_sent
     if (isset($_SESSION['force_logout']) && $_SESSION['force_logout']) {
         session_destroy();
         // Ruta absoluta desde APP_URL: un Location relativo falla si el script está en /api/ u otra carpeta.
-        header('Location: ' . rtrim(APP_URL, '/') . '/views/login.php');
+        if (function_exists('app_set_route')) {
+            app_set_route('login');
+        }
+        header('Location: ' . rtrim(APP_URL, '/') . '/');
         exit;
     }
 }
+
 ?>

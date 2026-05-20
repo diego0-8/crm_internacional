@@ -1,11 +1,7 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// Verificar autenticación
-if (!isLoggedIn()) {
-    header('Location: login.php');
-    exit;
-}
+requireAuthRole('asesor');
 
 // Obtener datos del usuario actual
 $user = getCurrentUser();
@@ -16,13 +12,14 @@ $message = getMessage();
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <?php require __DIR__ . '/partials/app_head.php'; ?>
     <title>Mis casos (reparto) - <?php echo APP_NAME; ?></title>
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
-    <link href="../css/variables.css" rel="stylesheet">
-    <link href="../css/role-specific.css" rel="stylesheet">
-    <link href="../css/dashboard.css" rel="stylesheet">
-    <link href="../css/asesor.css" rel="stylesheet">
-    <link href="../css/tickets.css" rel="stylesheet">
+    <link href="css/variables.css" rel="stylesheet">
+    <link href="css/role-specific.css" rel="stylesheet">
+    <link href="css/dashboard.css" rel="stylesheet">
+    <link href="css/asesor.css" rel="stylesheet">
+    <link href="css/tickets.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -30,22 +27,22 @@ $message = getMessage();
         <div class="sidebar">
             <div class="sidebar-header">
                 <div class="logo logo-asesor">
-                    <img src="../img/logo2.png" alt="Logo CRM">
+                    <img src="img/logo2.png" alt="Logo CRM">
                 </div>
             </div>
 
             <nav class="sidebar-nav">
                 <div class="nav-section">
                     <div class="nav-section-title">Asesor</div>
-                    <a href="asesor_dashboard.php" class="nav-item active">
+                    <a href="<?php echo app_nav_url('asesor_dashboard'); ?>" class="nav-item active">
                         <i class="fas fa-folder-open"></i>
                         Mis casos (reparto)
                     </a>
-                    <a href="asesor_tickets.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('asesor_tickets'); ?>" class="nav-item">
                         <i class="fas fa-ticket-alt"></i>
                         Mis tickets CRM
                     </a>
-                    <a href="asesor_estadisticas.php" class="nav-item">
+                    <a href="<?php echo app_nav_url('asesor_estadisticas'); ?>" class="nav-item">
                         <i class="fas fa-chart-bar"></i>
                         Estadísticas
                     </a>
@@ -100,7 +97,7 @@ $message = getMessage();
                 <?php if ($message): ?>
                     <div class="message <?php echo $message['type']; ?>">
                         <i class="fas fa-<?php echo $message['type'] === 'success' ? 'check-circle' : ($message['type'] === 'error' ? 'exclamation-triangle' : 'info-circle'); ?>"></i>
-                        <?php echo $message['message']; ?>
+                        <?php echo htmlspecialchars($message['message'], ENT_QUOTES, 'UTF-8'); ?>
                     </div>
                 <?php endif; ?>
 
@@ -177,11 +174,11 @@ $message = getMessage();
 
         async function loadTitulares() {
             try {
-                const response = await fetch('../api/asesor_titulares.php');
+                const response = await fetch('api/asesor_titulares.php');
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = 'login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -255,7 +252,7 @@ $message = getMessage();
 
         function gestionarTicket(titularId) {
             showMessage('Iniciando gestión...', 'info');
-            fetch('../api/crear_ticket_desde_titular.php', {
+            fetch('api/crear_ticket_desde_titular.php', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ titular_id: titularId })
@@ -263,7 +260,7 @@ $message = getMessage();
             .then(response => response.json())
             .then(result => {
                 if (result.success) {
-                    window.location.href = 'asesor_gestionar_ticket.php?id=' + result.ticket_id;
+                    window.appGo('asesor_gestionar_ticket', {id: result.ticket_id});
                 } else {
                     showMessage('Error: ' + result.message, 'error');
                 }
@@ -276,11 +273,11 @@ $message = getMessage();
 
         async function loadEstadisticas() {
             try {
-                const response = await fetch('../api/estadisticas_asesor.php');
+                const response = await fetch('api/estadisticas_asesor.php');
 
                 if (!response.ok) {
                     if (response.status === 401) {
-                        window.location.href = 'login.php';
+                        window.appGoLogin();
                         return;
                     }
                     throw new Error('Error HTTP: ' + response.status);
@@ -310,7 +307,7 @@ $message = getMessage();
         }
 
         function irAMisTicketsCrm() {
-            window.location.href = 'asesor_tickets.php';
+            window.appGo('asesor_tickets');
         }
 
         function showMessage(message, type) {
@@ -398,7 +395,7 @@ $message = getMessage();
             if (!confirm('¿Está seguro de cerrar sesión?')) return;
             
             try {
-                const response = await fetch('../api/logout.php', {
+                const response = await fetch('api/logout.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -408,7 +405,7 @@ $message = getMessage();
                 const result = await response.json();
                 
                 if (result.success) {
-                    window.location.href = '../views/login.php';
+                    window.appGoLogin();
                 } else {
                     showMessage(result.message, 'error');
                 }

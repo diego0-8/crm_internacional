@@ -7,7 +7,10 @@ class TitularModel {
     private static $tieneColAsesor = null;
     /** @var bool|null */
     private static $tiketeraTienePrimeraGestion = null;
-
+    /** @var bool|null */
+    private static $tieneColArchivoCsv = null;
+    /** @var bool|null */
+    private static $archivosCsvTieneActivo = null;
 
     /** True si la columna existe en la BD actual (evita 1054 si la migración no se aplicó). */
     private function titularesTieneColumnaAsesorCedula(): bool {
@@ -46,6 +49,87 @@ class TitularModel {
         return self::$tiketeraTienePrimeraGestion;
     }
 
+    private function titularesTieneColumnaArchivoCsvId(): bool {
+        if (self::$tieneColArchivoCsv !== null) {
+            return self::$tieneColArchivoCsv;
+        }
+        try {
+            $stmt = $this->db->query("
+                SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'titulares'
+                  AND COLUMN_NAME = 'archivo_csv_id'
+            ");
+            self::$tieneColArchivoCsv = ((int) $stmt->fetchColumn()) > 0;
+        } catch (Exception $e) {
+            self::$tieneColArchivoCsv = false;
+        }
+        return self::$tieneColArchivoCsv;
+    }
+
+    private function archivosCsvTieneColumnaActivo(): bool {
+        if (self::$archivosCsvTieneActivo !== null) {
+            return self::$archivosCsvTieneActivo;
+        }
+        try {
+            $stmt = $this->db->query("
+                SELECT COUNT(*) FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'archivos_csv'
+                  AND COLUMN_NAME = 'activo'
+            ");
+            self::$archivosCsvTieneActivo = ((int) $stmt->fetchColumn()) > 0;
+        } catch (Exception $e) {
+            self::$archivosCsvTieneActivo = false;
+        }
+        return self::$archivosCsvTieneActivo;
+    }
+
+    /**
+     * Fragmento SQL: excluye titulares cuyo cargue CSV está inhabilitado.
+     */
+    private function sqlSoloArchivoCsvActivo(string $titularAlias = 't'): string {
+        if (!$this->titularesTieneColumnaArchivoCsvId() || !$this->archivosCsvTieneColumnaActivo()) {
+            return '';
+        }
+        return " AND ({$titularAlias}.archivo_csv_id IS NULL OR EXISTS (
+            SELECT 1 FROM archivos_csv ac_csv_vis
+            WHERE ac_csv_vis.id = {$titularAlias}.archivo_csv_id AND ac_csv_vis.activo = 1
+        ))";
+    }
+
+    /**
+     * True si el titular no tiene CSV o su cargue sigue habilitado.
+     */
+    public function titularTieneArchivoCsvActivo(int $idCliente): bool {
+        if (!$this->titularesTieneColumnaArchivoCsvId()) {
+            return true;
+        }
+        $sql = 'SELECT archivo_csv_id FROM titulares WHERE id_cliente = ? LIMIT 1';
+        if ($this->archivosCsvTieneColumnaActivo()) {
+            $sql = '
+                SELECT t.archivo_csv_id, COALESCE(ac.activo, 1) AS activo
+                FROM titulares t
+                LEFT JOIN archivos_csv ac ON ac.id = t.archivo_csv_id
+                WHERE t.id_cliente = ?
+                LIMIT 1
+            ';
+        }
+        $stmt = $this->db->prepare($sql);
+        $stmt->execute([$idCliente]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            return false;
+        }
+        if (empty($row['archivo_csv_id'])) {
+            return true;
+        }
+        if (!$this->archivosCsvTieneColumnaActivo()) {
+            return true;
+        }
+        return (int) ($row['activo'] ?? 1) === 1;
+    }
+
     public function __construct() {
         $this->db = getDB();
     }
@@ -56,15 +140,15 @@ class TitularModel {
             $stmt = $this->db->prepare('
                 SELECT COUNT(*) AS total,
                        SUM(CASE WHEN asesor_cedula IS NOT NULL THEN 1 ELSE 0 END) AS asignados
-                FROM titulares
-                WHERE coordinador_cedula = ?
-            ');
+                FROM titulares t
+                WHERE t.coordinador_cedula = ?
+            ' . $this->sqlSoloArchivoCsvActivo('t'));
         } else {
             $stmt = $this->db->prepare('
                 SELECT COUNT(*) AS total, 0 AS asignados
-                FROM titulares
-                WHERE coordinador_cedula = ?
-            ');
+                FROM titulares t
+                WHERE t.coordinador_cedula = ?
+            ' . $this->sqlSoloArchivoCsvActivo('t'));
         }
         $stmt->execute([$coordinadorCedula]);
         $row = $stmt->fetch(PDO::FETCH_ASSOC) ?: ['total' => 0, 'asignados' => 0];
@@ -104,7 +188,7 @@ class TitularModel {
             LEFT JOIN propiedades p ON p.id_cliente = t.id_cliente
             LEFT JOIN usuarios a ON t.asesor_cedula = a.cedula
             WHERE t.coordinador_cedula = ?
-        ';
+        ' . $this->sqlSoloArchivoCsvActivo('t');
         } else {
             $sql = '
             SELECT
@@ -128,7 +212,7 @@ class TitularModel {
             FROM titulares t
             LEFT JOIN propiedades p ON p.id_cliente = t.id_cliente
             WHERE t.coordinador_cedula = ?
-        ';
+        ' . $this->sqlSoloArchivoCsvActivo('t');
         }
         $params = [$coordinadorCedula];
         if ($busqueda !== null && trim($busqueda) !== '') {
@@ -184,7 +268,7 @@ class TitularModel {
             LEFT JOIN propiedades p ON p.id_cliente = t.id_cliente
             LEFT JOIN usuarios a ON t.asesor_cedula = a.cedula
             WHERE t.asesor_cedula = ?
-        ';
+        ' . $this->sqlSoloArchivoCsvActivo('t');
         $params = [$asesorCedula];
         if ($busqueda !== null && trim($busqueda) !== '') {
             $like = '%' . trim($busqueda) . '%';
@@ -243,7 +327,7 @@ class TitularModel {
                 SUM(CASE WHEN t.actualizado_en >= DATE_FORMAT(NOW(), \'%Y-%m-01\') THEN 1 ELSE 0 END) AS titulares_mes
             FROM titulares t
             WHERE t.asesor_cedula = ?
-        ';
+        ' . $this->sqlSoloArchivoCsvActivo('t');
         $params = [$asesorCedula];
         if ($this->tiketeraTieneColumnaPrimeraGestion()) {
             $sql .= ' AND NOT EXISTS (
@@ -279,6 +363,9 @@ class TitularModel {
         }
         if (!$this->titularPerteneceACoordinador($idCliente, $coordinadorCedula)) {
             throw new Exception('Titular no encontrado o no pertenece a este coordinador');
+        }
+        if (!$this->titularTieneArchivoCsvActivo($idCliente)) {
+            throw new Exception('Este titular pertenece a un cargue CSV inhabilitado y no puede asignarse');
         }
         $stmt = $this->db->prepare('UPDATE titulares SET asesor_cedula = ?, actualizado_en = CURRENT_TIMESTAMP WHERE id_cliente = ?');
         $stmt->execute([$asesorCedula, $idCliente]);
@@ -466,18 +553,21 @@ class TitularModel {
     }
 
     public function listarDisponiblesPorCoordinador(string $coordinadorCedula, int $limite): array {
+        $filtroArchivo = $this->sqlSoloArchivoCsvActivo('t');
         if ($this->titularesTieneColumnaAsesorCedula()) {
             $stmt = $this->db->prepare('
-            SELECT id_cliente FROM titulares
-            WHERE coordinador_cedula = ? AND asesor_cedula IS NULL
-            ORDER BY id_cliente ASC
+            SELECT t.id_cliente FROM titulares t
+            WHERE t.coordinador_cedula = ? AND t.asesor_cedula IS NULL
+            ' . $filtroArchivo . '
+            ORDER BY t.id_cliente ASC
             LIMIT ?
         ');
         } else {
             $stmt = $this->db->prepare('
-            SELECT id_cliente FROM titulares
-            WHERE coordinador_cedula = ?
-            ORDER BY id_cliente ASC
+            SELECT t.id_cliente FROM titulares t
+            WHERE t.coordinador_cedula = ?
+            ' . $filtroArchivo . '
+            ORDER BY t.id_cliente ASC
             LIMIT ?
         ');
         }

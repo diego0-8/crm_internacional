@@ -90,13 +90,20 @@ class MassUploadController {
             $archivoId = $this->archivoCsvModel->createArchivo($archivoData);
             $repartoImporter = $esReparto ? new RepartoImportModel() : null;
             $filaArchivo = 1;
+            /** @var array<string,int> */
+            $casosEnArchivo = [];
+            /** @var array<string,int> */
+            $parcelasEnArchivo = [];
 
             if ($esReparto) {
                 while (($data = fgetcsv($handle)) !== false) {
                     $filaArchivo++;
                     $rowAssoc = $repartoImporter->filaAsociativa($headers, $data);
 
-                    $validacion = $repartoImporter->validarFila($rowAssoc, $coordinadorId);
+                    $validacion = $repartoImporter->validarFila($rowAssoc, $coordinadorId, [
+                        'casos_en_archivo' => $casosEnArchivo,
+                        'parcelas_en_archivo' => $parcelasEnArchivo,
+                    ]);
                     if ($validacion['fila_vacia']) {
                         continue;
                     }
@@ -109,6 +116,7 @@ class MassUploadController {
                         $filasRechazadas[] = [
                             'fila_csv' => $filaArchivo,
                             'identificador' => $validacion['identificador'] ?: ($refRech['referencia'] ?: '—'),
+                            'tipo_referencia' => $refRech['tipo_referencia'],
                             'case_number' => $refRech['case_number'],
                             'parcel_number' => $refRech['parcel_number'],
                             'faltantes' => $validacion['faltantes'],
@@ -123,6 +131,14 @@ class MassUploadController {
                     try {
                         $idTitular = $repartoImporter->importarFila($rowAssoc, $archivoId, $coordinadorId);
                         $registrosProcesados++;
+                        $caseFila = trim((string) ($rowAssoc['Case Number'] ?? ''));
+                        $parcelFila = trim((string) ($rowAssoc['Parcel Number'] ?? ''));
+                        if ($caseFila !== '') {
+                            $casosEnArchivo[$caseFila] = $filaArchivo;
+                        }
+                        if ($parcelFila !== '') {
+                            $parcelasEnArchivo[$parcelFila] = $filaArchivo;
+                        }
                         $refOk = RepartoImportModel::referenciaDesdeFila($rowAssoc);
                         $filasImportadas[] = [
                             'fila_csv' => $filaArchivo,
@@ -138,6 +154,7 @@ class MassUploadController {
                         $filasRechazadas[] = [
                             'fila_csv' => $filaArchivo,
                             'identificador' => $validacion['identificador'] ?: ($refErr['referencia'] ?: '—'),
+                            'tipo_referencia' => $refErr['tipo_referencia'],
                             'case_number' => $refErr['case_number'],
                             'parcel_number' => $refErr['parcel_number'],
                             'faltantes' => [$e->getMessage()],

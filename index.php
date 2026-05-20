@@ -1,56 +1,31 @@
 <?php
 /**
- * CRM Internacional - Router Principal
- * Sistema de gestión de clientes y tickets
- * 
- * ROLES DEL SISTEMA:
- * 1. ADMINISTRADOR - Gestión completa del sistema
- * 2. COORDINADOR - Gestión de asesores y clientes
- * 3. ASESOR - Gestión de clientes asignados y tickets
- * 4. CLIENTE - Visualización de tickets propios
+ * CRM Internacional - Front controller
+ * Todas las vistas se sirven desde aquí; la URL visible es siempre la raíz del proyecto.
  */
 
-// Incluir configuración (config.php inicia/configura la sesión)
-require_once 'config.php';
+require_once __DIR__ . '/config.php';
+require_once __DIR__ . '/includes/router.php';
 
-// Rutas absolutas de redirección (evitan bucles cuando .htaccess envía a index.php
-// una URL bajo views/ que ya no existe: un Location relativo "views/..." se duplicaba).
-function appRedirectPath($relativePath) {
-    return rtrim(APP_URL, '/') . '/' . ltrim($relativePath, '/');
+// Recordar sesión válida
+if (!isLoggedIn() && checkRememberMeCookie()) {
+    require_once __DIR__ . '/controller/LoginController.php';
+    (new LoginController())->redirectToDashboard();
 }
 
-// Función para redirigir al dashboard según el rol
-function redirectToDashboard($rol) {
-    switch ($rol) {
-        case 'admin':
-            header('Location: ' . appRedirectPath('views/admin_dashboard.php'));
-            break;
-        case 'coordinador':
-            header('Location: ' . appRedirectPath('views/coordinador_dashboard.php'));
-            break;
-        case 'asesor':
-            header('Location: ' . appRedirectPath('views/asesor_dashboard.php'));
-            break;
-        case 'cliente':
-            header('Location: ' . appRedirectPath('views/cliente_dashboard.php'));
-            break;
-        default:
-            header('Location: ' . appRedirectPath('views/login.php'));
-            break;
-    }
-    exit();
+// Login POST
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['usuario'])) {
+    require_once __DIR__ . '/controller/LoginController.php';
+    (new LoginController())->processLogin();
 }
 
-// Verificar si el usuario ya está logueado
-if (isLoggedIn()) {
-    $user = getCurrentUser();
-    if ($user) {
-        // Redirigir al dashboard correspondiente según el rol
-        redirectToDashboard($user['rol_nombre']);
-    }
+// Cerrar sesión vía GET (enlaces legacy)
+if (isset($_GET['logout'])) {
+    require_once __DIR__ . '/controller/LoginController.php';
+    (new LoginController())->logout();
+    app_clear_route();
+    app_set_route('login');
+    app_redirect_home();
 }
 
-// Si no está logueado, redirigir al login
-header('Location: ' . appRedirectPath('views/login.php'));
-exit();
-?>
+app_dispatch_view();

@@ -297,6 +297,14 @@
     box-shadow: 0 0 0 3px rgba(30, 136, 229, 0.1);
 }
 
+.form-text-muted {
+    display: block;
+    margin-top: 0.35rem;
+    font-size: 0.8rem;
+    color: var(--text-muted);
+    line-height: 1.4;
+}
+
 /* Clases para Modales */
 .modal-header {
     background: var(--gradient-primary);

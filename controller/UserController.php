@@ -153,6 +153,14 @@ class UserController {
                 }
             }
 
+            if (isset($data['rol_id'])) {
+                $role = $this->roleModel->getRoleById($data['rol_id']);
+                if ($role && $role['nombre'] !== 'asesor') {
+                    $data['sip_extension'] = '';
+                    unset($data['sip_secret']);
+                }
+            }
+
             if (isset($data['sip_extension']) && strlen((string) $data['sip_extension']) > 40) {
                 throw new Exception('La extensión SIP no puede superar 40 caracteres');
             }

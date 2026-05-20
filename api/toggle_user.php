@@ -20,13 +20,13 @@ $userController = new UserController();
 
 try {
     $input = json_decode(file_get_contents('php://input'), true);
-    $userId = (int)($input['user_cedula'] ?? 0);
+    $userCedula = trim((string) ($input['user_cedula'] ?? ''));
     
-    if (!$userId) {
-        throw new Exception('ID de usuario requerido');
+    if ($userCedula === '') {
+        throw new Exception('Cédula de usuario requerida');
     }
     
-    $result = $userController->toggleUserStatus($userId);
+    $result = $userController->toggleUserStatus($userCedula);
     echo json_encode($result);
 } catch (Exception $e) {
     http_response_code(500);

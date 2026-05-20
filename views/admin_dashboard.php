@@ -256,24 +256,26 @@ $message = getMessage();
                             <label for="sip_extension">Extensión SIP (softphone / PBX)</label>
                             <input type="text" id="sip_extension" name="sip_extension" class="form-control" maxlength="40"
                                    placeholder="Ej. 1001" autocomplete="off">
+                            <small id="sipExtensionHint" class="form-text form-text-muted">Solo asesores. En edición: dejar en blanco para quitar la extensión.</small>
                         </div>
                         <div class="form-group">
                             <label for="sip_secret">Clave SIP (password en texto plano)</label>
                             <input type="text" id="sip_secret" name="sip_secret" class="form-control" maxlength="128"
                                    placeholder="Tal como la lee el PBX / softphone" autocomplete="off">
-                            <small class="form-text" style="display:block;margin-top:6px;color:#a0aec0;font-size:0.8rem;">
+                            <small id="sipSecretHint" class="form-text form-text-muted">
                                 Solo aplica a <strong>asesores</strong>. Se guarda en texto plano (requisito Asterisk / WebRTC).
                             </small>
                         </div>
                     </div>
                     <div class="form-row">
                         <div class="form-group">
-                            <label for="password">Contraseña *</label>
-                            <input type="password" id="password" name="password" class="form-control" required>
+                            <label for="password" id="passwordLabel">Contraseña *</label>
+                            <input type="password" id="password" name="password" class="form-control" required autocomplete="new-password">
+                            <small id="passwordHint" class="form-text form-text-muted"></small>
                         </div>
                         <div class="form-group">
-                            <label for="confirm_password">Confirmar Contraseña *</label>
-                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" required>
+                            <label for="confirm_password" id="confirmPasswordLabel">Confirmar contraseña *</label>
+                            <input type="password" id="confirm_password" name="confirm_password" class="form-control" required autocomplete="new-password">
                         </div>
                     </div>
                     <div class="form-row">
@@ -522,6 +524,50 @@ $message = getMessage();
             row.style.display = rol && rol.nombre === 'asesor' ? '' : 'none';
         }
 
+        function setUserFormEditMode(isEdit) {
+            const password = document.getElementById('password');
+            const confirmPassword = document.getElementById('confirm_password');
+            const passwordLabel = document.getElementById('passwordLabel');
+            const confirmLabel = document.getElementById('confirmPasswordLabel');
+            const passwordHint = document.getElementById('passwordHint');
+            const sipExtHint = document.getElementById('sipExtensionHint');
+            const sipSecHint = document.getElementById('sipSecretHint');
+
+            if (isEdit) {
+                password.required = false;
+                confirmPassword.required = false;
+                passwordLabel.textContent = 'Contraseña nueva (opcional)';
+                confirmLabel.textContent = 'Confirmar contraseña nueva';
+                password.placeholder = 'Dejar en blanco para mantener la actual';
+                confirmPassword.placeholder = 'Repita solo si cambia la contraseña';
+                if (passwordHint) {
+                    passwordHint.textContent = 'Si no desea cambiar la contraseña, deje ambos campos vacíos.';
+                }
+                if (sipExtHint) {
+                    sipExtHint.textContent = 'Si el asesor tiene extensión, aparece aquí. Dejar en blanco para quitarla.';
+                }
+                if (sipSecHint) {
+                    sipSecHint.innerHTML = 'Dejar en blanco para <strong>mantener</strong> la clave SIP actual. Escriba un valor solo si desea cambiarla.';
+                }
+            } else {
+                password.required = true;
+                confirmPassword.required = true;
+                passwordLabel.textContent = 'Contraseña *';
+                confirmLabel.textContent = 'Confirmar contraseña *';
+                password.placeholder = '';
+                confirmPassword.placeholder = '';
+                if (passwordHint) {
+                    passwordHint.textContent = '';
+                }
+                if (sipExtHint) {
+                    sipExtHint.textContent = 'Solo asesores. Opcional al crear.';
+                }
+                if (sipSecHint) {
+                    sipSecHint.innerHTML = 'Solo aplica a <strong>asesores</strong>. Se guarda en texto plano (requisito Asterisk / WebRTC).';
+                }
+            }
+        }
+
         // Renderizar tabla de usuarios
         function renderUsersTable() {
             const tbody = document.getElementById('usersTableBody');
@@ -582,11 +628,8 @@ $message = getMessage();
                             <button class="btn btn-sm btn-edit" onclick="editUser('${user.cedula}')" title="Editar">
                                 <i class="fas fa-edit"></i>
                             </button>
-                            <button class="btn btn-sm btn-toggle" onclick="toggleUser('${user.cedula}')" title="${user.activo ? 'Deshabilitar' : 'Habilitar'}">
+                            <button type="button" class="btn btn-sm btn-toggle" onclick="toggleUser('${user.cedula}')" title="${user.activo ? 'Inhabilitar' : 'Habilitar'}">
                                 <i class="fas fa-${user.activo ? 'ban' : 'check'}"></i>
-                            </button>
-                            <button class="btn btn-sm btn-delete" onclick="deleteUser('${user.cedula}')" title="Eliminar">
-                                <i class="fas fa-trash"></i>
                             </button>
                         </div>
                     </td>
@@ -713,8 +756,7 @@ $message = getMessage();
             document.getElementById('modalTitle').textContent = 'Crear Nuevo Usuario';
             document.getElementById('userForm').reset();
             document.getElementById('userId').value = '';
-            document.getElementById('password').required = true;
-            document.getElementById('confirm_password').required = true;
+            setUserFormEditMode(false);
             document.getElementById('coordinadorGroup').style.display = 'none';
             updateSipFieldsVisibility();
             document.getElementById('userModal').style.display = 'block';
@@ -737,10 +779,11 @@ $message = getMessage();
             document.getElementById('email').value = user.email;
             document.getElementById('telefono').value = user.telefono || '';
             document.getElementById('sip_extension').value = user.sip_extension || '';
-            document.getElementById('sip_secret').value = user.sip_secret || '';
+            document.getElementById('sip_secret').value = '';
             document.getElementById('rol_id').value = user.rol_id;
-            document.getElementById('password').required = false;
-            document.getElementById('confirm_password').required = false;
+            document.getElementById('password').value = '';
+            document.getElementById('confirm_password').value = '';
+            setUserFormEditMode(true);
             
             // Mostrar campo coordinador si es asesor
             if (user.rol_nombre === 'asesor') {
@@ -940,8 +983,13 @@ $message = getMessage();
             // Validar contraseñas si es creación o si se proporciona contraseña
             const userId = document.getElementById('userId').value;
             const password = document.getElementById('password').value;
+            const confirmPassword = document.getElementById('confirm_password').value;
             
-            if (!userId || password) {
+            if (!userId) {
+                if (!validatePasswords()) {
+                    return;
+                }
+            } else if (password !== '' || confirmPassword !== '') {
                 if (!validatePasswords()) {
                     return;
                 }
@@ -1014,7 +1062,9 @@ $message = getMessage();
 
         // Toggle usuario (habilitar/deshabilitar)
         async function toggleUser(userCedula) {
-            if (!confirm('¿Está seguro de cambiar el estado de este usuario?')) return;
+            const user = users.find(u => String(u.cedula) === String(userCedula));
+            const accion = user && user.activo ? 'inhabilitar' : 'habilitar';
+            if (!confirm('¿Está seguro de ' + accion + ' este usuario?')) return;
             
             try {
                 const response = await fetch('api/toggle_user.php', {
@@ -1022,32 +1072,7 @@ $message = getMessage();
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ user_cedula: userCedula })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    loadUsers();
-                    showMessage(result.message, 'success');
-                } else {
-                    showMessage(result.message, 'error');
-                }
-            } catch (error) {
-                showMessage('Error del sistema', 'error');
-            }
-        }
-
-        // Eliminar usuario
-        async function deleteUser(userCedula) {
-            if (!confirm('¿Está seguro de eliminar este usuario? Esta acción no se puede deshacer.')) return;
-            
-            try {
-                const response = await fetch('api/delete_user.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
+                    credentials: 'include',
                     body: JSON.stringify({ user_cedula: userCedula })
                 });
                 

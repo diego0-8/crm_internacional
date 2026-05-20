@@ -2845,15 +2845,24 @@ class WebRTCSoftphone {
      * @param {string} numero - Número de teléfono a establecer
      */
     setNumber(numero) {
-        if (!numero || typeof numero !== 'string') {
+        if (typeof numero !== 'string' && typeof numero !== 'number') {
             console.warn('⚠️ [Softphone] setNumber: número inválido');
             return;
         }
-        // Limpiar el número (solo dígitos, asteriscos y numerales)
-        this.currentNumber = numero.toString().replace(/[^0-9*#]/g, '');
+        // Limpiar el número (solo dígitos, asteriscos y numerales); cadena vacía = limpiar marcador
+        this.currentNumber = String(numero).replace(/[^0-9*#]/g, '');
         this._updateNumberDisplay();
         if (this.config.debug_mode) {
-            console.log('📞 [Softphone] Número establecido:', this.currentNumber);
+            console.log('📞 [Softphone] Número establecido:', this.currentNumber || '(vacío)');
+        }
+    }
+
+    /** Vacía el marcador para marcar manualmente. */
+    clearNumber() {
+        this.currentNumber = '';
+        this._updateNumberDisplay();
+        if (this.config.debug_mode) {
+            console.log('📞 [Softphone] Marcador limpiado');
         }
     }
 

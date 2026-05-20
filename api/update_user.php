@@ -32,11 +32,17 @@ try {
         'telefono' => sanitize($_POST['telefono'] ?? ''),
         'rol_id' => (int)($_POST['rol_id'] ?? 0),
         'coordinador_cedula' => !empty($_POST['coordinador_cedula']) ? sanitize($_POST['coordinador_cedula']) : null,
+        // Vacío = quitar extensión en BD
         'sip_extension' => trim((string) ($_POST['sip_extension'] ?? '')),
-        'sip_secret' => array_key_exists('sip_secret', $_POST) ? trim((string) $_POST['sip_secret']) : null,
     ];
+
+    // Clave SIP: solo actualizar si el admin escribe un valor nuevo
+    $sipSecret = trim((string) ($_POST['sip_secret'] ?? ''));
+    if ($sipSecret !== '') {
+        $data['sip_secret'] = $sipSecret;
+    }
     
-    // Solo incluir contraseña si se proporciona
+    // Contraseña: vacío en edición = mantener la actual
     if (!empty($_POST['password'])) {
         $data['password'] = $_POST['password'];
     }

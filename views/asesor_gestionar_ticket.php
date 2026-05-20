@@ -489,11 +489,28 @@ $message = getMessage();
             );
         }
 
-        function syncSoftphoneNumberFromTicketSelect() {
+        function limpiarMarcadorSoftphone() {
+            if (window.webrtcSoftphone && typeof window.webrtcSoftphone.clearNumber === 'function') {
+                window.webrtcSoftphone.clearNumber();
+                return;
+            }
+            if (window.webrtcSoftphone && typeof window.webrtcSoftphone.setNumber === 'function') {
+                window.webrtcSoftphone.setNumber('');
+                return;
+            }
+            var nd = document.getElementById('number-display');
+            if (nd) {
+                nd.value = '';
+            }
+        }
+
+        /** Actualiza la línea informativa bajo el softphone (sin tocar el marcador). */
+        function actualizarLineaSoftphoneCliente() {
             var sel = document.getElementById('detClienteTelefonoSelect');
-            if (!sel || sel.selectedIndex < 0) return;
-            var raw = String(sel.options[sel.selectedIndex].value || '').trim();
-            var digits = raw.replace(/\D/g, '');
+            var raw = '';
+            if (sel && sel.selectedIndex >= 0 && sel.options[sel.selectedIndex]) {
+                raw = String(sel.options[sel.selectedIndex].value || '').trim();
+            }
             var nombre = '';
             try {
                 if (window.__ticketActual && window.__ticketActual.cliente_nombre) {
@@ -501,16 +518,43 @@ $message = getMessage();
                 }
             } catch (_) {}
             var line = document.getElementById('softphoneClienteLine');
-            if (line) {
-                line.textContent = digits
-                    ? (nombre ? nombre + ' · Tel. ' + raw : 'Tel. ' + raw)
-                    : (nombre ? nombre + ' · Sin teléfono en ficha' : 'Cliente sin datos');
+            if (!line) {
+                return;
             }
-            if (digits && window.webrtcSoftphone && typeof window.webrtcSoftphone.setNumber === 'function') {
+            if (raw) {
+                line.textContent = nombre ? (nombre + ' · Tel. seleccionado: ' + raw) : ('Tel. seleccionado: ' + raw);
+            } else if (nombre) {
+                line.textContent = nombre + ' · Marque en el softphone o elija un teléfono en la ficha';
+            } else {
+                line.textContent = 'Marque en el softphone o elija un teléfono en la ficha del cliente';
+            }
+        }
+
+        /**
+         * @param {boolean} copiarAlMarcador Si true, pone el teléfono del selector en el softphone (elección del asesor).
+         */
+        function syncSoftphoneNumberFromTicketSelect(copiarAlMarcador) {
+            actualizarLineaSoftphoneCliente();
+            if (copiarAlMarcador !== true) {
+                return;
+            }
+            var sel = document.getElementById('detClienteTelefonoSelect');
+            if (!sel || sel.selectedIndex < 0) {
+                return;
+            }
+            var raw = String(sel.options[sel.selectedIndex].value || '').trim();
+            var digits = raw.replace(/\D/g, '');
+            if (!digits) {
+                limpiarMarcadorSoftphone();
+                return;
+            }
+            if (window.webrtcSoftphone && typeof window.webrtcSoftphone.setNumber === 'function') {
                 window.webrtcSoftphone.setNumber(digits);
-            } else if (digits) {
+            } else {
                 var nd = document.getElementById('number-display');
-                if (nd) nd.value = digits;
+                if (nd) {
+                    nd.value = digits;
+                }
             }
         }
 
@@ -522,7 +566,7 @@ $message = getMessage();
             __detalleTelToolbarHandlersBound = true;
             sel.addEventListener('change', function() {
                 actualizarDetalleTelefonoSeleccionVisual();
-                syncSoftphoneNumberFromTicketSelect();
+                syncSoftphoneNumberFromTicketSelect(true);
             });
             btn.addEventListener('click', function(ev) {
                 ev.preventDefault();
@@ -636,9 +680,10 @@ $message = getMessage();
             var mount = document.getElementById('webrtc-softphone');
             if (!line || !banner || !mount) return;
 
-            var tel = obtenerTelefonoPrincipalParaSoftphone(ticket);
             var nombre = (ticket && ticket.cliente_nombre) ? String(ticket.cliente_nombre) : '';
-            line.textContent = tel ? (nombre + ' · Tel. ' + tel) : (nombre ? nombre + ' · Sin teléfono en ficha' : 'Cliente sin datos');
+            line.textContent = nombre
+                ? (nombre + ' · Marque en el softphone o elija un teléfono en la ficha')
+                : 'Marque en el softphone o elija un teléfono en la ficha del cliente';
 
             try {
                 var res = await fetch('api/softphone_config.php', { credentials: 'same-origin' }).then(function(r) {
@@ -673,7 +718,7 @@ $message = getMessage();
                 if (!window.WebRTCSoftphone) {
                     await new Promise(function(resolve, reject) {
                         var s = document.createElement('script');
-                        s.src = '../assets/js/softphone-web.js';
+                        s.src = 'assets/js/softphone-web.js';
                         s.async = true;
                         s.onload = function() { resolve(); };
                         s.onerror = function() { reject(new Error('No se pudo cargar softphone-web.js')); };
@@ -686,19 +731,15 @@ $message = getMessage();
                 }
 
                 if (window.webrtcSoftphone) {
-                    syncSoftphoneNumberFromTicketSelect();
+                    limpiarMarcadorSoftphone();
+                    actualizarLineaSoftphoneCliente();
                     return;
                 }
 
                 new WebRTCSoftphone(res.config);
 
-                syncSoftphoneNumberFromTicketSelect();
-
-                var digits = obtenerTelefonoPrincipalParaSoftphone(ticket).replace(/\D/g, '');
-                window.__callLogContext = { cliente_id: 0, telefono_contacto: digits.slice(-12) };
-                if (window.webrtcSoftphone && typeof window.webrtcSoftphone.setCallContext === 'function') {
-                    window.webrtcSoftphone.setCallContext(window.__callLogContext);
-                }
+                limpiarMarcadorSoftphone();
+                actualizarLineaSoftphoneCliente();
             } catch (e) {
                 console.error(e);
                 banner.style.display = 'block';
@@ -1593,7 +1634,7 @@ $message = getMessage();
                     });
                     bindDetalleTelefonosToolbarOnce();
                     actualizarDetalleTelefonoSeleccionVisual();
-                    syncSoftphoneNumberFromTicketSelect();
+                    actualizarLineaSoftphoneCliente();
                 }
             }
 

@@ -1,0 +1,241 @@
+/**
+ * Campana asesor — panel de llamadas pendientes.
+ * Cargar después de dashboard.css / tickets.css.
+ * position:fixed evita recorte por .dashboard-container { overflow: hidden }.
+ */
+
+.top-header .header-actions,
+.top-header .asesor-bell-wrap {
+    overflow: visible !important;
+    position: relative;
+}
+
+.asesor-bell-wrap {
+    position: relative;
+    z-index: 100;
+    flex-shrink: 0;
+}
+
+.asesor-bell-btn {
+    width: 40px;
+    height: 40px;
+    border: none;
+    border-radius: 50%;
+    background: rgba(167, 167, 167, 0.35);
+    color: #333;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.2s ease, transform 0.2s ease, color 0.2s ease;
+    position: relative;
+    padding: 0;
+    font-size: 1rem;
+    box-sizing: border-box;
+}
+
+.header-asesor .asesor-bell-btn {
+    color: #fff;
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.asesor-bell-btn:hover,
+.asesor-bell-btn[aria-expanded="true"] {
+    background: #4a5568;
+    color: #fff;
+    transform: scale(1.05);
+}
+
+.header-asesor .asesor-bell-btn:hover,
+.header-asesor .asesor-bell-btn[aria-expanded="true"] {
+    background: rgba(255, 255, 255, 0.35);
+    color: #fff;
+}
+
+.asesor-bell-btn .notification-badge {
+    position: absolute;
+    top: -5px;
+    right: -5px;
+    min-width: 18px;
+    height: 18px;
+    padding: 0 4px;
+    font-size: 0.65rem;
+    font-weight: 700;
+    background: #ef4444;
+    color: #fff;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+.asesor-bell-btn .notification-badge[hidden] {
+    display: none !important;
+}
+
+.asesor-bell-panel {
+    position: fixed;
+    z-index: 10050;
+    width: min(22rem, calc(100vw - 2rem));
+    max-height: min(60vh, 420px);
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    box-shadow: 0 12px 40px rgba(0, 90, 156, 0.25);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.asesor-bell-panel[hidden] {
+    display: none !important;
+}
+
+.asesor-bell-panel-header {
+    flex-shrink: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    padding: 0.85rem 1rem;
+    border-bottom: 1px solid #e2e8f0;
+    background: #f5f5f5;
+}
+
+.asesor-bell-panel-header h4 {
+    margin: 0;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: #005a9c;
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+}
+
+.asesor-bell-panel-close {
+    border: none;
+    background: transparent;
+    font-size: 1.4rem;
+    line-height: 1;
+    color: #666;
+    cursor: pointer;
+    padding: 0 0.25rem;
+}
+
+.asesor-bell-panel-close:hover {
+    color: #333;
+}
+
+.asesor-bell-list {
+    flex: 1 1 auto;
+    min-height: 0;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    padding: 0.5rem 0;
+    background: #fff;
+}
+
+.asesor-bell-status,
+.asesor-bell-empty {
+    text-align: center;
+    padding: 1.25rem 1rem;
+    color: #666;
+    font-size: 0.88rem;
+    margin: 0;
+}
+
+.asesor-bell-status--error {
+    color: #d32f2f;
+}
+
+.asesor-bell-group-title {
+    padding: 0.5rem 1rem 0.25rem;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: #666;
+}
+
+.asesor-bell-item {
+    display: block;
+    padding: 0.75rem 1rem;
+    text-decoration: none;
+    color: #333;
+    border-bottom: 1px solid #e2e8f0;
+    transition: background 0.15s ease;
+    box-sizing: border-box;
+}
+
+.asesor-bell-item:hover {
+    background: #f5f5f5;
+    color: #333;
+}
+
+.asesor-bell-item:last-child {
+    border-bottom: none;
+}
+
+.asesor-bell-item-head {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
+    gap: 0.5rem;
+    margin-bottom: 0.25rem;
+}
+
+.asesor-bell-item-title {
+    font-weight: 600;
+    font-size: 0.9rem;
+    color: #333;
+    word-break: break-word;
+}
+
+.asesor-bell-urgencia {
+    flex-shrink: 0;
+    font-size: 0.65rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 2px 8px;
+    border-radius: 10px;
+}
+
+.asesor-bell-urgencia--vencida {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.asesor-bell-urgencia--hoy {
+    background: #e3f2fd;
+    color: #1565c0;
+}
+
+.asesor-bell-item-meta {
+    font-size: 0.8rem;
+    color: #666;
+    margin-bottom: 0.2rem;
+}
+
+.asesor-bell-item-accion {
+    font-size: 0.85rem;
+    color: #333;
+    margin-bottom: 0.25rem;
+    line-height: 1.35;
+}
+
+.asesor-bell-item-cliente {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.asesor-bell-tel {
+    color: #1e88e5;
+}
+
+@media (max-width: 640px) {
+    .asesor-bell-panel {
+        width: min(20rem, calc(100vw - 1.5rem));
+    }
+}

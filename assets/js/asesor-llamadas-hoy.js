@@ -153,6 +153,7 @@
                 var panel = $('asesorBellPanel');
                 if (panel && !panel.hidden) {
                     renderList(items);
+                    positionBellPanel();
                 }
                 return items;
             })
@@ -166,6 +167,28 @@
             });
     }
 
+    function positionBellPanel() {
+        var btn = $('asesorBellBtn');
+        var panel = $('asesorBellPanel');
+        if (!btn || !panel || panel.hasAttribute('hidden')) {
+            return;
+        }
+        var rect = btn.getBoundingClientRect();
+        var gap = 10;
+        var maxW = Math.min(352, window.innerWidth - 16);
+        var top = rect.bottom + gap;
+        var maxH = Math.min(window.innerHeight * 0.6, 420);
+        if (top + maxH > window.innerHeight - 8) {
+            top = Math.max(8, rect.top - gap - maxH);
+        }
+        var right = Math.max(8, window.innerWidth - rect.right);
+        panel.style.top = top + 'px';
+        panel.style.right = right + 'px';
+        panel.style.left = 'auto';
+        panel.style.width = maxW + 'px';
+        panel.style.maxHeight = maxH + 'px';
+    }
+
     function setPanelOpen(open) {
         var btn = $('asesorBellBtn');
         var panel = $('asesorBellPanel');
@@ -174,6 +197,7 @@
         if (open) {
             panel.removeAttribute('hidden');
             btn.setAttribute('aria-expanded', 'true');
+            positionBellPanel();
             renderList(cachedItems);
             if (!cachedItems.length) {
                 loadAndRender(true);
@@ -181,6 +205,10 @@
         } else {
             panel.setAttribute('hidden', 'hidden');
             btn.setAttribute('aria-expanded', 'false');
+            panel.style.top = '';
+            panel.style.right = '';
+            panel.style.width = '';
+            panel.style.maxHeight = '';
         }
     }
 
@@ -226,6 +254,18 @@
                 loadAndRender(false);
             }
         });
+
+        window.addEventListener('resize', function () {
+            if (isPanelOpen()) {
+                positionBellPanel();
+            }
+        });
+
+        window.addEventListener('scroll', function () {
+            if (isPanelOpen()) {
+                positionBellPanel();
+            }
+        }, true);
 
         if (refreshTimer) clearInterval(refreshTimer);
         refreshTimer = setInterval(function () {

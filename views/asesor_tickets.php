@@ -20,6 +20,7 @@ $message = getMessage();
     <link href="css/dashboard.css" rel="stylesheet">
     <link href="css/asesor.css" rel="stylesheet">
     <link href="css/tickets.css" rel="stylesheet">
+    <link href="css/asesor-bell.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">

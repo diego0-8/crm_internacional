@@ -284,7 +284,7 @@ try {
                        fecha_venta,
                        numero_caso, numero_parcela, tipo_foreclosure,
                        propiedad_calle, propiedad_ciudad, propiedad_estado, propiedad_codigo_postal,
-                       condado, fuente
+                       condado, fuente, monetizacion
                 FROM propiedades
                 WHERE id_cliente = ?
                 LIMIT 1
@@ -304,6 +304,7 @@ try {
                         'propiedad_codigo_postal' => $propRow['propiedad_codigo_postal'],
                         'condado' => $propRow['condado'],
                         'fuente' => $propRow['fuente'],
+                        'monetizacion' => $propRow['monetizacion'] ?? null,
                     ],
                     $mora
                 );

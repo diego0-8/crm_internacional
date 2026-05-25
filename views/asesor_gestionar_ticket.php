@@ -25,6 +25,7 @@ $message = getMessage();
     <link href="css/asesor.css" rel="stylesheet">
     <link href="css/tickets.css" rel="stylesheet">
     <link href="css/softphone-web.css" rel="stylesheet">
+    <link href="css/monetizacion-ticket.css" rel="stylesheet">
 </head>
 <body>
     <div class="dashboard-container">
@@ -189,6 +190,9 @@ $message = getMessage();
                             <div class="detalle-acciones-cliente">
                                 <button type="button" class="btn btn-secondary btn-compact" id="btnAbrirReferencias">
                                     <i class="fas fa-address-book"></i> Referencias
+                                </button>
+                                <button type="button" class="btn btn-primary btn-compact" id="btnAgregarContacto">
+                                    <i class="fas fa-plus-circle"></i> Agregar
                                 </button>
                             </div>
                         </section>
@@ -422,11 +426,15 @@ $message = getMessage();
                             <div id="webrtc-softphone"></div>
                         </div>
                         <p class="softphone-client-line" id="softphoneClienteLine"></p>
-                        
-                        <div class="monetizacion-panel" style="margin-top: 20px; background: #fff; border-radius: 8px; padding: 16px; border: 1px solid var(--border-light); text-align: center; box-shadow: 0 1px 3px rgba(0,0,0,0.05);">
-                            <h4 style="color: var(--primary-color); font-size: 14px; margin-bottom: 8px; font-weight: 600;"><i class="fas fa-money-bill-wave"></i> Monetización Esperada</h4>
-                            <div style="font-size: 24px; font-weight: 700; color: #10b981;" id="detMonetizacion">—</div>
-                            <p style="font-size: 12px; color: #64748b; margin-top: 4px;">Incentivo por cerrar el ticket</p>
+
+                        <div id="monetizacionPanel" class="monetizacion-premio" hidden>
+                            <div class="monetizacion-premio__shine" aria-hidden="true"></div>
+                            <div class="monetizacion-premio__icon"><i class="fas fa-trophy" aria-hidden="true"></i></div>
+                            <p class="monetizacion-premio__eyebrow">Tu incentivo al cerrar</p>
+                            <h4 class="monetizacion-premio__title">Monetización esperada</h4>
+                            <p id="detMonetizacion" class="monetizacion-premio__valor" aria-live="polite">—</p>
+                            <p class="monetizacion-premio__hint">Incentivo por cerrar el ticket</p>
+                            <canvas id="monetizacionConfetti" class="monetizacion-confetti-canvas" aria-hidden="true"></canvas>
                         </div>
                     </aside>
                 </div>
@@ -449,6 +457,36 @@ $message = getMessage();
         </div>
     </div>
 
+    <div id="modalAgregarContacto" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalAgregarContactoTitulo" aria-hidden="true" style="display: none;">
+        <div class="modal-content modal-agregar-contacto-content">
+            <div class="modal-header">
+                <h3 class="modal-title" id="modalAgregarContactoTitulo"><i class="fas fa-plus-circle"></i> Agregar contactos</h3>
+                <button type="button" class="close" onclick="cerrarModalAgregarContacto()" aria-label="Cerrar">&times;</button>
+            </div>
+            <div class="modal-body">
+                <div class="form-group">
+                    <label for="agregarContactoDestino"><i class="fas fa-user-tag"></i> ¿Para quién?</label>
+                    <select id="agregarContactoDestino" class="form-control" required>
+                        <option value="">— Seleccionar —</option>
+                        <option value="cliente">Cliente (titular)</option>
+                    </select>
+                </div>
+                <div id="agregarContactoFilas" class="agregar-contacto-filas"></div>
+                <button type="button" class="btn btn-outline-secondary btn-sm agregar-contacto-btn-mas" id="btnAgregarFilaContacto">
+                    <i class="fas fa-plus"></i> Agregar otro dato
+                </button>
+                <div id="agregarContactoMsg" class="agregar-contacto-msg" hidden></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" onclick="cerrarModalAgregarContacto()">Cancelar</button>
+                <button type="button" class="btn btn-primary" id="btnGuardarNuevoContacto">
+                    <i class="fas fa-save"></i> Guardar todo
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="assets/js/monetizacion-ticket.js"></script>
     <script>
         const TICKET_ID = <?php echo $ticketId; ?>;
 
@@ -815,8 +853,30 @@ $message = getMessage();
                     });
                 }
                 document.addEventListener('keydown', function(ev) {
-                    if (ev.key === 'Escape') cerrarModalReferencias();
+                    if (ev.key === 'Escape') {
+                        cerrarModalReferencias();
+                        cerrarModalAgregarContacto();
+                    }
                 });
+
+                var btnAgregar = document.getElementById('btnAgregarContacto');
+                if (btnAgregar) {
+                    btnAgregar.addEventListener('click', function() {
+                        abrirModalAgregarContacto();
+                    });
+                }
+                var modalAgregar = document.getElementById('modalAgregarContacto');
+                if (modalAgregar) {
+                    modalAgregar.addEventListener('click', function(ev) {
+                        if (ev.target === modalAgregar) cerrarModalAgregarContacto();
+                    });
+                }
+                var btnGuardar = document.getElementById('btnGuardarNuevoContacto');
+                if (btnGuardar) {
+                    btnGuardar.addEventListener('click', function() {
+                        guardarNuevoContacto();
+                    });
+                }
 
                 await initSoftphoneSidebar(ticket);
             } catch (e) {
@@ -1933,7 +1993,237 @@ $message = getMessage();
             modal.setAttribute('aria-hidden', 'true');
         }
 
+        var __agregarContactoFilaIdx = 0;
+
+        function crearFilaContacto() {
+            var idx = __agregarContactoFilaIdx++;
+            var row = document.createElement('div');
+            row.className = 'agregar-contacto-fila';
+            row.dataset.idx = idx;
+            row.innerHTML =
+                '<div class="acf-col-tipo">' +
+                    '<select class="form-control acf-tipo" data-idx="' + idx + '">' +
+                        '<option value="telefono">Teléfono</option>' +
+                        '<option value="email">Correo</option>' +
+                    '</select>' +
+                '</div>' +
+                '<div class="acf-col-valor">' +
+                    '<input type="tel" class="form-control acf-valor" data-idx="' + idx + '" placeholder="Ej: +1 555 123 4567">' +
+                '</div>' +
+                '<button type="button" class="btn btn-sm acf-btn-quitar" data-idx="' + idx + '" title="Quitar fila">' +
+                    '<i class="fas fa-times"></i>' +
+                '</button>';
+
+            row.querySelector('.acf-tipo').addEventListener('change', function() {
+                var inp = row.querySelector('.acf-valor');
+                if (this.value === 'email') {
+                    inp.type = 'email';
+                    inp.placeholder = 'Ej: correo@ejemplo.com';
+                } else {
+                    inp.type = 'tel';
+                    inp.placeholder = 'Ej: +1 555 123 4567';
+                }
+            });
+
+            row.querySelector('.acf-btn-quitar').addEventListener('click', function() {
+                row.remove();
+                actualizarBotonesQuitarFila();
+            });
+
+            return row;
+        }
+
+        function actualizarBotonesQuitarFila() {
+            var container = document.getElementById('agregarContactoFilas');
+            if (!container) return;
+            var filas = container.querySelectorAll('.agregar-contacto-fila');
+            for (var i = 0; i < filas.length; i++) {
+                var btn = filas[i].querySelector('.acf-btn-quitar');
+                if (btn) btn.style.visibility = filas.length <= 1 ? 'hidden' : 'visible';
+            }
+        }
+
+        function abrirModalAgregarContacto() {
+            var modal = document.getElementById('modalAgregarContacto');
+            if (!modal) return;
+
+            var sel = document.getElementById('agregarContactoDestino');
+            if (sel) {
+                while (sel.options.length > 2) sel.remove(2);
+                var ticket = window.__ticketActual || {};
+                var refs = ticket.referencias_personales || [];
+                for (var i = 0; i < refs.length; i++) {
+                    var r = refs[i];
+                    var opt = document.createElement('option');
+                    opt.value = 'referencia_' + r.id;
+                    var label = (r.nombre || '') + ' ' + (r.apellido || '');
+                    opt.textContent = 'Ref: ' + label.trim() + (r.possible_type ? ' (' + r.possible_type + ')' : '');
+                    sel.appendChild(opt);
+                }
+                sel.value = '';
+            }
+
+            var container = document.getElementById('agregarContactoFilas');
+            if (container) {
+                container.innerHTML = '';
+                __agregarContactoFilaIdx = 0;
+                container.appendChild(crearFilaContacto());
+                actualizarBotonesQuitarFila();
+            }
+
+            var msg = document.getElementById('agregarContactoMsg');
+            if (msg) { msg.hidden = true; msg.textContent = ''; msg.className = 'agregar-contacto-msg'; }
+
+            modal.style.display = 'block';
+            modal.setAttribute('aria-hidden', 'false');
+        }
+
+        function cerrarModalAgregarContacto() {
+            var modal = document.getElementById('modalAgregarContacto');
+            if (!modal) return;
+            modal.style.display = 'none';
+            modal.setAttribute('aria-hidden', 'true');
+        }
+
+        (function() {
+            var btnMas = document.getElementById('btnAgregarFilaContacto');
+            if (btnMas) {
+                btnMas.addEventListener('click', function() {
+                    var container = document.getElementById('agregarContactoFilas');
+                    if (!container) return;
+                    container.appendChild(crearFilaContacto());
+                    actualizarBotonesQuitarFila();
+                    var filas = container.querySelectorAll('.agregar-contacto-fila');
+                    var ultima = filas[filas.length - 1];
+                    if (ultima) {
+                        var inp = ultima.querySelector('.acf-valor');
+                        if (inp) inp.focus();
+                    }
+                });
+            }
+        })();
+
+        function mostrarMsgAgregar(texto, tipo) {
+            var msg = document.getElementById('agregarContactoMsg');
+            if (!msg) return;
+            msg.textContent = texto;
+            msg.className = 'agregar-contacto-msg agregar-contacto-msg--' + (tipo || 'info');
+            msg.hidden = false;
+        }
+
+        function recogerFilasContacto() {
+            var container = document.getElementById('agregarContactoFilas');
+            if (!container) return [];
+            var filas = container.querySelectorAll('.agregar-contacto-fila');
+            var items = [];
+            for (var i = 0; i < filas.length; i++) {
+                var tipo = filas[i].querySelector('.acf-tipo').value;
+                var valor = filas[i].querySelector('.acf-valor').value.trim();
+                if (valor) items.push({ tipo: tipo, valor: valor });
+            }
+            return items;
+        }
+
+        function validarItemContacto(item) {
+            if (item.tipo === 'telefono') {
+                var digits = item.valor.replace(/[^0-9]/g, '');
+                if (digits.length < 7) return 'El teléfono "' + item.valor + '" debe tener al menos 7 dígitos.';
+            }
+            if (item.tipo === 'email') {
+                if (item.valor.indexOf('@') === -1 || item.valor.indexOf('.') === -1)
+                    return '"' + item.valor + '" no es un correo electrónico válido.';
+            }
+            return null;
+        }
+
+        async function guardarNuevoContacto() {
+            var destino = document.getElementById('agregarContactoDestino').value;
+            if (!destino) { mostrarMsgAgregar('Selecciona para quién son los contactos.', 'error'); return; }
+
+            var items = recogerFilasContacto();
+            if (items.length === 0) { mostrarMsgAgregar('Ingresa al menos un teléfono o correo.', 'error'); return; }
+
+            for (var v = 0; v < items.length; v++) {
+                var err = validarItemContacto(items[v]);
+                if (err) { mostrarMsgAgregar(err, 'error'); return; }
+            }
+
+            var btn = document.getElementById('btnGuardarNuevoContacto');
+            if (btn) { btn.disabled = true; btn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Guardando…'; }
+
+            var errores = [];
+            var exitos = 0;
+            var limitReachedMsg = '';
+
+            try {
+                for (var i = 0; i < items.length; i++) {
+                    var fd = new FormData();
+                    fd.append('ticket_id', TICKET_ID);
+                    fd.append('destino', destino);
+                    fd.append('tipo_contacto', items[i].tipo);
+                    fd.append('valor', items[i].valor);
+
+                    var resp = await fetch('api/agregar_contacto_ticket.php', {
+                        method: 'POST',
+                        credentials: 'same-origin',
+                        body: fd
+                    });
+                    var data = await resp.json();
+
+                    if (data.success) {
+                        exitos++;
+                    } else if (data.limit_reached) {
+                        limitReachedMsg = data.message || 'Has alcanzado el límite máximo de registros. Comunícate con el administrador para seguir agregando más números.';
+                        break;
+                    } else {
+                        errores.push((items[i].valor) + ': ' + (data.message || 'Error'));
+                    }
+                }
+
+                if (limitReachedMsg) {
+                    alert(limitReachedMsg);
+                    if (exitos > 0) {
+                        mostrarMsgAgregar(exitos + ' contacto(s) guardado(s). Límite alcanzado para los restantes.', 'info');
+                    } else {
+                        mostrarMsgAgregar(limitReachedMsg, 'error');
+                    }
+                    recargarDatosTicket();
+                } else if (errores.length > 0) {
+                    mostrarMsgAgregar('Errores: ' + errores.join('; '), 'error');
+                    if (exitos > 0) recargarDatosTicket();
+                } else {
+                    mostrarMsgAgregar('¡' + exitos + ' contacto(s) agregado(s) correctamente!', 'success');
+                    setTimeout(function() {
+                        cerrarModalAgregarContacto();
+                        recargarDatosTicket();
+                    }, 800);
+                }
+            } catch (e) {
+                console.error(e);
+                mostrarMsgAgregar('Error de red al guardar los contactos.', 'error');
+            } finally {
+                if (btn) { btn.disabled = false; btn.innerHTML = '<i class="fas fa-save"></i> Guardar todo'; }
+            }
+        }
+
+        async function recargarDatosTicket() {
+            try {
+                var resp = await fetch('api/ticket_detalle_completo.php?ticket_id=' + TICKET_ID, { credentials: 'same-origin' });
+                var result = await resp.json();
+                if (result.success && result.data) {
+                    window.__ticketActual = result.data;
+                    renderDetallesCaso(result.data);
+                }
+            } catch (e) {
+                console.error('Error al recargar datos del ticket:', e);
+            }
+        }
+
         function renderDetallesCaso(ticket) {
+            if (window.MonetizacionTicket && typeof MonetizacionTicket.reset === 'function') {
+                MonetizacionTicket.reset();
+            }
+
             // Cliente
             setText('detClienteNombre', ticket.cliente_nombre);
 
@@ -1983,6 +2273,9 @@ $message = getMessage();
                 if (lista) lista.style.display = 'none';
                 if (grupoValores) grupoValores.style.display = 'none';
                 renderImportanciaTicket(null);
+                if (window.MonetizacionTicket) {
+                    MonetizacionTicket.play(null);
+                }
             } else {
                 if (vacio) vacio.style.display = 'none';
                 if (lista) lista.style.display = '';
@@ -2008,15 +2301,6 @@ $message = getMessage();
                     setText('detValorVendido',  formatUsd(predio.valor_vendido));
                     setText('detValorDevolver', formatUsd(predio.valor_a_devolver));
                     setText('detDateSold',      formatDateOnly(predio.date_sold));
-
-                    var formatCop = function(val) {
-                        if (val === null || val === undefined || val === '') return '—';
-                        var num = parseFloat(val);
-                        if (isNaN(num)) return val;
-                        return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(num);
-                    };
-
-                    setText('detMonetizacion',  predio.monetizacion ? formatCop(predio.monetizacion) : '—');
                 } else if (pr) {
                     setText('detPredioCase', pr.numero_caso);
                     setText('detPredioParcel', pr.numero_parcela);
@@ -2057,6 +2341,16 @@ $message = getMessage();
                 }
 
                 renderImportanciaTicket(titRep ? titRep.prioridad : null);
+            }
+
+            var montoMonetizacion = null;
+            if (predio && predio.monetizacion != null && String(predio.monetizacion).trim() !== '') {
+                montoMonetizacion = predio.monetizacion;
+            } else if (pr && pr.monetizacion != null && String(pr.monetizacion).trim() !== '') {
+                montoMonetizacion = pr.monetizacion;
+            }
+            if (window.MonetizacionTicket) {
+                MonetizacionTicket.play(montoMonetizacion);
             }
         }
 

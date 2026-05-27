@@ -176,20 +176,28 @@ $message = getMessage();
                                     <div class="metric-value" id="totalTickets">0</div>
                                 </div>
                                 <div class="ticket-metric">
-                                    <div class="metric-label">Abiertos</div>
-                                    <div class="metric-value tickets-abiertos" id="ticketsAbiertos">0</div>
+                                    <div class="metric-label">Contactabilidad</div>
+                                    <div class="metric-value tickets-contactabilidad" id="ticketsContactabilidad">0</div>
                                 </div>
                                 <div class="ticket-metric">
-                                    <div class="metric-label">En Progreso</div>
-                                    <div class="metric-value tickets-procesando" id="ticketsProcesando">0</div>
+                                    <div class="metric-label">Acuerdo / Validación</div>
+                                    <div class="metric-value tickets-acuerdo" id="ticketsAcuerdo">0</div>
                                 </div>
                                 <div class="ticket-metric">
-                                    <div class="metric-label">Terminados</div>
-                                    <div class="metric-value tickets-terminados" id="ticketsTerminados">0</div>
+                                    <div class="metric-label">Docs. Corte</div>
+                                    <div class="metric-value tickets-docs-corte" id="ticketsDocsCorte">0</div>
                                 </div>
                                 <div class="ticket-metric">
-                                    <div class="metric-label">Urgentes</div>
-                                    <div class="metric-value tickets-urgentes" id="ticketsUrgentes">0</div>
+                                    <div class="metric-label">Docs. Adicionales</div>
+                                    <div class="metric-value tickets-docs-adic" id="ticketsDocsAdic">0</div>
+                                </div>
+                                <div class="ticket-metric">
+                                    <div class="metric-label">Giro / Swift</div>
+                                    <div class="metric-value tickets-giro-swift" id="ticketsGiroSwift">0</div>
+                                </div>
+                                <div class="ticket-metric">
+                                    <div class="metric-label">Desembolso / Cierre</div>
+                                    <div class="metric-value tickets-cierre" id="ticketsCierre">0</div>
                                 </div>
                             </div>
                 </div>
@@ -352,6 +360,20 @@ $message = getMessage();
                     <button type="submit" class="btn btn-primary" id="createUserSubmitBtn">Crear Usuario</button>
                 </div>
             </form>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal detalles del asesor -->
+    <div id="modalDetalleAsesor" class="modal-cliente">
+        <div class="modal-cliente-content modal-detalle-asesor">
+            <div class="modal-cliente-header">
+                <h3 class="modal-cliente-title" id="modalDetalleAsesorTitulo">Tickets del asesor</h3>
+                <span class="close-modal" onclick="cerrarModalDetalleAsesor()" role="button" tabindex="0">&times;</span>
+            </div>
+            <div class="mda-resumen" id="mdaResumen"></div>
+            <div class="modal-cliente-body" id="mdaBody">
+                <p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando...</p>
             </div>
         </div>
     </div>
@@ -623,21 +645,20 @@ $message = getMessage();
         }
         
         function updateTicketsMetrics() {
-            const tickets = dashboardData.tickets || {};
-            const procesando = (tickets.tickets_validacion || 0) + (tickets.tickets_proceso_judicial || 0)
-                             + (tickets.tickets_remate || 0)    + (tickets.tickets_recuperacion || 0);
-            const urgentes   = (tickets.tickets_remate || 0)    + (tickets.tickets_proceso_judicial || 0);
-
-            const elTotal = document.getElementById('totalTickets');
-            const elAb    = document.getElementById('ticketsAbiertos');
-            const elProc  = document.getElementById('ticketsProcesando');
-            const elTerm  = document.getElementById('ticketsTerminados');
-            const elUrg   = document.getElementById('ticketsUrgentes');
-            if (elTotal) elTotal.textContent = tickets.total_tickets || 0;
-            if (elAb)    elAb.textContent    = tickets.tickets_comunicacion || 0;
-            if (elProc)  elProc.textContent  = procesando;
-            if (elTerm)  elTerm.textContent  = tickets.tickets_cierre || 0;
-            if (elUrg)   elUrg.textContent   = urgentes;
+            const t = dashboardData.tickets || {};
+            const ids = {
+                totalTickets:         t.total_tickets || 0,
+                ticketsContactabilidad: t.tickets_comunicacion || 0,
+                ticketsAcuerdo:       t.tickets_validacion || 0,
+                ticketsDocsCorte:     t.tickets_proceso_judicial || 0,
+                ticketsDocsAdic:      t.tickets_remate || 0,
+                ticketsGiroSwift:     t.tickets_recuperacion || 0,
+                ticketsCierre:        t.tickets_cierre || 0,
+            };
+            for (const [id, val] of Object.entries(ids)) {
+                const el = document.getElementById(id);
+                if (el) el.textContent = val;
+            }
         }
         
         // Actualizar métricas de rendimiento
@@ -739,12 +760,12 @@ $message = getMessage();
                     </div>
                     <div class="asesor-metrics">
                         <div class="metric-item">
-                            <div class="metric-item-value">${asesor.total_clientes || 0}</div>
-                            <div class="metric-item-label">Clientes</div>
+                            <div class="metric-item-value">${tickets.total_tickets || 0}</div>
+                            <div class="metric-item-label">Asignados</div>
                         </div>
                         <div class="metric-item">
-                            <div class="metric-item-value">${tickets.total_tickets || 0}</div>
-                            <div class="metric-item-label">Tickets</div>
+                            <div class="metric-item-value">${tickets.tickets_gestionados || 0}</div>
+                            <div class="metric-item-label">Gestionados</div>
                         </div>
                         <div class="metric-item">
                             <div class="metric-item-value">${tickets.tickets_cierre || 0}</div>
@@ -885,10 +906,172 @@ $message = getMessage();
             });
         }
 
-        // Ver detalles del asesor
-        function verDetallesAsesor(cedula) {
-            // Implementar modal de detalles
-            showMessage('Funcionalidad de detalles próximamente', 'info');
+        function escHtml(s) {
+            var d = document.createElement('div');
+            d.textContent = String(s || '');
+            return d.innerHTML;
+        }
+
+        function badgeEstado(estado, label) {
+            var slug = String(estado || '').toLowerCase().replace(/[^a-z0-9]/g, '_');
+            return '<span class="mda-badge mda-badge--' + slug + '">' + escHtml(label || estado) + '</span>';
+        }
+
+        function cerrarModalDetalleAsesor() {
+            var m = document.getElementById('modalDetalleAsesor');
+            if (m) m.classList.remove('is-open');
+        }
+
+        async function verDetallesAsesor(cedula) {
+            var asesor = null;
+            if (dashboardData.asesores) {
+                asesor = dashboardData.asesores.find(function(a) { return a.cedula === cedula; });
+            }
+            var nombre = asesor ? (asesor.nombre + ' ' + asesor.apellido) : cedula;
+            var tickets = asesor ? (asesor.tickets || {}) : {};
+            var rendimiento = asesor ? (asesor.rendimiento || {}) : {};
+
+            document.getElementById('modalDetalleAsesorTitulo').textContent = 'Tickets de ' + nombre;
+            document.getElementById('mdaResumen').innerHTML =
+                '<div class="mda-resumen-item"><strong>' + (tickets.total_tickets || 0) + '</strong><span>Asignados</span></div>' +
+                '<div class="mda-resumen-item"><strong>' + (tickets.tickets_gestionados || 0) + '</strong><span>Gestionados</span></div>' +
+                '<div class="mda-resumen-item"><strong>' + (tickets.tickets_cierre || 0) + '</strong><span>Cerrados</span></div>' +
+                '<div class="mda-resumen-item"><strong>' + (rendimiento.efectividad || 0) + '%</strong><span>Efectividad</span></div>';
+
+            var body = document.getElementById('mdaBody');
+            body.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando tickets...</p>';
+            document.getElementById('modalDetalleAsesor').classList.add('is-open');
+
+            try {
+                var resp = await fetch('api/coordinador_tickets_asesor.php?asesor_cedula=' + encodeURIComponent(cedula), { credentials: 'include' });
+                var data = await resp.json();
+                if (!data.success || !data.data) {
+                    body.innerHTML = '<p class="text-muted">No se pudieron cargar los tickets.</p>';
+                    return;
+                }
+                renderTablaTicketsAsesor(data.data, body);
+            } catch (e) {
+                console.error(e);
+                body.innerHTML = '<p class="text-muted">Error de red al cargar tickets.</p>';
+            }
+        }
+
+        function renderTablaTicketsAsesor(tickets, container) {
+            if (!tickets.length) {
+                container.innerHTML = '<p class="text-muted" style="text-align:center;padding:20px;">Este asesor no tiene tickets asignados.</p>';
+                return;
+            }
+            var html = '<table class="mda-table"><thead><tr>' +
+                '<th>#</th><th>Case / Parcel</th><th>Gestiones</th><th>Estado</th><th>Ver</th>' +
+                '</tr></thead><tbody>';
+            tickets.forEach(function(tk, i) {
+                var caseLabel = tk.case_number || tk.numero_ticket || ('#' + tk.id);
+                if (tk.parcel_number && tk.parcel_number !== tk.case_number) {
+                    caseLabel += ' / ' + tk.parcel_number;
+                }
+                html += '<tr>' +
+                    '<td>' + (i + 1) + '</td>' +
+                    '<td class="mda-cell-case">' + escHtml(caseLabel) + '</td>' +
+                    '<td class="mda-cell-center">' + (tk.total_gestiones || 0) + '</td>' +
+                    '<td>' + badgeEstado(tk.estado, tk.estado_label) + '</td>' +
+                    '<td class="mda-cell-center"><button class="btn btn-sm btn-outline-primary mda-btn-ver" onclick="toggleHistorialTicket(' + tk.id + ', this)" title="Ver historial"><i class="fas fa-eye"></i></button></td>' +
+                    '</tr>' +
+                    '<tr class="mda-historial-row" id="mdaHist_' + tk.id + '" style="display:none;">' +
+                    '<td colspan="5"><div class="mda-historial-wrap" id="mdaHistContent_' + tk.id + '"><p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando...</p></div></td>' +
+                    '</tr>';
+            });
+            html += '</tbody></table>';
+            container.innerHTML = html;
+        }
+
+        var __historialCache = {};
+
+        async function toggleHistorialTicket(ticketId, btn) {
+            var row = document.getElementById('mdaHist_' + ticketId);
+            if (!row) return;
+            var visible = row.style.display !== 'none';
+            if (visible) {
+                row.style.display = 'none';
+                return;
+            }
+            row.style.display = '';
+
+            if (__historialCache[ticketId]) {
+                renderHistorialTicket(ticketId, __historialCache[ticketId]);
+                return;
+            }
+
+            var wrap = document.getElementById('mdaHistContent_' + ticketId);
+            wrap.innerHTML = '<p class="text-muted"><i class="fas fa-spinner fa-spin"></i> Cargando historial...</p>';
+
+            try {
+                var resp = await fetch('api/coordinador_ticket_historial.php?ticket_id=' + ticketId, { credentials: 'include' });
+                var data = await resp.json();
+                if (!data.success) {
+                    wrap.innerHTML = '<p class="text-muted">Error al cargar historial.</p>';
+                    return;
+                }
+                __historialCache[ticketId] = data;
+                renderHistorialTicket(ticketId, data);
+            } catch (e) {
+                console.error(e);
+                wrap.innerHTML = '<p class="text-muted">Error de red.</p>';
+            }
+        }
+
+        function renderHistorialTicket(ticketId, data) {
+            var wrap = document.getElementById('mdaHistContent_' + ticketId);
+            if (!wrap) return;
+
+            var html = '';
+
+            if (data.historial_estado && data.historial_estado.length) {
+                html += '<div class="mda-timeline-title"><i class="fas fa-history"></i> Timeline de estados</div>';
+                html += '<div class="mda-timeline">';
+                data.historial_estado.forEach(function(h) {
+                    html += '<div class="mda-timeline-item">' +
+                        '<div class="mda-timeline-dot"></div>' +
+                        '<div class="mda-timeline-content">' +
+                            '<div class="mda-timeline-head">' +
+                                badgeEstado(h.estado_nuevo, h.estado_label || h.estado_nuevo) +
+                                '<span class="mda-timeline-dur"><i class="fas fa-clock"></i> ' + escHtml(h.duracion_legible) + '</span>' +
+                            '</div>' +
+                            '<div class="mda-timeline-meta">' + escHtml(h.fecha_cambio) + (h.asesor_nombre_completo ? ' &mdash; ' + escHtml(h.asesor_nombre_completo) : '') + '</div>' +
+                            (h.observacion ? '<div class="mda-timeline-obs">' + escHtml(h.observacion) + '</div>' : '') +
+                        '</div>' +
+                    '</div>';
+                });
+                html += '</div>';
+            }
+
+            var notasPorEstado = data.notas_por_estado || {};
+            var estadoKeys = Object.keys(notasPorEstado);
+            if (estadoKeys.length) {
+                html += '<div class="mda-timeline-title" style="margin-top:16px;"><i class="fas fa-clipboard-list"></i> Gestiones por estado</div>';
+                estadoKeys.forEach(function(ek) {
+                    var notas = notasPorEstado[ek];
+                    var labelEstado = (notas[0] && notas[0].estado_label) ? notas[0].estado_label : ek;
+                    if (ek === '_sin_estado') labelEstado = 'Sin estado asignado';
+                    html += '<div class="mda-notas-grupo">';
+                    html += '<div class="mda-notas-grupo-head">' + badgeEstado(ek, labelEstado) + ' <span class="mda-notas-count">(' + notas.length + ')</span></div>';
+                    notas.forEach(function(n) {
+                        var telHtml = n.telefono_contacto ? '<div class="mda-nota-telefono"><i class="fas fa-phone-alt"></i> ' + escHtml(n.telefono_contacto) + '</div>' : '';
+                        html += '<div class="mda-nota-item">' +
+                            '<div class="mda-nota-meta"><strong>' + escHtml(n.asesor_nombre) + '</strong> &mdash; ' + escHtml(n.fecha_creacion) + '</div>' +
+                            telHtml +
+                            '<div class="mda-nota-contenido">' + escHtml(n.contenido) + '</div>' +
+                            (n.proxima_accion ? '<div class="mda-nota-accion"><i class="fas fa-arrow-right"></i> ' + escHtml(n.proxima_accion) + (n.fecha_proxima_accion ? ' (' + escHtml(n.fecha_proxima_accion) + ')' : '') + '</div>' : '') +
+                        '</div>';
+                    });
+                    html += '</div>';
+                });
+            }
+
+            if (!html) {
+                html = '<p class="text-muted" style="padding:12px;">Sin historial ni gestiones registradas.</p>';
+            }
+
+            wrap.innerHTML = html;
         }
 
         // Editar asesor
@@ -1034,6 +1217,14 @@ $message = getMessage();
             if (modal && event.target === modal) {
                 closeCreateUserModal();
             }
+            const mdaModal = document.getElementById('modalDetalleAsesor');
+            if (mdaModal && event.target === mdaModal) {
+                cerrarModalDetalleAsesor();
+            }
+        });
+
+        document.addEventListener('keydown', function(ev) {
+            if (ev.key === 'Escape') cerrarModalDetalleAsesor();
         });
 
     </script>

@@ -108,6 +108,18 @@ class CoordinadorController {
      * Obtener estadísticas de tickets para un asesor
      */
     private function getEstadisticasTicketsAsesor($asesorCedula) {
+        $defaults = [
+            'total_tickets'             => 0,
+            'tickets_gestionados'       => 0,
+            'tickets_abiertos'          => 0,
+            'tickets_comunicacion'      => 0,
+            'tickets_validacion'        => 0,
+            'tickets_proceso_judicial'  => 0,
+            'tickets_remate'            => 0,
+            'tickets_recuperacion'      => 0,
+            'tickets_cierre'            => 0,
+            'tiempo_promedio_resolucion' => 0,
+        ];
         try {
             $db = getDB();
             
@@ -128,32 +140,26 @@ class CoordinadorController {
                 WHERE asesor_cedula = ?
             ");
             $stmt->execute([$asesorCedula]);
-            $stats = $stmt->fetch();
+            $stats = $stmt->fetch() ?: $defaults;
 
-            $defaults = [
-                'total_tickets'             => 0,
-                'tickets_abiertos'          => 0,
-                'tickets_comunicacion'      => 0,
-                'tickets_validacion'        => 0,
-                'tickets_proceso_judicial'  => 0,
-                'tickets_remate'            => 0,
-                'tickets_recuperacion'      => 0,
-                'tickets_cierre'            => 0,
-                'tiempo_promedio_resolucion' => 0,
-            ];
-            return $stats ?: $defaults;
+            $gestionados = 0;
+            try {
+                $stmt2 = $db->prepare("
+                    SELECT COUNT(DISTINCT t.id) AS cnt
+                    FROM tiketera t
+                    WHERE t.asesor_cedula = ?
+                      AND EXISTS (SELECT 1 FROM ticket_notas tn WHERE tn.ticket_id = t.id)
+                ");
+                $stmt2->execute([$asesorCedula]);
+                $gestionados = (int) $stmt2->fetchColumn();
+            } catch (PDOException $e) {
+                // ticket_notas might not exist yet
+            }
+            $stats['tickets_gestionados'] = $gestionados;
+
+            return $stats;
         } catch (Exception $e) {
-            return [
-                'total_tickets'             => 0,
-                'tickets_abiertos'          => 0,
-                'tickets_comunicacion'      => 0,
-                'tickets_validacion'        => 0,
-                'tickets_proceso_judicial'  => 0,
-                'tickets_remate'            => 0,
-                'tickets_recuperacion'      => 0,
-                'tickets_cierre'            => 0,
-                'tiempo_promedio_resolucion' => 0,
-            ];
+            return $defaults;
         }
     }
     

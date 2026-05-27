@@ -966,11 +966,13 @@ $message = getMessage();
                                 fechaProx = '';
                             }
                         }
+                        var telNotaHtml = nota.telefono_contacto ? '<div class="nota-telefono"><i class="fas fa-phone-alt"></i> ' + escapeHtml(nota.telefono_contacto) + '</div>' : '';
                         return '<div class="nota-item' + (esVistaTipif ? ' nota-item-tipificacion' : '') + '">' +
                             '<div class="nota-header">' +
                             '<span class="nota-fecha">' + new Date(nota.fecha_creacion).toLocaleString() + '</span>' +
                             '<span class="nota-asesor">' + escapeHtml(nota.asesor_nombre || '') + '</span>' +
                             '</div>' +
+                            telNotaHtml +
                             badgeTipo +
                             estadoHtml +
                             cuerpoTipif +
@@ -2536,6 +2538,11 @@ $message = getMessage();
             const formData = new FormData();
             formData.append('ticket_id', ticketId);
             formData.append('estado', estado);
+
+            const telContacto = obtenerTelefonoPrincipalParaSoftphone(window.__ticketActual);
+            if (telContacto) {
+                formData.append('telefono_contacto', telContacto);
+            }
 
             if (estado === ESTADO_CONTACTABILIDAD && isPerfilContactabilidadCompleta()) {
                 formData.append('perfilacion_contactabilidad', JSON.stringify({

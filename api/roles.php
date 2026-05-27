@@ -4,7 +4,7 @@ require_once '../config.php';
 require_once '../model/RoleModel.php';
 
 // Verificar autenticación
-if (!isLoggedIn() || !hasRole('admin')) {
+if (!isLoggedIn() || (!hasRole('admin') && !hasRole('coordinador'))) {
     http_response_code(401);
     echo json_encode(['success' => false, 'message' => 'No autorizado']);
     exit;

@@ -310,6 +310,7 @@ class WebRTCSoftphone {
         this._audioBaseUrl = (config.audioBaseUrl !== undefined && config.audioBaseUrl !== '')
             ? config.audioBaseUrl.replace(/\/?$/, '/')
             : this._getAudioBaseUrl();
+        this._audioBaseUrl = this._normalizeAudioBaseUrl(this._audioBaseUrl);
 
         this.userAgent = null;
         this.registerer = null;
@@ -709,6 +710,21 @@ class WebRTCSoftphone {
         const required = ['extension', 'password', 'wss_server', 'sip_domain'];
         const missing = required.filter((k) => !this.config[k] || String(this.config[k]).trim() === '');
         if (missing.length) throw new Error('Config incompleta: ' + missing.join(', '));
+    }
+
+    /**
+     * Evita mixed content: si la página es HTTPS, las URLs absolutas http:// se pasan a https://.
+     */
+    _normalizeAudioBaseUrl(url) {
+        if (!url || typeof url !== 'string') {
+            return url;
+        }
+        try {
+            if (typeof window !== 'undefined' && window.location.protocol === 'https:' && /^http:\/\//i.test(url)) {
+                return url.replace(/^http:\/\//i, 'https://');
+            }
+        } catch (e) { /* ignore */ }
+        return url;
     }
 
     /**

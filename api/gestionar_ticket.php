@@ -26,6 +26,7 @@ try {
     $nuevaNota          = sanitize($_POST['nueva_nota'] ?? '');
     $proximaAccion      = sanitize($_POST['proxima_accion'] ?? '');
     $fechaProximaAccion = sanitize($_POST['fecha_proxima_accion'] ?? '');
+    $telefonoContacto   = sanitize($_POST['telefono_contacto'] ?? '');
     if ($fechaProximaAccion !== '') {
         $fechaProximaAccion = preg_replace('/\s*T\s*/', ' ', $fechaProximaAccion);
     }
@@ -144,32 +145,52 @@ try {
         if ($estado !== '' && in_array($estado, TiketeraModel::ESTADOS, true)) {
             $estadoParaNota = $estado;
         }
+        $telParam = $telefonoContacto !== '' ? $telefonoContacto : null;
         try {
             $stmt = $db->prepare("
                 INSERT INTO ticket_notas (
-                    ticket_id, asesor_cedula, estado_ticket, contenido,
+                    ticket_id, asesor_cedula, estado_ticket, contenido, telefono_contacto,
                     proxima_accion, fecha_proxima_accion, fecha_creacion
                 )
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
+                VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
             ");
             $stmt->execute([
                 $ticketId,
                 $asesorCedula,
                 $estadoParaNota,
                 $nuevaNota,
+                $telParam,
                 $proximaAccion ?: null,
                 $fechaProximaAccion ?: null,
             ]);
         } catch (PDOException $e) {
-            // BD sin columna estado_ticket (esquema antiguo)
-            if (strpos($e->getMessage(), 'estado_ticket') === false) {
+            if (strpos($e->getMessage(), 'telefono_contacto') !== false ||
+                strpos($e->getMessage(), 'estado_ticket') !== false) {
+                try {
+                    $stmt = $db->prepare("
+                        INSERT INTO ticket_notas (
+                            ticket_id, asesor_cedula, estado_ticket, contenido,
+                            proxima_accion, fecha_proxima_accion, fecha_creacion
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, NOW())
+                    ");
+                    $stmt->execute([
+                        $ticketId, $asesorCedula, $estadoParaNota, $nuevaNota,
+                        $proximaAccion ?: null, $fechaProximaAccion ?: null,
+                    ]);
+                } catch (PDOException $e2) {
+                    if (strpos($e2->getMessage(), 'estado_ticket') === false) {
+                        throw $e2;
+                    }
+                    $stmt = $db->prepare("
+                        INSERT INTO ticket_notas (ticket_id, asesor_cedula, contenido, proxima_accion, fecha_proxima_accion, fecha_creacion)
+                        VALUES (?, ?, ?, ?, ?, NOW())
+                    ");
+                    $stmt->execute([$ticketId, $asesorCedula, $nuevaNota, $proximaAccion ?: null, $fechaProximaAccion ?: null]);
+                }
+            } else {
                 throw $e;
             }
-            $stmt = $db->prepare("
-                INSERT INTO ticket_notas (ticket_id, asesor_cedula, contenido, proxima_accion, fecha_proxima_accion, fecha_creacion)
-                VALUES (?, ?, ?, ?, ?, NOW())
-            ");
-            $stmt->execute([$ticketId, $asesorCedula, $nuevaNota, $proximaAccion ?: null, $fechaProximaAccion ?: null]);
         }
     }
 
@@ -298,15 +319,17 @@ try {
             $tieneTipoNota = false;
         }
 
+        $telParamTipif = $telefonoContacto !== '' ? $telefonoContacto : null;
+
         if ($tieneTipoNota) {
             try {
                 $stmtT = $db->prepare(
                     "
                     INSERT INTO ticket_notas (
-                        ticket_id, asesor_cedula, tipo_nota, estado_ticket, contenido,
+                        ticket_id, asesor_cedula, tipo_nota, estado_ticket, contenido, telefono_contacto,
                         proxima_accion, fecha_proxima_accion, fecha_creacion
                     )
-                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, NOW())
                     "
                 );
                 $stmtT->execute([
@@ -315,6 +338,7 @@ try {
                     'tipificacion_actualizacion',
                     $payloadPerfilActGuardado['estado_al_guardar'],
                     $contenidoTipif,
+                    $telParamTipif,
                     $proximaAccion ?: null,
                     $fechaProximaAccion ?: null,
                 ]);
@@ -323,15 +347,16 @@ try {
                     $stmtTf = $db->prepare(
                         "
                         INSERT INTO ticket_notas (
-                            ticket_id, asesor_cedula, estado_ticket, contenido,
+                            ticket_id, asesor_cedula, tipo_nota, estado_ticket, contenido,
                             proxima_accion, fecha_proxima_accion, fecha_creacion
                         )
-                        VALUES (?, ?, ?, ?, ?, ?, NOW())
+                        VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
                         "
                     );
                     $stmtTf->execute([
                         $ticketId,
                         $asesorCedula,
+                        'tipificacion_actualizacion',
                         $payloadPerfilActGuardado['estado_al_guardar'],
                         $contenidoTipif,
                         $proximaAccion ?: null,
@@ -354,42 +379,63 @@ try {
                 }
             }
         } else {
-            $stmtTn = $db->prepare(
-                "
-                INSERT INTO ticket_notas (
-                    ticket_id, asesor_cedula, estado_ticket, contenido,
-                    proxima_accion, fecha_proxima_accion, fecha_creacion
-                )
-                VALUES (?, ?, ?, ?, ?, ?, NOW())
-                "
-            );
             try {
+                $stmtTn = $db->prepare(
+                    "
+                    INSERT INTO ticket_notas (
+                        ticket_id, asesor_cedula, estado_ticket, contenido, telefono_contacto,
+                        proxima_accion, fecha_proxima_accion, fecha_creacion
+                    )
+                    VALUES (?, ?, ?, ?, ?, ?, ?, NOW())
+                    "
+                );
                 $stmtTn->execute([
                     $ticketId,
                     $asesorCedula,
                     $payloadPerfilActGuardado['estado_al_guardar'],
                     $contenidoTipif,
+                    $telParamTipif,
                     $proximaAccion ?: null,
                     $fechaProximaAccion ?: null,
                 ]);
             } catch (PDOException $e) {
-                if (strpos($e->getMessage(), 'estado_ticket') !== false ||
-                    strpos($e->getMessage(), 'Unknown column') !== false) {
-                    $stmtTn2 = $db->prepare(
+                try {
+                    $stmtTnFb = $db->prepare(
                         "
-                        INSERT INTO ticket_notas (ticket_id, asesor_cedula, contenido, proxima_accion, fecha_proxima_accion, fecha_creacion)
-                        VALUES (?, ?, ?, ?, ?, NOW())
+                        INSERT INTO ticket_notas (
+                            ticket_id, asesor_cedula, estado_ticket, contenido,
+                            proxima_accion, fecha_proxima_accion, fecha_creacion
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, NOW())
                         "
                     );
-                    $stmtTn2->execute([
+                    $stmtTnFb->execute([
                         $ticketId,
                         $asesorCedula,
+                        $payloadPerfilActGuardado['estado_al_guardar'],
                         $contenidoTipif,
                         $proximaAccion ?: null,
                         $fechaProximaAccion ?: null,
                     ]);
-                } else {
-                    throw $e;
+                } catch (PDOException $e2) {
+                    if (strpos($e2->getMessage(), 'estado_ticket') !== false ||
+                        strpos($e2->getMessage(), 'Unknown column') !== false) {
+                        $stmtTn2 = $db->prepare(
+                            "
+                            INSERT INTO ticket_notas (ticket_id, asesor_cedula, contenido, proxima_accion, fecha_proxima_accion, fecha_creacion)
+                            VALUES (?, ?, ?, ?, ?, NOW())
+                            "
+                        );
+                        $stmtTn2->execute([
+                            $ticketId,
+                            $asesorCedula,
+                            $contenidoTipif,
+                            $proximaAccion ?: null,
+                            $fechaProximaAccion ?: null,
+                        ]);
+                    } else {
+                        throw $e2;
+                    }
                 }
             }
         }

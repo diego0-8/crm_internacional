@@ -1181,6 +1181,15 @@
     font-style: italic;
 }
 
+.nota-telefono {
+    font-size: 0.85rem;
+    color: #059669;
+    margin: 2px 0 4px;
+}
+.nota-telefono i {
+    margin-right: 4px;
+}
+
 .nota-estado-line {
     margin-bottom: 8px;
     display: flex;

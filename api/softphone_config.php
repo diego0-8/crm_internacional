@@ -61,6 +61,13 @@ foreach ($asterisk['iceServers'] ?? [] as $row) {
 $audioBase = '';
 if (defined('APP_URL')) {
     $audioBase = rtrim((string) APP_URL, '/') . '/assets/audio/';
+    if (preg_match('#^http:#i', $audioBase)) {
+        $isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off')
+            || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && strtolower((string) $_SERVER['HTTP_X_FORWARDED_PROTO']) === 'https');
+        if ($isHttps) {
+            $audioBase = preg_replace('#^http:#i', 'https:', $audioBase);
+        }
+    }
 }
 
 $config = [

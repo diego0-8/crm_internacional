@@ -57,6 +57,19 @@ try {
         $tieneColTipo = false;
     }
 
+    $tieneColTelefono = false;
+    try {
+        $chkTel = $db->query("
+            SELECT COUNT(*) FROM information_schema.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+              AND TABLE_NAME = 'ticket_notas'
+              AND COLUMN_NAME = 'telefono_contacto'
+        ");
+        $tieneColTelefono = ((int) $chkTel->fetchColumn()) > 0;
+    } catch (Exception $e) {
+        $tieneColTelefono = false;
+    }
+
     $sql = "
         SELECT
             tn.id,
@@ -68,6 +81,7 @@ try {
             u.apellido AS asesor_apellido"
         . ($tieneColEstado ? ", tn.estado_ticket" : ", NULL AS estado_ticket")
         . ($tieneColTipo ? ", tn.tipo_nota" : ", 'asesor' AS tipo_nota")
+        . ($tieneColTelefono ? ", tn.telefono_contacto" : ", NULL AS telefono_contacto")
         . "
         FROM ticket_notas tn
         JOIN usuarios u ON tn.asesor_cedula = u.cedula

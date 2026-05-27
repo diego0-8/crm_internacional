@@ -1443,3 +1443,357 @@ body.modal-assign-titular-open {
 .import-result-faltantes {
     color: var(--text-muted);
 }
+
+/* ── Modal detalle asesor ── */
+#modalDetalleAsesor {
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+#modalDetalleAsesor.is-open {
+    display: flex !important;
+}
+
+.modal-detalle-asesor {
+    max-width: 920px;
+    width: 95vw;
+    max-height: 90vh;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    margin: 0;
+    border-radius: 12px;
+    background: #fff;
+}
+
+.modal-detalle-asesor .modal-cliente-header {
+    border-radius: 12px 12px 0 0;
+    padding: 18px 24px;
+}
+
+.modal-detalle-asesor .modal-cliente-title::before {
+    content: none;
+}
+
+.modal-detalle-asesor .modal-cliente-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: 0 20px 20px;
+    min-height: 120px;
+}
+
+.mda-resumen {
+    display: flex;
+    gap: 0;
+    border-bottom: 1px solid #e2e8f0;
+    padding: 12px 20px;
+    background: #f8fafc;
+}
+
+.mda-resumen-item {
+    flex: 1;
+    text-align: center;
+    border-right: 1px solid #e2e8f0;
+    padding: 4px 8px;
+}
+
+.mda-resumen-item:last-child {
+    border-right: none;
+}
+
+.mda-resumen-item strong {
+    display: block;
+    font-size: 1.3rem;
+    color: #1e293b;
+}
+
+.mda-resumen-item span {
+    font-size: 0.78rem;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+/* Tabla de tickets */
+.mda-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+    margin-top: 12px;
+}
+
+.mda-table thead th {
+    background: #f1f5f9;
+    padding: 10px 12px;
+    text-align: left;
+    font-weight: 600;
+    color: #334155;
+    border-bottom: 2px solid #e2e8f0;
+    font-size: 0.82rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.mda-table tbody td {
+    padding: 10px 12px;
+    border-bottom: 1px solid #f1f5f9;
+    vertical-align: middle;
+}
+
+.mda-table tbody tr:hover:not(.mda-historial-row) {
+    background: #2d3748;
+    color: #fff;
+}
+
+.mda-table tbody tr:hover:not(.mda-historial-row) .mda-cell-case {
+    color: #fff;
+}
+
+.mda-table tbody tr:hover:not(.mda-historial-row) .mda-badge {
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.mda-table tbody tr:hover:not(.mda-historial-row) .mda-btn-ver {
+    background: #fff;
+    color: #2d3748;
+    border-color: #fff;
+}
+
+.mda-cell-case {
+    font-weight: 600;
+    color: #1e293b;
+    max-width: 220px;
+    word-break: break-word;
+}
+
+.mda-cell-center {
+    text-align: center;
+}
+
+.mda-btn-ver {
+    padding: 5px 12px;
+    border-radius: 6px;
+    font-size: 0.88rem;
+    background: #eef2ff;
+    color: #4f46e5;
+    border: 1px solid #c7d2fe;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+
+.mda-btn-ver:hover {
+    background: #4f46e5;
+    color: #fff;
+}
+
+/* Badges de estado */
+.mda-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.78rem;
+    font-weight: 600;
+    white-space: nowrap;
+}
+
+.mda-badge--contactabilidad_cliente { background: #dbeafe; color: #1d4ed8; }
+.mda-badge--comunicacion           { background: #dbeafe; color: #1d4ed8; }
+.mda-badge--acuerdo_comercial      { background: #fef3c7; color: #92400e; }
+.mda-badge--validacion             { background: #fef3c7; color: #92400e; }
+.mda-badge--documentos_corte       { background: #e0e7ff; color: #3730a3; }
+.mda-badge--proceso_judicial       { background: #e0e7ff; color: #3730a3; }
+.mda-badge--documentos_adicionales { background: #fce7f3; color: #9d174d; }
+.mda-badge--remate                 { background: #fce7f3; color: #9d174d; }
+.mda-badge--corte_giro_saldo       { background: #d1fae5; color: #065f46; }
+.mda-badge--cliente_swift          { background: #d1fae5; color: #065f46; }
+.mda-badge--recuperacion           { background: #d1fae5; color: #065f46; }
+.mda-badge--desembolso             { background: #bbf7d0; color: #14532d; }
+.mda-badge--cierre                 { background: #bbf7d0; color: #14532d; }
+.mda-badge--_sin_estado            { background: #f1f5f9; color: #64748b; }
+
+/* Fila de historial expandible */
+.mda-historial-row td {
+    padding: 0 !important;
+    border-bottom: 2px solid #e2e8f0;
+}
+
+.mda-historial-wrap {
+    padding: 16px 20px;
+    background: #fafbfc;
+    border-left: 3px solid #6366f1;
+}
+
+/* Timeline */
+.mda-timeline-title {
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: #334155;
+    margin-bottom: 10px;
+}
+
+.mda-timeline-title i {
+    margin-right: 6px;
+    color: #6366f1;
+}
+
+.mda-timeline {
+    position: relative;
+    padding-left: 22px;
+    margin-bottom: 8px;
+}
+
+.mda-timeline::before {
+    content: '';
+    position: absolute;
+    left: 7px;
+    top: 4px;
+    bottom: 4px;
+    width: 2px;
+    background: #cbd5e1;
+}
+
+.mda-timeline-item {
+    position: relative;
+    padding-bottom: 14px;
+    display: flex;
+    gap: 10px;
+}
+
+.mda-timeline-item:last-child {
+    padding-bottom: 0;
+}
+
+.mda-timeline-dot {
+    position: absolute;
+    left: -19px;
+    top: 5px;
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #6366f1;
+    border: 2px solid #fff;
+    box-shadow: 0 0 0 2px #c7d2fe;
+    flex-shrink: 0;
+}
+
+.mda-timeline-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.mda-timeline-head {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.mda-timeline-dur {
+    font-size: 0.78rem;
+    color: #64748b;
+}
+
+.mda-timeline-dur i {
+    margin-right: 3px;
+}
+
+.mda-timeline-meta {
+    font-size: 0.78rem;
+    color: #94a3b8;
+    margin-top: 2px;
+}
+
+.mda-timeline-obs {
+    font-size: 0.82rem;
+    color: #475569;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+/* Notas por estado */
+.mda-notas-grupo {
+    margin-bottom: 14px;
+}
+
+.mda-notas-grupo-head {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 8px;
+}
+
+.mda-notas-count {
+    font-size: 0.78rem;
+    color: #94a3b8;
+}
+
+.mda-nota-item {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    padding: 10px 14px;
+    margin-bottom: 6px;
+    margin-left: 12px;
+}
+
+.mda-nota-meta {
+    font-size: 0.8rem;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.mda-nota-contenido {
+    font-size: 0.88rem;
+    color: #1e293b;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
+.mda-nota-accion {
+    font-size: 0.8rem;
+    color: #6366f1;
+    margin-top: 4px;
+}
+
+.mda-nota-accion i {
+    margin-right: 4px;
+}
+
+.mda-nota-telefono {
+    font-size: 0.8rem;
+    color: #059669;
+    margin-top: 2px;
+    margin-bottom: 2px;
+}
+.mda-nota-telefono i {
+    margin-right: 4px;
+}
+
+@media (max-width: 640px) {
+    .modal-detalle-asesor {
+        max-width: 100vw;
+        width: 100vw;
+        max-height: 100vh;
+        border-radius: 0;
+    }
+    .mda-resumen {
+        flex-wrap: wrap;
+    }
+    .mda-resumen-item {
+        flex: 0 0 50%;
+        border-right: none;
+        border-bottom: 1px solid #e2e8f0;
+        padding: 8px 4px;
+    }
+    .mda-table {
+        font-size: 0.82rem;
+    }
+    .mda-table thead th,
+    .mda-table tbody td {
+        padding: 8px 6px;
+    }
+}

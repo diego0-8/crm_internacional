@@ -810,7 +810,7 @@ class WebRTCSoftphone {
             if (btn) this._addDigit(btn.dataset.number);
         });
         c.querySelector('#btn-delete')?.addEventListener('click', () => this._deleteLastDigit());
-        c.querySelector('#btn-call')?.addEventListener('click', () => this.makeCall());
+        c.querySelector('#btn-call')?.addEventListener('click', () => this._startOutgoingCallFromUi());
         c.querySelector('#btn-hangup')?.addEventListener('click', () => this.hangup());
         c.querySelector('#btn-transfer')?.addEventListener('click', () => this.showTransferDialog());
 
@@ -846,7 +846,12 @@ class WebRTCSoftphone {
         // DEBUG: Verificar valores antes de usarlos
         if (this.config.debug_mode) {
             console.log(`📝 [WebRTC] Intentando registro: ${extensionStr} @ ${domainStr}`);
-            console.log(`📝 [WebRTC] Estrategia ICE: ${iceServers.length > 0 ? 'WAN (STUN activo)' : 'LAN (Solo Local)'}`);
+            const hasTurn = iceServers.some((s) => String(Array.isArray(s.urls) ? s.urls.join(',') : (s.urls || '')).match(/turns?:/i));
+            console.log(`📝 [WebRTC] ICE servers:`, iceServers);
+            console.log(`📝 [WebRTC] Estrategia ICE: ${hasTurn ? 'WAN (STUN+TURN)' : (iceServers.length > 0 ? 'WAN (solo STUN)' : 'LAN (sin STUN)')}`);
+            if (iceServers.length > 0 && !hasTurn) {
+                console.warn('[Softphone] Solo STUN configurado. Si el asesor está fuera de la LAN del PBX y no hay audio, configure TURN en config/asterisk.php.');
+            }
             console.log('🔍 [SOFTPHONE _connect] Verificando credenciales:');
             console.log('  - extensionStr:', extensionStr);
             console.log('  - passwordStr longitud:', passwordStr.length);
@@ -1096,6 +1101,13 @@ class WebRTCSoftphone {
     /* -------------------------------------------------------------
      * Llamada saliente
      * ------------------------------------------------------------- */
+    _startOutgoingCallFromUi() {
+        this.makeCall().catch((err) => {
+            console.error('[Softphone] Error iniciando llamada:', err);
+            this._showError('No se pudo iniciar la llamada. Revise consola o conexión del softphone.');
+        });
+    }
+
     async makeCall() {
         if (!this.currentNumber.trim()) {
             this._showError('Ingrese un número');
@@ -1114,6 +1126,7 @@ class WebRTCSoftphone {
             this._showError('Ya hay una llamada en curso');
             return;
         }
+        this._unlockPageAudio();
 
         // Reset flags de buzón de voz y timbrado al iniciar nueva llamada
         this.voicemailDetected = false;
@@ -1222,6 +1235,9 @@ class WebRTCSoftphone {
                     // CRÍTICO: Detectar 180 Ringing para saber que la llamada timbró normalmente
                     if (response && response.message) {
                         const statusCode = response.message.statusCode || response.statusCode;
+                        if (statusCode === 183) {
+                            this._setupAudio(inviter);
+                        }
                         if (statusCode === 180) {
                             // 180 Ringing significa que el teléfono está timbrando normalmente
                             this.hasRung = true;
@@ -1368,6 +1384,9 @@ class WebRTCSoftphone {
                     // CRÍTICO: Detectar 180 Ringing para saber que la llamada timbró normalmente
                     if (response && response.message) {
                         const statusCode = response.message.statusCode || response.statusCode;
+                        if (statusCode === 183) {
+                            this._setupAudio(inviter);
+                        }
                         if (statusCode === 180) {
                             // 180 Ringing significa que el teléfono está timbrando normalmente
                             this.hasRung = true;
@@ -1476,6 +1495,7 @@ class WebRTCSoftphone {
                         console.log('📞 [Softphone] Estado Ringing detectado - Teléfono está timbrando');
                     }
                 }
+                this._setupAudio(inviter);
                 this._playRingback();
             } else if (s === 'Terminated' || s === '5') {
                 // CRÍTICO: Detener timbrado INMEDIATAMENTE cuando la sesión termina
@@ -1541,6 +1561,7 @@ class WebRTCSoftphone {
                 console.log(`🚀 [Softphone] Llamando a ${number}...`);
             }
             await inviter.invite();
+            this._monitorMediaConnection(inviter);
             
             // LOG PÚBLICO: Confirmar que el INVITE fue enviado
             console.log('%c✅ [INVITE ENVIADO] Esperando respuesta del servidor...', 'background: #17a2b8; color: white; font-weight: bold; padding: 5px 10px; border-radius: 5px; font-size: 14px;');
@@ -1729,6 +1750,7 @@ class WebRTCSoftphone {
         this.incomingCall = invitation;
         this.incomingCallInvitation = invitation; // Alias para compatibilidad
         this.currentNumber = caller;
+        this._monitorMediaConnection(invitation);
 
         // OPTIMIZACIÓN: Pre-adquirir el stream de audio cuando llega la llamada entrante
         // Esto acelera la aceptación porque no hay que esperar a getUserMedia cuando el usuario presiona "Contestar"
@@ -2594,6 +2616,80 @@ class WebRTCSoftphone {
         }
     }
 
+    /**
+     * Desbloquea reproducción de audio (política autoplay del navegador).
+     */
+    async _unlockPageAudio() {
+        if (this._audioUnlocked) return;
+        try {
+            const Ctx = window.AudioContext || window.webkitAudioContext;
+            if (Ctx && !this._audioContext) {
+                this._audioContext = new Ctx();
+            }
+            if (this._audioContext && this._audioContext.state === 'suspended') {
+                await this._audioContext.resume();
+            }
+        } catch (e) { /* ignore */ }
+
+        if (!this.remoteAudioElement) {
+            this.remoteAudioElement = document.createElement('audio');
+            this.remoteAudioElement.autoplay = true;
+            this.remoteAudioElement.playsInline = true;
+            this.remoteAudioElement.setAttribute('playsinline', '');
+            this.remoteAudioElement.muted = false;
+            this.remoteAudioElement.volume = 1;
+            this.remoteAudioElement.style.display = 'none';
+            document.body.appendChild(this.remoteAudioElement);
+        }
+
+        // No llamar play() sobre un <audio> vacío: en algunos navegadores deja
+        // makeCall esperando o genera rechazo antes de enviar el INVITE.
+        this._audioUnlocked = true;
+    }
+
+    _playHtmlAudioElement(audioEl, label) {
+        if (!audioEl) return;
+        audioEl.muted = false;
+        audioEl.volume = audioEl.volume || 0.6;
+        audioEl.play().catch((err) => {
+            console.warn('[Softphone] No se pudo reproducir ' + (label || 'audio') + ':', err.message || err);
+        });
+    }
+
+    /**
+     * Monitorea ICE: si falla, el usuario no oirá nada aunque SIP diga "Established".
+     */
+    _monitorMediaConnection(session) {
+        const pc = session?.sessionDescriptionHandler?.peerConnection;
+        if (!pc || pc.__softphoneIceMonitored) return;
+        pc.__softphoneIceMonitored = true;
+        const logIce = (st) => {
+            if (this.config.debug_mode) {
+                console.log('[Softphone] ICE connection state:', st);
+            }
+        };
+        pc.addEventListener('iceconnectionstatechange', () => {
+            const st = pc.iceConnectionState;
+            logIce(st);
+            if (st === 'connected' || st === 'completed') {
+                this._setupAudio(session);
+            } else if (st === 'failed' || st === 'disconnected') {
+                console.warn(
+                    '[Softphone] Sin ruta de audio (ICE ' + st + '). ' +
+                    'El PBX suele necesitar externaddr/RTCP en Asterisk o un servidor TURN para asesores en Internet.'
+                );
+                this._showError(
+                    'Sin audio: no hay conexión de medios (ICE). Revise NAT/TURN en el PBX o configure TURN en config/asterisk.php.'
+                );
+            }
+        });
+        pc.addEventListener('connectionstatechange', () => {
+            if (this.config.debug_mode) {
+                console.log('[Softphone] Peer connection state:', pc.connectionState);
+            }
+        });
+    }
+
     _setupAudio(session) {
         if (!session?.sessionDescriptionHandler) return;
         const pc = session.sessionDescriptionHandler.peerConnection;
@@ -2603,28 +2699,45 @@ class WebRTCSoftphone {
             this.remoteAudioElement = document.createElement('audio');
             this.remoteAudioElement.autoplay = true;
             this.remoteAudioElement.playsInline = true;
+            this.remoteAudioElement.setAttribute('playsinline', '');
+            this.remoteAudioElement.muted = false;
+            this.remoteAudioElement.volume = 1;
             this.remoteAudioElement.style.display = 'none';
             document.body.appendChild(this.remoteAudioElement);
         }
 
         const attach = () => {
             const receivers = pc.getReceivers ? pc.getReceivers() : [];
+            let attached = false;
             receivers.forEach((r) => {
                 if (r.track && r.track.kind === 'audio') {
                     const ms = new MediaStream([r.track]);
                     this.remoteAudioElement.srcObject = ms;
-                    this.remoteAudioElement.play().catch(() => { });
+                    this._playHtmlAudioElement(this.remoteAudioElement, 'audio remoto');
+                    attached = true;
+                    if (this.config.debug_mode) {
+                        console.log('[Softphone] Pista de audio remota enlazada');
+                    }
                 }
             });
+            return attached;
         };
-        attach();
-        pc.addEventListener('track', (ev) => {
-            if (ev.track?.kind === 'audio') {
-                const ms = new MediaStream([ev.track]);
-                this.remoteAudioElement.srcObject = ms;
-                this.remoteAudioElement.play().catch(() => { });
+        if (!attach()) {
+            if (this.config.debug_mode) {
+                console.log('[Softphone] Esperando pista de audio remota…');
             }
-        });
+        }
+        if (!pc.__softphoneTrackListener) {
+            pc.__softphoneTrackListener = true;
+            pc.addEventListener('track', (ev) => {
+                if (ev.track?.kind === 'audio') {
+                    const ms = new MediaStream([ev.track]);
+                    this.remoteAudioElement.srcObject = ms;
+                    this._playHtmlAudioElement(this.remoteAudioElement, 'audio remoto (track)');
+                    this._stopRingback();
+                }
+            });
+        }
     }
 
     /* -------------------------------------------------------------
@@ -2695,7 +2808,7 @@ class WebRTCSoftphone {
             // Enter para llamar
             else if (key === 'Enter' && this.currentNumber && this.currentNumber.trim() !== '') {
                 e.preventDefault();
-                this.makeCall();
+                this._startOutgoingCallFromUi();
                 if (this.config.debug_mode) {
                     console.log('⌨️ [Softphone] Llamada iniciada desde teclado (Enter)');
                 }
@@ -2819,7 +2932,7 @@ class WebRTCSoftphone {
         numberInput.addEventListener('keypress', (e) => {
             if (e.key === 'Enter' && this.currentNumber && this.currentNumber.trim() !== '') {
                 e.preventDefault();
-                this.makeCall();
+                this._startOutgoingCallFromUi();
                 if (this.config.debug_mode) {
                     console.log('⌨️ [Softphone] Llamada iniciada desde input (Enter)');
                 }
@@ -3204,7 +3317,7 @@ class WebRTCSoftphone {
             this.ringbackAudio.volume = 0.6;
         }
         this.ringbackAudio.currentTime = 0;
-        this.ringbackAudio.play().catch(() => { });
+        this._playHtmlAudioElement(this.ringbackAudio, 'ringback');
     }
     _stopRingback() {
         if (this.ringbackAudio) {

@@ -52,10 +52,17 @@ foreach ($asterisk['iceServers'] ?? [] as $row) {
     if ($u === '') {
         continue;
     }
-    if (stripos($u, 'stun:') !== 0 && stripos($u, 'turn:') !== 0) {
+    if (stripos($u, 'stun:') !== 0 && stripos($u, 'turn:') !== 0 && stripos($u, 'turns:') !== 0) {
         $u = 'stun:' . $u;
     }
-    $iceServers[] = ['urls' => $u];
+    $server = ['urls' => $u];
+    if (isset($row['username']) && trim((string) $row['username']) !== '') {
+        $server['username'] = trim((string) $row['username']);
+    }
+    if (isset($row['credential']) && trim((string) $row['credential']) !== '') {
+        $server['credential'] = trim((string) $row['credential']);
+    }
+    $iceServers[] = $server;
 }
 
 $audioBase = '';

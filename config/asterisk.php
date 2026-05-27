@@ -32,6 +32,15 @@ define('ASTERISK_WSS_PATH', '/ws');
 // Servidores STUN --stun.alphacron.de:3478 % stun.l.google.com:19302
 define('ASTERISK_STUN_SERVER', 'stun.alphacron.de:3478');
 
+/**
+ * TURN (recomendado en producción si el asesor está fuera de la LAN del PBX).
+ * Sin TURN, el navegador no puede enlazar RTP con Asterisk cuando el SDP del PBX
+ * solo trae IPs privadas (192.168.x.x). Descomente y complete si tiene coturn/relay.
+ */
+// define('ASTERISK_TURN_SERVER', 'turn:turn.ejemplo.com:3478');
+// define('ASTERISK_TURN_USERNAME', 'usuario');
+// define('ASTERISK_TURN_CREDENTIAL', 'clave');
+
 // Modo Debug 
 define('ASTERISK_DEBUG_MODE', true);
 
@@ -50,9 +59,30 @@ function getWebRTCConfig()
         'sip_domain' => ASTERISK_SIP_DOMAIN,
         'wss_port' => ASTERISK_WSS_PORT,
         'wss_path' => ASTERISK_WSS_PATH,
-        'iceServers' => [
-            ['urls' => (strpos(ASTERISK_STUN_SERVER, 'stun:') === 0 ? ASTERISK_STUN_SERVER : 'stun:' . ASTERISK_STUN_SERVER)],
-        ],
+        'iceServers' => (function () {
+            $servers = [];
+            if (defined('ASTERISK_STUN_SERVER') && ASTERISK_STUN_SERVER !== '') {
+                $stun = ASTERISK_STUN_SERVER;
+                if (stripos($stun, 'stun:') !== 0) {
+                    $stun = 'stun:' . $stun;
+                }
+                $servers[] = ['urls' => $stun];
+            }
+            if (defined('ASTERISK_TURN_SERVER') && ASTERISK_TURN_SERVER !== ''
+                && defined('ASTERISK_TURN_USERNAME') && ASTERISK_TURN_USERNAME !== ''
+                && defined('ASTERISK_TURN_CREDENTIAL') && ASTERISK_TURN_CREDENTIAL !== '') {
+                $turn = ASTERISK_TURN_SERVER;
+                if (stripos($turn, 'turn:') !== 0 && stripos($turn, 'turns:') !== 0) {
+                    $turn = 'turn:' . $turn;
+                }
+                $servers[] = [
+                    'urls' => $turn,
+                    'username' => ASTERISK_TURN_USERNAME,
+                    'credential' => ASTERISK_TURN_CREDENTIAL,
+                ];
+            }
+            return $servers;
+        })(),
         'debug_mode' => ASTERISK_DEBUG_MODE,
         'trace_sip' => true
     ];

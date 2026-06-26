@@ -720,6 +720,31 @@
     width: 100%;
 }
 
+.coordinador-dashboard .cliente-card-actions-row--assigned {
+    flex-direction: column;
+    align-items: stretch;
+}
+
+.coordinador-dashboard .cliente-card-actions-row--assigned .cliente-assigned-info {
+    margin-bottom: 0.25rem;
+}
+
+.coordinador-dashboard .cliente-card-actions-row--assigned .btn {
+    flex: 1;
+    justify-content: center;
+}
+
+.coordinador-dashboard .btn-warning {
+    background: #f59e0b;
+    color: #fff;
+    border: none;
+}
+
+.coordinador-dashboard .btn-warning:hover {
+    background: #d97706;
+    color: #fff;
+}
+
 .coordinador-dashboard .pagination-container {
     display: flex;
     justify-content: space-between;

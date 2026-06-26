@@ -506,8 +506,16 @@ $message = getMessage();
                     </div>
                     <div class="cliente-card-actions">
                         ${cliente.asesor_nombre ?
-                            `<div class="cliente-assigned-info">
-                                <i class="fas fa-user-check" aria-hidden="true"></i> Asignado a: ${asesorTxt}
+                            `<div class="cliente-card-actions-row cliente-card-actions-row--assigned">
+                                <div class="cliente-assigned-info">
+                                    <i class="fas fa-user-check" aria-hidden="true"></i> Asignado a: ${asesorTxt}
+                                </div>
+                                <button type="button" class="btn btn-sm btn-warning" onclick="desasignarTitular(${tid})" title="Quitar asignación para poder reasignar">
+                                    <i class="fas fa-user-minus" aria-hidden="true"></i> Desasignar
+                                </button>
+                                <button type="button" class="btn btn-sm btn-primary" onclick="abrirModalAsignacion(${tid})" title="Asignar a otro asesor">
+                                    <i class="fas fa-exchange-alt" aria-hidden="true"></i> Reasignar
+                                </button>
                              </div>` :
                             `<div class="cliente-card-actions-row">
                                 <input type="checkbox" id="titular_${tid}" value="${tid}"
@@ -930,6 +938,49 @@ $message = getMessage();
             } catch (e) {
                 console.error(e);
                 showMessage('Error en asignación masiva', 'error');
+            }
+        }
+
+        // Desasignar titular de su asesor actual
+        async function desasignarTitular(titularId) {
+            const cliente = clientes.find(c => String(c.titular_id) === String(titularId));
+            const nombre = cliente
+                ? [cliente.nombre, cliente.apellido].filter(x => x != null && String(x).trim() !== '').join(' ').trim()
+                : ('ID ' + titularId);
+            const asesor = cliente && cliente.asesor_nombre ? cliente.asesor_nombre : 'su asesor';
+
+            if (!confirm('¿Desasignar a «' + nombre + '» de ' + asesor + '?\n\nPodrá asignarlo a otro asesor después.')) {
+                return;
+            }
+
+            try {
+                const response = await fetch('api/desasignar_titular.php', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    credentials: 'include',
+                    body: JSON.stringify({ titular_id: parseInt(titularId, 10) })
+                });
+
+                if (!response.ok) {
+                    if (response.status === 401) {
+                        window.appGoLogin();
+                        return;
+                    }
+                    throw new Error('Error HTTP: ' + response.status);
+                }
+
+                const result = await response.json();
+                if (result.success) {
+                    showMessage('Titular desasignado correctamente', 'success');
+                    loadClientes();
+                    loadDashboardData();
+                    loadAsesores();
+                } else {
+                    showMessage('Error al desasignar: ' + (result.message || 'Error desconocido'), 'error');
+                }
+            } catch (error) {
+                console.error('Error desasignando titular:', error);
+                showMessage('Error al desasignar titular', 'error');
             }
         }
 

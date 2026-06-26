@@ -494,6 +494,25 @@ class CoordinadorController {
     }
     
     /**
+     * Desasignar titular (reparto) de su asesor actual.
+     */
+    public function desasignarTitularDeAsesor($titularId, $coordinadorCedula) {
+        try {
+            $this->titularModel->desasignarAsesor((int) $titularId, $coordinadorCedula);
+            
+            return [
+                'success' => true,
+                'message' => 'Titular desasignado correctamente'
+            ];
+        } catch (Exception $e) {
+            return [
+                'success' => false,
+                'message' => $e->getMessage()
+            ];
+        }
+    }
+    
+    /**
      * Asignar cliente CRM a asesor (cédula PK en clientes).
      */
     public function asignarClienteAAsesor($clienteId, $asesorId) {

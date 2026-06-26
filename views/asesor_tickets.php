@@ -429,7 +429,7 @@ $message = getMessage();
                         ${ticket.pdf_archivo ? `
                             <div class="ticket-pdf">
                                 <i class="fas fa-file-pdf"></i>
-                                <a href="${archivoTicketUrl(ticket.pdf_archivo)}" target="_blank" rel="noopener" class="pdf-link">Ver PDF adjunto</a>
+                                <a href="${archivoTicketUrl(ticket.pdf_archivo, { ticketId: ticket.id })}" target="_blank" rel="noopener" class="pdf-link">Ver PDF adjunto</a>
                             </div>
                         ` : ''}
                     </div>
@@ -573,9 +573,18 @@ $message = getMessage();
             return value !== null && value !== undefined && String(value).trim() !== '' && String(value).trim() !== '—';
         }
 
-        function archivoTicketUrl(ruta) {
+        function archivoTicketUrl(ruta, opts) {
+            opts = opts || {};
+            var base = (typeof APP_HOME !== 'undefined' && APP_HOME) ? APP_HOME : '';
+            if (opts.archivoId) {
+                return base + 'api/ver_ticket_pdf.php?archivo_id=' + encodeURIComponent(opts.archivoId);
+            }
+            if (opts.ticketId) {
+                return base + 'api/ver_ticket_pdf.php?ticket_id=' + encodeURIComponent(opts.ticketId);
+            }
             if (!ruta) return '#';
-            return String(ruta).replace(/^\.\.\//, '').replace(/^\//, '');
+            var rel = String(ruta).replace(/^\.\.\//, '').replace(/^\//, '');
+            return base + rel;
         }
 
         function puedeGestionarTicket(estado) {
@@ -795,7 +804,10 @@ $message = getMessage();
             if (archivos.length) {
                 html += '<div class="info-section"><h4><i class="fas fa-paperclip"></i> Archivos (' + archivos.length + ')</h4><div class="ticket-archivos">';
                 archivos.forEach(function(archivo) {
-                    const url = archivoTicketUrl(archivo.ruta_archivo);
+                    const url = archivoTicketUrl(archivo.ruta_archivo, {
+                        archivoId: archivo.id,
+                        ticketId: ticket.id
+                    });
                     html += '<div class="archivo-item"><div class="archivo-info"><i class="fas fa-file-pdf"></i><div class="archivo-details">';
                     html += '<span class="archivo-nombre">' + escapeHtml(archivo.nombre_archivo || 'Documento') + '</span>';
                     if (archivo.fecha_subida) {
@@ -803,9 +815,6 @@ $message = getMessage();
                     }
                     html += '</div></div><div class="archivo-actions">';
                     html += '<a href="' + escapeHtml(url) + '" target="_blank" rel="noopener" class="btn btn-sm btn-primary"><i class="fas fa-eye"></i> Ver</a>';
-                    if (archivo.id) {
-                        html += '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarArchivo(' + parseInt(archivo.id, 10) + ')"><i class="fas fa-trash"></i></button>';
-                    }
                     html += '</div></div>';
                 });
                 html += '</div></div>';
@@ -868,7 +877,7 @@ $message = getMessage();
                     ? '<div class="info-section"><h4><i class="fas fa-align-left"></i> Descripción</h4><div class="ticket-description">' + escapeHtml(ticket.descripcion) + '</div></div>'
                     : '') +
                 (hasDetalleValor(ticket.pdf_archivo)
-                    ? '<div class="info-section"><h4><i class="fas fa-paperclip"></i> Archivo</h4><a href="' + escapeHtml(archivoTicketUrl(ticket.pdf_archivo)) + '" target="_blank" rel="noopener" class="pdf-link"><i class="fas fa-file-pdf"></i> Ver PDF</a></div>'
+                    ? '<div class="info-section"><h4><i class="fas fa-paperclip"></i> Archivo</h4><a href="' + escapeHtml(archivoTicketUrl(ticket.pdf_archivo, { ticketId: ticket.id })) + '" target="_blank" rel="noopener" class="pdf-link"><i class="fas fa-file-pdf"></i> Ver PDF</a></div>'
                     : '') +
                 '<p class="ticket-detalle-hint">No se pudo cargar el detalle completo. Use <strong>Gestionar ticket</strong> para la ficha ampliada.</p>' +
                 '</div>';
@@ -925,39 +934,6 @@ $message = getMessage();
             }
             const modal = document.getElementById('ticketDetalleModal');
             if (modal) modal.classList.remove('is-open');
-        }
-
-        // Eliminar archivo PDF
-        async function eliminarArchivo(archivoId) {
-            if (!confirm('¿Estás seguro de que quieres eliminar este archivo?')) {
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('archivo_id', archivoId);
-
-                const response = await fetch('api/eliminar_archivo_ticket.php', {
-                    method: 'POST',
-                    body: formData
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('Archivo eliminado exitosamente', 'success');
-                    // Recargar el modal de detalle
-                    const ticketId = document.querySelector('.ticket-detalle-completo').dataset.ticketId;
-                    if (ticketId) {
-                        verDetalleTicket(ticketId);
-                    }
-                } else {
-                    showMessage(result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error eliminando archivo:', error);
-                showMessage('Error eliminando archivo', 'error');
-            }
         }
 
         // Funciones de utilidad

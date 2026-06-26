@@ -34,6 +34,22 @@ if (!in_array($tipoContacto, ['telefono', 'email'], true)) {
     exit;
 }
 
+if ($tipoContacto === 'telefono') {
+    $digits = preg_replace('/[^0-9]/', '', $valor);
+    if (strlen($digits) < 7) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'El teléfono debe tener al menos 7 dígitos']);
+        exit;
+    }
+} else {
+    if (!filter_var($valor, FILTER_VALIDATE_EMAIL)) {
+        http_response_code(400);
+        echo json_encode(['success' => false, 'message' => 'Correo electrónico inválido']);
+        exit;
+    }
+    $valor = strtolower($valor);
+}
+
 $db = getDB();
 
 $MAX_PER_PERSON = 10;
@@ -82,12 +98,23 @@ try {
 
         if ($tipoContacto === 'telefono') {
             $numeroNorm = preg_replace('/[^0-9]/', '', $valor);
+            $stmt = $db->prepare("SELECT id FROM cliente_telefonos WHERE cliente_cedula = ? AND numero_normalizado = ? LIMIT 1");
+            $stmt->execute([$clienteCedula, $numeroNorm]);
+            if ($stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Ese teléfono ya está registrado para este cliente']);
+                exit;
+            }
             $stmt = $db->prepare("INSERT INTO cliente_telefonos (cliente_cedula, numero, numero_normalizado, tipo, orden) VALUES (?, ?, ?, 'other', ?)");
             $stmt->execute([$clienteCedula, $valor, $numeroNorm, $nextOrden]);
         } else {
-            $emailClean = strtolower(trim($valor));
+            $stmt = $db->prepare("SELECT id FROM cliente_emails WHERE cliente_cedula = ? AND LOWER(email) = ? LIMIT 1");
+            $stmt->execute([$clienteCedula, $valor]);
+            if ($stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Ese correo ya está registrado para este cliente']);
+                exit;
+            }
             $stmt = $db->prepare("INSERT INTO cliente_emails (cliente_cedula, email, orden) VALUES (?, ?, ?)");
-            $stmt->execute([$clienteCedula, $emailClean, $nextOrden]);
+            $stmt->execute([$clienteCedula, $valor, $nextOrden]);
         }
 
     } elseif (preg_match('/^referencia_(\d+)$/', $destino, $m)) {
@@ -127,12 +154,23 @@ try {
 
         if ($tipoContacto === 'telefono') {
             $numeroNorm = preg_replace('/[^0-9]/', '', $valor);
+            $stmt = $db->prepare("SELECT id FROM referencia_telefonos WHERE referencia_id = ? AND numero_normalizado = ? LIMIT 1");
+            $stmt->execute([$referenciaId, $numeroNorm]);
+            if ($stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Ese teléfono ya está registrado para esta referencia']);
+                exit;
+            }
             $stmt = $db->prepare("INSERT INTO referencia_telefonos (referencia_id, numero, numero_normalizado, tipo, orden) VALUES (?, ?, ?, 'other', ?)");
             $stmt->execute([$referenciaId, $valor, $numeroNorm, $nextOrden]);
         } else {
-            $emailClean = strtolower(trim($valor));
+            $stmt = $db->prepare("SELECT id FROM referencia_emails WHERE referencia_id = ? AND LOWER(email) = ? LIMIT 1");
+            $stmt->execute([$referenciaId, $valor]);
+            if ($stmt->fetch()) {
+                echo json_encode(['success' => false, 'message' => 'Ese correo ya está registrado para esta referencia']);
+                exit;
+            }
             $stmt = $db->prepare("INSERT INTO referencia_emails (referencia_id, email, orden) VALUES (?, ?, ?)");
-            $stmt->execute([$referenciaId, $emailClean, $nextOrden]);
+            $stmt->execute([$referenciaId, $valor, $nextOrden]);
         }
 
     } else {
@@ -144,6 +182,7 @@ try {
     echo json_encode(['success' => true, 'message' => 'Contacto agregado correctamente']);
 
 } catch (PDOException $e) {
+    error_log('agregar_contacto_ticket.php: ' . $e->getMessage());
     http_response_code(500);
-    echo json_encode(['success' => false, 'message' => 'Error de base de datos: ' . $e->getMessage()]);
+    echo json_encode(['success' => false, 'message' => 'Error interno del servidor']);
 }

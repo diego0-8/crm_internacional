@@ -372,7 +372,108 @@ class TitularModel {
         if ($stmt->rowCount() === 0) {
             throw new Exception('No se pudo actualizar el titular');
         }
+        $this->sincronizarCrmAsesor($idCliente, $asesorCedula);
         logActivity('titular_assigned', "Titular id_cliente=$idCliente asignado a asesor $asesorCedula");
+    }
+
+    /**
+     * Quita la asignación de asesor de un titular (reparto).
+     */
+    public function desasignarAsesor(int $idCliente, string $coordinadorCedula): void {
+        if (!$this->titularesTieneColumnaAsesorCedula()) {
+            throw new Exception(
+                'La tabla titulares no tiene la columna asesor_cedula. Ejecute en MySQL el script database/migration_titulares_archivo_csv.sql (o importe database/internacional2.sql en una base nueva).'
+            );
+        }
+        if (!$this->titularPerteneceACoordinador($idCliente, $coordinadorCedula)) {
+            throw new Exception('Titular no encontrado o no pertenece a este coordinador');
+        }
+        $stmt = $this->db->prepare('
+            SELECT asesor_cedula FROM titulares WHERE id_cliente = ? AND coordinador_cedula = ? LIMIT 1
+        ');
+        $stmt->execute([$idCliente, $coordinadorCedula]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if (!$row) {
+            throw new Exception('Titular no encontrado');
+        }
+        $asesorActual = trim((string) ($row['asesor_cedula'] ?? ''));
+        if ($asesorActual === '') {
+            throw new Exception('Este titular no tiene asesor asignado');
+        }
+        $stmt = $this->db->prepare('
+            UPDATE titulares SET asesor_cedula = NULL, actualizado_en = CURRENT_TIMESTAMP
+            WHERE id_cliente = ? AND coordinador_cedula = ?
+        ');
+        $stmt->execute([$idCliente, $coordinadorCedula]);
+        if ($stmt->rowCount() === 0) {
+            throw new Exception('No se pudo desasignar el titular');
+        }
+        $this->sincronizarCrmAsesor($idCliente, null);
+        logActivity('titular_unassigned', "Titular id_cliente=$idCliente desasignado de asesor $asesorActual");
+    }
+
+    /**
+     * Cédula CRM sintética del titular reparto (TIT-{id_cliente}).
+     */
+    private function cedulaCrmDesdeTitular(int $idCliente): string {
+        return 'TIT-' . $idCliente;
+    }
+
+    /**
+     * Permite dejar tiketera.asesor_cedula en NULL al desasignar.
+     */
+    private function asegurarTiketeraAsesorNullable(): void {
+        static $verificado = false;
+        if ($verificado) {
+            return;
+        }
+        try {
+            $stmt = $this->db->query("
+                SELECT IS_NULLABLE FROM information_schema.COLUMNS
+                WHERE TABLE_SCHEMA = DATABASE()
+                  AND TABLE_NAME = 'tiketera'
+                  AND COLUMN_NAME = 'asesor_cedula'
+                LIMIT 1
+            ");
+            $nullable = $stmt->fetchColumn();
+            if ($nullable === 'NO') {
+                $this->db->exec('ALTER TABLE tiketera MODIFY asesor_cedula VARCHAR(20) NULL DEFAULT NULL');
+            }
+        } catch (Exception $e) {
+            // Si falla el ALTER, el UPDATE a NULL puede fallar después.
+        }
+        $verificado = true;
+    }
+
+    /**
+     * Propaga asignación/desasignación del titular al cliente CRM y tickets tiketera.
+     */
+    private function sincronizarCrmAsesor(int $idCliente, ?string $asesorCedula): void {
+        $cedula = $this->cedulaCrmDesdeTitular($idCliente);
+
+        try {
+            $stmt = $this->db->prepare('UPDATE clientes SET asesor_cedula = ? WHERE cedula = ?');
+            $stmt->execute([$asesorCedula, $cedula]);
+        } catch (PDOException $e) {
+            // Tabla clientes o fila inexistente: no bloquea desasignación del titular.
+        }
+
+        try {
+            $this->asegurarTiketeraAsesorNullable();
+
+            $stmt = $this->db->prepare('UPDATE tiketera SET asesor_cedula = ? WHERE cliente_cedula = ?');
+            $stmt->execute([$asesorCedula, $cedula]);
+
+            $stmt = $this->db->prepare('
+                UPDATE tiketera tk
+                INNER JOIN propiedades p ON p.numero_caso = tk.numero_ticket
+                SET tk.asesor_cedula = ?
+                WHERE p.id_cliente = ?
+            ');
+            $stmt->execute([$asesorCedula, $idCliente]);
+        } catch (PDOException $e) {
+            throw new Exception('No se pudo sincronizar el ticket CRM del titular: ' . $e->getMessage());
+        }
     }
 
     /**

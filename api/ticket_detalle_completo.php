@@ -287,6 +287,7 @@ try {
                        condado, fuente, monetizacion
                 FROM propiedades
                 WHERE id_cliente = ?
+                ORDER BY actualizado_en DESC, id_propiedad DESC
                 LIMIT 1
             ');
             $stmt->execute([$titularIdResuelto]);
@@ -327,7 +328,11 @@ try {
         ");
         $stmt->execute([$ticket['cliente_cedula']]);
         $ticket['cliente_telefonos'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('ticket_detalle_completo cliente_telefonos: ' . $e->getMessage());
+    }
 
+    try {
         $stmt = $db->prepare("
             SELECT email, orden
             FROM cliente_emails
@@ -336,7 +341,11 @@ try {
         ");
         $stmt->execute([$ticket['cliente_cedula']]);
         $ticket['cliente_emails_list'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log('ticket_detalle_completo cliente_emails: ' . $e->getMessage());
+    }
 
+    try {
         $stmt = $db->prepare("
             SELECT id, nombre, apellido, possible_type, age, orden
             FROM referencias_personales
@@ -351,31 +360,39 @@ try {
             $placeholders = implode(',', array_fill(0, count($ids), '?'));
 
             $phonesByRef = [];
-            $stmt = $db->prepare("
-                SELECT referencia_id, numero, numero_normalizado, tipo, dnc_litigator, orden
-                FROM referencia_telefonos
-                WHERE referencia_id IN ($placeholders)
-                ORDER BY referencia_id ASC, orden ASC, id ASC
-            ");
-            $stmt->execute($ids);
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $rid = (int) $row['referencia_id'];
-                unset($row['referencia_id']);
-                $phonesByRef[$rid][] = $row;
+            try {
+                $stmt = $db->prepare("
+                    SELECT referencia_id, numero, numero_normalizado, tipo, dnc_litigator, orden
+                    FROM referencia_telefonos
+                    WHERE referencia_id IN ($placeholders)
+                    ORDER BY referencia_id ASC, orden ASC, id ASC
+                ");
+                $stmt->execute($ids);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $rid = (int) $row['referencia_id'];
+                    unset($row['referencia_id']);
+                    $phonesByRef[$rid][] = $row;
+                }
+            } catch (PDOException $e) {
+                error_log('ticket_detalle_completo referencia_telefonos: ' . $e->getMessage());
             }
 
             $emailsByRef = [];
-            $stmt = $db->prepare("
-                SELECT referencia_id, email, orden
-                FROM referencia_emails
-                WHERE referencia_id IN ($placeholders)
-                ORDER BY referencia_id ASC, orden ASC, id ASC
-            ");
-            $stmt->execute($ids);
-            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
-                $rid = (int) $row['referencia_id'];
-                unset($row['referencia_id']);
-                $emailsByRef[$rid][] = $row;
+            try {
+                $stmt = $db->prepare("
+                    SELECT referencia_id, email, orden
+                    FROM referencia_emails
+                    WHERE referencia_id IN ($placeholders)
+                    ORDER BY referencia_id ASC, orden ASC, id ASC
+                ");
+                $stmt->execute($ids);
+                foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                    $rid = (int) $row['referencia_id'];
+                    unset($row['referencia_id']);
+                    $emailsByRef[$rid][] = $row;
+                }
+            } catch (PDOException $e) {
+                error_log('ticket_detalle_completo referencia_emails: ' . $e->getMessage());
             }
 
             foreach ($refs as &$r) {
@@ -387,9 +404,7 @@ try {
             $ticket['referencias_personales'] = $refs;
         }
     } catch (PDOException $e) {
-        $ticket['cliente_telefonos'] = [];
-        $ticket['cliente_emails_list'] = [];
-        $ticket['referencias_personales'] = [];
+        error_log('ticket_detalle_completo referencias_personales: ' . $e->getMessage());
     }
 
     echo json_encode([

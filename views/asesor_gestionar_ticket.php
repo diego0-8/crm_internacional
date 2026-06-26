@@ -966,13 +966,11 @@ $message = getMessage();
                                 fechaProx = '';
                             }
                         }
-                        var telNotaHtml = nota.telefono_contacto ? '<div class="nota-telefono"><i class="fas fa-phone-alt"></i> ' + escapeHtml(nota.telefono_contacto) + '</div>' : '';
                         return '<div class="nota-item' + (esVistaTipif ? ' nota-item-tipificacion' : '') + '">' +
                             '<div class="nota-header">' +
                             '<span class="nota-fecha">' + new Date(nota.fecha_creacion).toLocaleString() + '</span>' +
                             '<span class="nota-asesor">' + escapeHtml(nota.asesor_nombre || '') + '</span>' +
                             '</div>' +
-                            telNotaHtml +
                             badgeTipo +
                             estadoHtml +
                             cuerpoTipif +
@@ -1013,10 +1011,8 @@ $message = getMessage();
                                 '<span class="archivo-fecha">' + new Date(archivo.fecha_subida).toLocaleString() + '</span>' +
                                 '</div></div>' +
                                 '<div class="archivo-actions">' +
-                                '<a href="../' + archivo.ruta_archivo + '" target="_blank" class="btn btn-sm btn-primary">' +
+                                '<a href="' + escapeHtml((typeof APP_HOME !== 'undefined' ? APP_HOME : '') + 'api/ver_ticket_pdf.php?archivo_id=' + encodeURIComponent(archivo.id)) + '" target="_blank" rel="noopener" class="btn btn-sm btn-primary">' +
                                 '<i class="fas fa-eye"></i> Ver</a>' +
-                                '<button type="button" class="btn btn-sm btn-danger" onclick="eliminarArchivoGestion(' +
-                                archivo.id + ')"><i class="fas fa-trash"></i> Eliminar</button>' +
                                 '</div></div>';
                         }).join('') +
                         '</div>';
@@ -1034,35 +1030,6 @@ $message = getMessage();
             const div = document.createElement('div');
             div.textContent = text;
             return div.innerHTML;
-        }
-
-        async function eliminarArchivoGestion(archivoId) {
-            if (!confirm('¿Estás seguro de que quieres eliminar este archivo?')) {
-                return;
-            }
-
-            try {
-                const formData = new FormData();
-                formData.append('archivo_id', archivoId);
-
-                const response = await fetch('api/eliminar_archivo_ticket.php', {
-                    method: 'POST',
-                    body: formData,
-                    credentials: 'same-origin'
-                });
-
-                const result = await response.json();
-
-                if (result.success) {
-                    showMessage('Archivo eliminado exitosamente', 'success');
-                    cargarArchivosExistentes(TICKET_ID);
-                } else {
-                    showMessage(result.message, 'error');
-                }
-            } catch (error) {
-                console.error('Error eliminando archivo:', error);
-                showMessage('Error eliminando archivo', 'error');
-            }
         }
 
         const ESTADO_CONTACTABILIDAD = 'contactabilidad_cliente';
@@ -2170,6 +2137,11 @@ $message = getMessage();
                         credentials: 'same-origin',
                         body: fd
                     });
+                    if (!resp.ok) {
+                        var errText = await resp.text();
+                        errores.push((items[i].valor) + ': Error del servidor (' + resp.status + ')');
+                        continue;
+                    }
                     var data = await resp.json();
 
                     if (data.success) {
@@ -2211,21 +2183,36 @@ $message = getMessage();
         async function recargarDatosTicket() {
             try {
                 var resp = await fetch('api/ticket_detalle_completo.php?ticket_id=' + TICKET_ID, { credentials: 'same-origin' });
+                if (!resp.ok) {
+                    console.error('Error HTTP al recargar ticket:', resp.status);
+                    return;
+                }
                 var result = await resp.json();
                 if (result.success && result.data) {
                     window.__ticketActual = result.data;
                     renderDetallesCaso(result.data);
+                    renderHeaderPro(result.data);
                 }
             } catch (e) {
                 console.error('Error al recargar datos del ticket:', e);
             }
         }
 
-        function renderDetallesCaso(ticket) {
-            if (window.MonetizacionTicket && typeof MonetizacionTicket.reset === 'function') {
-                MonetizacionTicket.reset();
-            }
+        var __ultimoMontoMonetizacion = null;
 
+        function actualizarMonetizacion(monto) {
+            var key = (monto === null || monto === undefined) ? '' : String(monto).trim();
+            if (key === __ultimoMontoMonetizacion) return;
+            __ultimoMontoMonetizacion = key;
+            if (!window.MonetizacionTicket) return;
+            if (key === '') {
+                MonetizacionTicket.reset();
+            } else {
+                MonetizacionTicket.play(monto);
+            }
+        }
+
+        function renderDetallesCaso(ticket) {
             // Cliente
             setText('detClienteNombre', ticket.cliente_nombre);
 
@@ -2275,9 +2262,6 @@ $message = getMessage();
                 if (lista) lista.style.display = 'none';
                 if (grupoValores) grupoValores.style.display = 'none';
                 renderImportanciaTicket(null);
-                if (window.MonetizacionTicket) {
-                    MonetizacionTicket.play(null);
-                }
             } else {
                 if (vacio) vacio.style.display = 'none';
                 if (lista) lista.style.display = '';
@@ -2351,9 +2335,7 @@ $message = getMessage();
             } else if (pr && pr.monetizacion != null && String(pr.monetizacion).trim() !== '') {
                 montoMonetizacion = pr.monetizacion;
             }
-            if (window.MonetizacionTicket) {
-                MonetizacionTicket.play(montoMonetizacion);
-            }
+            actualizarMonetizacion(montoMonetizacion);
         }
 
         function parsePrioridadImportancia(valor) {
@@ -2538,11 +2520,6 @@ $message = getMessage();
             const formData = new FormData();
             formData.append('ticket_id', ticketId);
             formData.append('estado', estado);
-
-            const telContacto = obtenerTelefonoPrincipalParaSoftphone(window.__ticketActual);
-            if (telContacto) {
-                formData.append('telefono_contacto', telContacto);
-            }
 
             if (estado === ESTADO_CONTACTABILIDAD && isPerfilContactabilidadCompleta()) {
                 formData.append('perfilacion_contactabilidad', JSON.stringify({

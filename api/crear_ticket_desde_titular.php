@@ -127,10 +127,12 @@ try {
         $stmtTel = $db->prepare("SELECT * FROM telefonos WHERE id_cliente = ?");
         $stmtTel->execute([$titularId]);
         foreach ($stmtTel->fetchAll(PDO::FETCH_ASSOC) as $t) {
-            $stmtInsert = $db->prepare("INSERT INTO cliente_telefonos (cliente_cedula, numero, tipo, dnc_litigator, orden) VALUES (?, ?, ?, ?, ?)");
+            $numeroNorm = preg_replace('/[^0-9]/', '', (string) ($t['numero'] ?? ''));
+            $stmtInsert = $db->prepare("INSERT INTO cliente_telefonos (cliente_cedula, numero, numero_normalizado, tipo, dnc_litigator, orden) VALUES (?, ?, ?, ?, ?, ?)");
             $stmtInsert->execute([
                 $cedulaCliente,
                 $t['numero'],
+                $numeroNorm,
                 $t['tipo'] ?: 'other',
                 $t['dnc_litigator'],
                 $t['orden']

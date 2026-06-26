@@ -17,7 +17,9 @@
         var s = String(raw).trim();
         if (s === '' || s === '—') return NaN;
         var cleaned = s.replace(/[^\d,.-]/g, '');
-        if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') !== -1) {
+        if (/^\d{1,3}(,\d{3})+(\.\d+)?$/.test(cleaned)) {
+            cleaned = cleaned.replace(/,/g, '');
+        } else if (cleaned.indexOf(',') !== -1 && cleaned.indexOf('.') !== -1) {
             cleaned = cleaned.replace(/\./g, '').replace(',', '.');
         } else if (cleaned.indexOf(',') !== -1) {
             cleaned = cleaned.replace(',', '.');
@@ -26,10 +28,11 @@
         return isNaN(n) ? NaN : n;
     }
 
-    function formatCop(n) {
-        return new Intl.NumberFormat('es-CO', {
+    function formatUsd(n) {
+        return new Intl.NumberFormat('en-US', {
             style: 'currency',
-            currency: 'COP',
+            currency: 'USD',
+            minimumFractionDigits: 0,
             maximumFractionDigits: 0
         }).format(n);
     }
@@ -143,12 +146,12 @@
             var t = Math.min(1, (now - start) / DURATION_MS);
             var eased = 1 - Math.pow(1 - t, 3);
             var current = Math.round(target * eased);
-            el.textContent = formatCop(current);
+            el.textContent = formatUsd(current);
 
             if (t < 1) {
                 rafId = requestAnimationFrame(frame);
             } else {
-                el.textContent = formatCop(target);
+                el.textContent = formatUsd(target);
                 el.classList.add('is-done', 'is-zoom-loop');
                 rafId = null;
                 burstConfetti();
@@ -195,12 +198,12 @@
         el.classList.remove('is-done', 'is-zoom-loop');
 
         if (prefersReducedMotion()) {
-            el.textContent = formatCop(target);
+            el.textContent = formatUsd(target);
             el.classList.add('is-done');
             return;
         }
 
-        el.textContent = formatCop(0);
+        el.textContent = formatUsd(0);
         runCountUp(el, target);
     }
 
@@ -208,6 +211,6 @@
         play: play,
         reset: reset,
         parseValor: parseValor,
-        formatCop: formatCop
+        formatUsd: formatUsd
     };
 })(window);

@@ -1,0 +1,14 @@
+# Carpetas locales / datos de entorno (no versionar)
+/uploads/
+/img/
+/images/
+/imagenes/
+/database/
+
+# Logs y depuración
+.cursor/
+*.log
+
+# Sistema
+Thumbs.db
+.DS_Store
